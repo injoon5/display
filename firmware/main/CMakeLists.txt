@@ -1,0 +1,30 @@
+idf_component_register(
+    SRCS
+        "main.cpp"
+        "matrix_refresh.cpp"
+        "renderer_task.cpp"
+        "net_sync.cpp"
+        "sensors.cpp"
+        "power_governor.cpp"
+        "brightness.cpp"
+        "ota.cpp"
+        "provision.cpp"
+        "homespan_panel.cpp"
+        "offline.cpp"
+    INCLUDE_DIRS "."
+    REQUIRES
+        app_update
+        bt
+        driver
+        esp_event
+        esp_http_client
+        esp_https_ota
+        esp_netif
+        esp_timer
+        esp_wifi
+        json
+        libmxr
+        nvs_flash
+        spiffs
+        wifi_provisioning
+)

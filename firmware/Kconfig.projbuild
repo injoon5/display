@@ -1,0 +1,10 @@
+menu "Matrix Panel firmware"
+
+config MX_HOMESPAN
+    bool "Enable HomeSpan integration"
+    default n
+    help
+        Enable HomeSpan/Arduino accessory code. Leave disabled unless the
+        Arduino-as-component and HomeSpan dependencies are available.
+
+endmenu

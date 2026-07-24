@@ -83,7 +83,7 @@ export default defineSchema({
     kind: v.string(),
     config: v.any(),
     intervalMs: v.number(),
-    origin: v.union(v.literal("convex"), v.literal("fly-nrt")),
+    origin: v.union(v.literal("convex"), v.literal("fly-nrt"), v.literal("oracle-icn")),
     data: v.any(),
     fetchedAt: v.number(),
     error: v.optional(v.string()),

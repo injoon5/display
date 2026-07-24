@@ -1,0 +1,29 @@
+{
+  "name": "@wall-matrix-panel/fetcher",
+  "version": "0.1.0",
+  "description": "Oracle ICN Seoul source fetcher for the Wall Matrix Panel",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "keywords": [
+    "convex",
+    "oracle-cloud",
+    "seoul",
+    "wall-matrix-panel"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "convex": "^1.42.3",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}

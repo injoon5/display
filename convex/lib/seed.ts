@@ -21,7 +21,7 @@ const seedSources = [
     kind: "seoul.bus",
     config: { route: "402", arsId: "23-005" },
     intervalMs: 20_000,
-    origin: "fly-nrt" as const,
+    origin: "oracle-icn" as const,
     data: {
       eta_min: 4,
       next_eta_min: 12,
@@ -35,7 +35,7 @@ const seedSources = [
     kind: "kma.now",
     config: { station: "Seoul-108" },
     intervalMs: 600_000,
-    origin: "fly-nrt" as const,
+    origin: "oracle-icn" as const,
     data: {
       tempC: 27.4,
       condition: "humid cloudy",
@@ -48,7 +48,7 @@ const seedSources = [
     kind: "airkorea",
     config: { station: "Gangnam-gu" },
     intervalMs: 600_000,
-    origin: "fly-nrt" as const,
+    origin: "oracle-icn" as const,
     data: {
       pm25: 18,
       pm10: 31,

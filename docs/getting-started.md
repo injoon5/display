@@ -6,7 +6,7 @@ Goal: from a cold clone to a live dashboard + C-rendered device emulator, no har
 
 | Tool | Required? | Notes |
 |---|---|---|
-| Node.js **22+** | yes | Workspaces + modern TS |
+| Node.js **22+** | yes | 22 or 24 preferred; 25+ works (no `"use node"` actions) |
 | npm | yes | Comes with Node |
 | CMake + make + a C99 compiler | yes | `libmxr` / `render_ppm` used by the emulator |
 | Emscripten (`emcc`) | optional | WASM preview in the dashboard (TS fallback works without it) |
@@ -81,6 +81,7 @@ CONVEX_SITE_URL=http://127.0.0.1:3211   # HTTP actions (/device/*, /api/*)
 ## Manual pieces (if you don't want the orchestrator)
 
 ```bash
+npm run compiler:build                       # required — Convex imports @matrix-panel/compiler
 CONVEX_AGENT_MODE=anonymous npx convex dev   # terminal 1
 npm run bootstrap                            # seed + deploy once Convex is up
 npm run web:dev                              # dashboard

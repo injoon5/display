@@ -1,5 +1,6 @@
 import type { SlotMapEntry } from "$lib/compiler";
-import { buildRuntimeScope, getByPath } from "./runtime-scope";
+import { resolveSlotValue } from "$lib/compiler";
+import { buildRuntimeScope } from "./runtime-scope";
 import type {
   DashboardDevice,
   DashboardSource,
@@ -33,7 +34,7 @@ export function sourceIdFromPath(path: string): string {
 }
 
 export function resolvePath(rootData: Record<string, unknown>, path: string): unknown {
-  return getByPath(rootData, path);
+  return resolveSlotValue(rootData, path);
 }
 
 function getSnapshotContext(): SnapshotContext {

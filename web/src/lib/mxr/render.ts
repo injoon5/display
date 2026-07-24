@@ -1,4 +1,5 @@
 import { rgb565, type SlotMapEntry } from "$lib/compiler";
+import { renderFx } from "./effects";
 import { initMxrWasm, isMxrWasmReady, renderWithWasm } from "./wasm";
 
 const WIDTH = 64;
@@ -12,6 +13,7 @@ const OPCODES = {
   LINE: 0x12,
   PIXEL: 0x13,
   TEXT: 0x20,
+  MARQUEE: 0x21,
   BLIT: 0x30,
   BLITC: 0x31,
   JMP: 0x40,
@@ -21,6 +23,7 @@ const OPCODES = {
   PUSHDIM: 0x52,
   POPDIM: 0x53,
   BLINK: 0x60,
+  FX: 0x70,
   HALT: 0xff
 } as const;
 
@@ -623,6 +626,32 @@ function renderBytecode(input: RenderInput): RenderFrame {
         pc += 7;
         break;
       }
+      case OPCODES.MARQUEE: {
+        // Same text source layout as TEXT, plus box width + speed (see libmxr/vm.c).
+        const x = program.code[pc + 1]!;
+        const y = program.code[pc + 2]!;
+        const font = program.code[pc + 3]!;
+        const color = dimRgb565(readU16(program.code, pc + 4), currentDim(dimStack));
+        const boxW = program.code[pc + 6]!;
+        const source = program.code[pc + 8]!;
+        const slotIndex = source & 0x80 ? source & 0x7f : null;
+        const text = slotIndex !== null ? slotToText(slots[slotIndex]) : (program.strings[source] ?? "");
+        drawText(framebuffer, x, y, font, color, text.slice(0, Math.max(1, Math.floor(boxW / 4))));
+        pc += 9;
+        break;
+      }
+      case OPCODES.FX: {
+        const kind = program.code[pc + 1]!;
+        const x = program.code[pc + 2]!;
+        const y = program.code[pc + 3]!;
+        const w = program.code[pc + 4]!;
+        const h = program.code[pc + 5]!;
+        const color = dimRgb565(readU16(program.code, pc + 6), currentDim(dimStack));
+        const arg = program.code[pc + 8]!;
+        renderFx(framebuffer, kind, x, y, w, h, color, arg, input.nowMs);
+        pc += 9;
+        break;
+      }
       case OPCODES.BLIT:
       case OPCODES.BLITC: {
         const x = program.code[pc + 1]!;
@@ -731,11 +760,26 @@ function tryRenderBytecode(input: RenderInput): RenderFrame {
     const wasmFb = renderWithWasm(input.bytecode, input.slots, input.nowMs);
     if (wasmFb) {
       // WASM owns the pixels; TS still builds hotspots / warnings for the editor.
-      const meta = renderBytecode(input);
-      return {
-        ...meta,
-        framebuffer: wasmFb,
-      };
+      try {
+        const meta = renderBytecode(input);
+        return {
+          ...meta,
+          framebuffer: wasmFb,
+        };
+      } catch (error) {
+        return {
+          framebuffer: wasmFb,
+          height: HEIGHT,
+          hotspots: [],
+          mode: "bytecode",
+          warnings: [
+            error instanceof Error
+              ? `Hotspot pass: ${error.message}`
+              : "Hotspot pass failed after WASM render",
+          ],
+          width: WIDTH,
+        };
+      }
     }
   }
 

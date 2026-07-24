@@ -11,6 +11,7 @@ import { validateLayout } from "./validate.js";
 
 export { rgb565 } from "./colors.js";
 export { collectPathReferences, evaluateExpression, exprToString, isConstantExpression, parseExpression } from "./expr.js";
+export { getByPath, resolveSlotValue } from "./slots.js";
 export type { CompileOptions, CompileResult, Diagnostic, SlotMapEntry } from "./types.js";
 
 function startPosition(): Position {

@@ -1,9 +1,10 @@
+import { resolveSlotValue } from "@matrix-panel/compiler";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery } from "./_generated/server";
 import { cardValidator } from "./cards";
 import { stripEtag } from "./lib/etag";
-import { buildRuntimeScope, getByPath } from "./lib/runtimeScope";
+import { buildRuntimeScope } from "./lib/runtimeScope";
 import { ruleValidator } from "./rules";
 import { sceneValidator } from "./scenes";
 
@@ -18,22 +19,21 @@ function indoorFetchedAt(sources: Array<{ sourceId: string; fetchedAt: number }>
   return sources.find((source) => source.sourceId === "indoor")?.fetchedAt;
 }
 
-function buildGlobalSlotMap(cards: Array<{ slotMap: SlotEntry[] }>): SlotEntry[] {
-  const seen = new Set<string>();
-  const globalSlots: SlotEntry[] = [];
-  for (const card of cards) {
-    for (const slot of card.slotMap) {
-      if (seen.has(slot.path)) {
-        continue;
-      }
-      seen.add(slot.path);
-      globalSlots.push({
-        ...slot,
-        index: globalSlots.length,
-      });
-    }
+/** Slot map for the bytecode currently on the device — indices must match that program. */
+function activeProgramSlotMap(
+  device: Doc<"devices">,
+  cards: Doc<"cards">[],
+): SlotEntry[] {
+  const byId = device.playlistCardId
+    ? cards.find((card) => card._id === device.playlistCardId)
+    : undefined;
+  if (byId?.slotMap?.length) {
+    return byId.slotMap;
   }
-  return globalSlots;
+  const byStorage = device.programStorageId
+    ? cards.find((card) => card.compiledStorageId === device.programStorageId)
+    : undefined;
+  return byStorage?.slotMap ?? [];
 }
 
 export const manifest = internalQuery({
@@ -103,7 +103,7 @@ export const dataFrame = internalQuery({
     }
 
     const cards = (await ctx.db.query("cards").take(200)).filter((card) => card.enabled);
-    const slotMap = buildGlobalSlotMap(cards);
+    const slotMap = activeProgramSlotMap(device, cards);
     const sources = await ctx.db.query("sources").take(200);
     const latestTelemetry = await ctx.db
       .query("telemetry")
@@ -161,7 +161,7 @@ export const dataFrame = internalQuery({
     const slots: Record<string, unknown> = {};
     const ages: Record<string, number> = {};
     for (const slot of slotMap) {
-      slots[String(slot.index)] = getByPath(sourceData, slot.path);
+      slots[String(slot.index)] = resolveSlotValue(sourceData, slot.path);
       ages[String(slot.index)] = fetchedAtBySource.get(slot.sourceId) ?? device.lastSeen;
     }
 

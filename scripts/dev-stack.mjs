@@ -178,6 +178,28 @@ function ensureEnvLocal() {
   log("wrote .env.local");
 }
 
+function buildCompiler() {
+  const entry = join(root, "compiler", "dist", "src", "index.js");
+  if (existsSync(entry)) {
+    log("@matrix-panel/compiler dist already present");
+    return;
+  }
+  log("building @matrix-panel/compiler (Convex imports it)");
+  const result = spawnSync("npm", ["run", "build", "-w", "compiler"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `compiler build failed:\n${result.stdout}\n${result.stderr}`,
+    );
+  }
+  if (!existsSync(entry)) {
+    throw new Error(`compiler build succeeded but ${entry} is missing`);
+  }
+  log("@matrix-panel/compiler dist ready");
+}
+
 function buildRenderPpm() {
   const result = spawnSync("make", ["-C", join(root, "libmxr"), "render_ppm"], {
     cwd: root,
@@ -228,6 +250,7 @@ async function main() {
 
   purgeConvexJsEmit();
   ensureEnvLocal();
+  buildCompiler();
   buildRenderPpm();
 
   spawnProc("convex", "npx", ["convex", "dev"], {

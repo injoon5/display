@@ -1,5 +1,3 @@
-"use node";
-
 import { compile } from "@matrix-panel/compiler";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
@@ -48,13 +46,14 @@ async function uploadBytecode(
 ): Promise<Id<"_storage">> {
   // Prefer generateUploadUrl + POST. Direct `ctx.storage.store(Blob)` hits
   // "BadHeader / Digest" on local anonymous Convex backends.
+  // Blob (not Buffer) keeps this on the default action runtime — no "use node".
   const uploadUrl = await ctx.storage.generateUploadUrl();
   const uploadResponse = await fetch(uploadUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/octet-stream",
     },
-    body: Buffer.from(bytecode),
+    body: new Blob([new Uint8Array(bytecode)]),
   });
   if (!uploadResponse.ok) {
     const detail = await uploadResponse.text();

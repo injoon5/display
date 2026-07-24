@@ -418,7 +418,8 @@ export const seedDemo = dashboardMutation({
         name: "night",
         cardSlugs: ["clock-dim"],
         schedule: "everyday 22:00-23:59",
-        brightnessCeiling: 15,
+        // Dim, but still visible on dashboard + emulator preview (15% → ~7 telemetry → looks blank).
+        brightnessCeiling: 40,
         homekitIdentifier: 4,
       },
       {

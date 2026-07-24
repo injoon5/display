@@ -15,6 +15,7 @@ const OPCODES = {
   FRECT: 0x10,
   FX: 0x70,
   HALT: 0xff,
+  MARQUEE: 0x21,
   JMP: 0x40,
   JMPCMP: 0x42,
   JMPSTALE: 0x43,
@@ -485,6 +486,19 @@ function emitDrawNode(writer: ByteWriter, node: DrawNode, context: TypecheckCont
     case "bar":
       emitBar(writer, node, context, slots, diagnostics);
       return;
+    case "marquee": {
+      const color = ensureLiteralColor(node.color.value ?? "#f0f0f0", diagnostics, node.span);
+      const source = simpleTemplateSlot(node as unknown as TextDrawable, context, slots, intern);
+      writer.writeU8(OPCODES.MARQUEE);
+      writer.writeU8(node.x);
+      writer.writeU8(node.y);
+      writer.writeU8(fontId(node.font));
+      writer.writeU16(color);
+      writer.writeU8(node.w);
+      writer.writeU8(node.speed);
+      writer.writeU8(source);
+      return;
+    }
     case "fx":
       writer.writeU8(OPCODES.FX);
       writer.writeU8(node.fx);

@@ -58,6 +58,7 @@ export interface ElementNode extends BaseNode {
     | "fx"
     | "icon"
     | "line"
+    | "marquee"
     | "pixel"
     | "rect"
     | "row"

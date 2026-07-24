@@ -25,56 +25,7 @@ const renderBin = join(root, "libmxr", "render_ppm");
 spawnSync("make", ["-C", join(root, "libmxr"), "render_ppm"], { encoding: "utf8" });
 
 // Sample values keyed by binding expression (exact) or base path (fallback).
-const SAMPLE = {
-  // current + upcoming weather
-  "wx.tempC": ["int", 23],
-  "wx.tempC | round": ["int", 23],
-  "wx.condition": ["str", "CLOUDY"],
-  "wx.condition | upper | trunc(10)": ["str", "CLOUDY"],
-  "wx.icon": ["int", 2],
-  // air
-  "air.pm25": ["int", 42],
-  "air.grade": ["str", "GOOD"],
-  "air.grade | upper | trunc(10)": ["str", "GOOD"],
-  // indoor
-  "room.temp_c": ["int", 22],
-  "room.temp_c | round": ["int", 22],
-  "room.humidity": ["int", 41],
-  "room.humidity | round": ["int", 41],
-  // clock
-  "now.hhmm": ["str", "14:52"],
-  // bus
-  "bus.eta_min": ["int", 3],
-  "bus.next_eta_min": ["int", 10],
-  "bus.next_eta_min | default('--')": ["int", 10],
-  "bus.eta2_min": ["int", 8],
-  "bus.next2_eta_min": ["int", 21],
-  "bus.eta3_min": ["int", 12],
-  "bus.next3_eta_min": ["int", 27],
-  "bus.crowding": ["int", 2],
-  // calendar
-  "calendar.next.title | trunc(10)": ["str", "Standup"],
-  "calendar.next.countdownMin": ["int", 15],
-  "calendar.next.startsAt | default(\"TBD\")": ["str", "TBD"],
-  // self status
-  "telemetry.rssi": ["int", -42],
-  "telemetry.uptime_s | default(0) | duration": ["str", "6d 4h"],
-  "device.programVersion": ["int", 7],
-  "device.fwVersion | trunc(6)": ["str", "1.2.0"],
-  // bike share
-  "bike.dock1.name | upper | trunc(9)": ["str", "CITY HALL"],
-  "bike.dock1.bikes": ["int", 7],
-  "bike.dock2.name | upper | trunc(9)": ["str", "SEOUL STN"],
-  "bike.dock2.bikes": ["int", 3],
-  // now playing
-  "np.title | trunc(10)": ["str", "Bad Habit"],
-  "np.artist | trunc(10)": ["str", "Steve Lacy"],
-  "np.progress_pct": ["int", 62],
-  // fx / krw / etc are static-drawn or fx; no binds
-  // year progress / dday
-  "year.pct": ["int", 56],
-  "dday.days": ["int", 128],
-};
+const SAMPLE = JSON.parse(readFileSync(join(root, "scripts", "sample.json"), "utf8"));
 
 function resolveSlot(pathExpr) {
   if (SAMPLE[pathExpr]) return SAMPLE[pathExpr];
@@ -227,8 +178,8 @@ const files = readdirSync(cardsDir).filter((n) => n.endsWith(".card")).sort();
 const cards = [];
 for (const name of files) {
   const source = readFileSync(join(cardsDir, name), "utf8");
-  const animated = /kind="fx/.test(source) || /\bfx\b/.test(source);
-  const tiles = renderCard(name, source, animated ? { frames: 4 } : {});
+  const animated = /<fx\b/.test(source) || /<marquee\b/.test(source);
+  const tiles = renderCard(name, source, animated ? { frames: 4, step: 420 } : {});
   if (!tiles) continue;
   cards.push({ name, tiles, animated });
   // per-card png: filmstrip for animated, single otherwise

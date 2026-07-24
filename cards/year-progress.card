@@ -1,0 +1,7 @@
+<card id="year-progress" name="Year" priority="52">
+  <text x="2" y="1" font="5x7" color="#b07cff">{{ now.year }}</text>
+  <text x="40" y="1" font="5x7" color="#8f9f8d">D{{ year.day }}</text>
+  <text x="2" y="9" font="8x16" color="#f0f0f0">{{ year.pct }}</text>
+  <text x="30" y="13" font="5x7" color="#8f9f8d">%</text>
+  <bar x="2" y="26" w="60" h="4" bg="#2a2438" color="#b07cff" value="{{ year.pct }}" max="100" />
+</card>

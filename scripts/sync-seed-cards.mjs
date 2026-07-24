@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Keep convex/lib/seed.ts card `source` strings in sync with cards/<slug>.json.
- * The seed embeds each Stage 0 card as an escaped JSON string; this regenerates
- * those literals from the canonical card files so the two never drift.
+ * Regenerate the `seedCards` array in convex/lib/seed.ts from the canonical
+ * cards/*.card (MXML) files, so the deployed demo matches the catalogue. The
+ * icon-sheet reference card is excluded.
  */
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -12,29 +12,31 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cardsDir = join(root, "cards");
 const seedPath = join(root, "convex", "lib", "seed.ts");
 
-let seed = readFileSync(seedPath, "utf8");
-const files = readdirSync(cardsDir).filter((n) => n.endsWith(".json"));
-let updated = 0;
+const EXCLUDE = new Set(["iconsheet"]);
+const DWELL = { clock: 10000, "clock-dim": 15000, "now-playing": 12000, bus: 12000 };
 
+const files = readdirSync(cardsDir).filter((n) => n.endsWith(".card")).sort();
+const entries = [];
 for (const file of files) {
-  const content = readFileSync(join(cardsDir, file), "utf8").trimEnd();
-  const id = JSON.parse(content).id;
-  const literal = JSON.stringify(content);
-  // Match: source: "...<...\"id\": \"<id>\"...>",  (a JS string literal)
-  const marker = `\\"id\\": \\"${id}\\"`;
-  const re = new RegExp(`source: "((?:[^"\\\\]|\\\\.)*?${escapeRe(marker)}(?:[^"\\\\]|\\\\.)*?)"`, "s");
-  if (!re.test(seed)) {
-    console.error(`no seed source found for id=${id}`);
-    process.exitCode = 1;
-    continue;
-  }
-  seed = seed.replace(re, () => `source: ${literal}`);
-  updated += 1;
+  const src = readFileSync(join(cardsDir, file), "utf8").trimEnd();
+  const idm = src.match(/<card\s+id="([^"]+)"\s+name="([^"]+)"\s+priority="(\d+)"/);
+  if (!idm) { console.error(`skip ${file}: no card header`); continue; }
+  const [, id, name, priority] = idm;
+  if (EXCLUDE.has(id)) continue;
+  const dwellMs = DWELL[id] ?? 9000;
+  entries.push({ slug: id, name, priority: Number(priority), dwellMs, source: src });
 }
 
-function escapeRe(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+const body = entries
+  .map((e) => `  {\n    slug: ${JSON.stringify(e.slug)},\n    name: ${JSON.stringify(e.name)},\n    priority: ${e.priority},\n    dwellMs: ${e.dwellMs},\n    source: ${JSON.stringify(e.source)},\n  },`)
+  .join("\n");
 
+let seed = readFileSync(seedPath, "utf8");
+const startMarker = "const seedCards: SeedCardInput[] = [";
+const start = seed.indexOf(startMarker);
+if (start < 0) throw new Error("seedCards array not found");
+const end = seed.indexOf("\n];", start);
+if (end < 0) throw new Error("seedCards end not found");
+seed = seed.slice(0, start) + `${startMarker}\n${body}\n]` + seed.slice(end + 2);
 writeFileSync(seedPath, seed);
-console.log(`synced ${updated} card source(s) into ${seedPath}`);
+console.log(`wrote ${entries.length} cards into seed.ts`);

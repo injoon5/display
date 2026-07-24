@@ -4,5 +4,13 @@
   <text x="2" y="9" font="8x16" color="#f0f0f0">{{ wx.tempC | round }}</text>
   <text x="28" y="13" font="5x7" color="#8f9f8d">C</text>
   <text x="2" y="25" font="5x7" color="#8f9f8d">{{ wx.condition | upper | trunc(10) }}</text>
+  <when test="{{ wx.icon == 0 }}"><fx kind="wxicon" x="43" y="1" w="20" h="18" arg="0" /></when>
+  <when test="{{ wx.icon == 1 }}"><fx kind="wxicon" x="43" y="1" w="20" h="18" arg="1" /></when>
+  <when test="{{ wx.icon == 2 }}"><fx kind="wxicon" x="43" y="1" w="20" h="18" arg="2" /></when>
+  <when test="{{ wx.icon == 3 }}"><fx kind="wxicon" x="43" y="1" w="20" h="18" arg="3" /></when>
+  <when test="{{ wx.icon == 4 }}"><fx kind="wxicon" x="43" y="1" w="20" h="18" arg="4" /></when>
+  <when test="{{ wx.icon == 5 }}"><fx kind="wxicon" x="43" y="1" w="20" h="18" arg="5" /></when>
+  <when test="{{ wx.icon == 6 }}"><fx kind="wxicon" x="43" y="1" w="20" h="18" arg="6" /></when>
+  <when test="{{ wx.icon == 7 }}"><fx kind="wxicon" x="43" y="1" w="20" h="18" arg="7" /></when>
   <stale after="20m" style="dim" />
 </card>

@@ -115,17 +115,17 @@ static void fx_matrix(uint16_t *fb, const mxr_rect_t *clip, int ox, int oy, int 
 static void fx_fire(uint16_t *fb, const mxr_rect_t *clip, int ox, int oy, int w, int h, uint32_t t_ms) {
     float t = t_ms * 0.001f;
     for (int yy = 0; yy < h; ++yy) {
-        float base = (float)(yy) / (float)(h - 1); /* 0 top .. 1 bottom */
+        float by = (float)(yy) / (float)(h - 1);  /* 0 top .. 1 bottom */
+        float base = powf(by, 1.7f);              /* keep the heat low and near the base */
         for (int xx = 0; xx < w; ++xx) {
-            float n = vnoise(xx * 0.28f, (h - yy) * 0.28f + t * 6.0f, 5);
-            float n2 = vnoise(xx * 0.6f + 3.0f, (h - yy) * 0.5f + t * 9.0f, 6);
-            float heat = (base * 1.35f) * (0.55f * n + 0.65f * n2);
-            heat *= 1.15f;
-            int hv = (int)(heat * 255.0f);
-            if (hv < 18) continue;
-            int r = hv * 3;
-            int g = (hv - 70) * 3;
-            int b = (hv - 165) * 4;
+            float n = vnoise(xx * 0.30f, (h - yy) * 0.30f + t * 4.5f, 5);
+            float col = vnoise(xx * 0.5f + 2.0f, t * 1.8f, 8); /* per-column flicker/gaps */
+            float heat = base * (0.35f + 1.1f * n) * (0.5f + 0.62f * col);
+            int hv = (int)(heat * 205.0f);
+            if (hv < 24) continue;                /* dark gaps between the flames */
+            int r = hv * 2 + 28;
+            int g = (hv - 82) * 2;
+            int b = (hv - 180) * 3;
             px(fb, clip, ox + xx, oy + yy, rgb565(r, g, b));
         }
     }
@@ -284,6 +284,168 @@ static void fx_vu(uint16_t *fb, const mxr_rect_t *clip, int ox, int oy, int w, i
     mxr_raster_frect(fb, clip, px0 - 1, py0 - 1, 3, 3, rgb565(220, 200, 120));
 }
 
+/* ---- 7: moon phase ---- */
+static void fx_moon(uint16_t *fb, const mxr_rect_t *clip, int ox, int oy, int w, int h, uint8_t arg) {
+    float phase = arg / 255.0f;             /* 0 new .. 0.5 full .. 1 new */
+    float cx = ox + w * 0.5f;
+    float cy = oy + h * 0.5f;
+    float R = (w < h ? w : h) * 0.5f - 1.0f;
+    float ca = cosf(6.2831853f * phase);
+    for (int y = 0; y < h; ++y) {
+        float ny = (oy + y - cy) / R;
+        if (ny < -1.0f || ny > 1.0f) continue;
+        float hw = sqrtf(1.0f - ny * ny);
+        for (int x = 0; x < w; ++x) {
+            float nx = (ox + x - cx) / R;
+            if (nx * nx + ny * ny > 1.0f) continue;
+            float term = hw * ca;
+            int lit = (phase < 0.5f) ? (nx > term) : (nx < -term);
+            /* soft edge near the terminator */
+            float d = (phase < 0.5f) ? (nx - term) : (-term - nx);
+            if (lit) {
+                int glow = (int)(30.0f * (1.0f - (nx * nx + ny * ny)));
+                int soft = d < 0.14f ? 40 : 0;
+                int cr = 214 + glow - soft, cg = 220 + glow - soft, cb = 190 + glow - soft;
+                /* a couple of maria for character */
+                float m = vnoise((nx + 1.4f) * 2.2f, (ny + 1.1f) * 2.2f, 11);
+                if (m < 0.34f) { cr -= 45; cg -= 42; cb -= 40; }
+                px(fb, clip, ox + x, oy + y, rgb565(cr, cg, cb));
+            } else {
+                px(fb, clip, ox + x, oy + y, rgb565(20, 22, 34));
+            }
+        }
+    }
+}
+
+/* ---- 8: github contribution grass ---- */
+static void fx_grass(uint16_t *fb, const mxr_rect_t *clip, int ox, int oy, int w, int h, uint16_t color, uint32_t t_ms) {
+    int cell = 4;
+    int cols = w / cell;
+    int rows = h / cell;
+    int cr = ((color >> 11) & 0x1f) << 3, cg = ((color >> 5) & 0x3f) << 2, cb = (color & 0x1f) << 3;
+    for (int c = 0; c < cols; ++c) {
+        for (int r = 0; r < rows; ++r) {
+            float n = vnoise(c * 0.55f, r * 0.7f, 21);
+            n = n * n;
+            /* subtle shimmer of the freshest column */
+            int level = (int)(n * 4.0f);
+            if (level <= 0) {
+                mxr_raster_frect(fb, clip, ox + c * cell, oy + r * cell, cell - 1, cell - 1, rgb565(24, 30, 28));
+                continue;
+            }
+            float f = 0.28f + level * 0.24f;
+            int flick = (c == cols - 1 && ((t_ms / 400 + (uint32_t)r) & 1)) ? 30 : 0;
+            mxr_raster_frect(fb, clip, ox + c * cell, oy + r * cell, cell - 1, cell - 1,
+                             rgb565((int)(cr * f) + flick, (int)(cg * f) + flick, (int)(cb * f)));
+        }
+    }
+}
+
+/* ---- 9: price line graph with gradient fill ---- */
+static void fx_graph(uint16_t *fb, const mxr_rect_t *clip, int ox, int oy, int w, int h, uint16_t color, uint8_t arg) {
+    int up = arg ? 1 : 0;
+    int lr = up ? 60 : 240, lg = up ? 210 : 90, lb = up ? 120 : 80;
+    (void)color;
+    /* build a plausible series */
+    float ys[128];
+    int n = w;
+    if (n > 128) n = 128;
+    float prev = 0.5f;
+    for (int i = 0; i < n; ++i) {
+        float trend = up ? (i / (float)n) * 0.5f : (1.0f - i / (float)n) * 0.5f;
+        float noise = vnoise(i * 0.18f, 0.0f, 31) * 0.5f;
+        float v = 0.20f + trend + noise * 0.55f;
+        prev = prev * 0.6f + v * 0.4f;
+        ys[i] = prev;
+    }
+    for (int i = 0; i < n; ++i) {
+        int gy = oy + h - 2 - (int)(ys[i] * (h - 5));
+        if (gy < oy) gy = oy;
+        /* gradient fill below the line, fading down */
+        for (int y = gy; y < oy + h; ++y) {
+            float f = 1.0f - (float)(y - gy) / (float)(oy + h - gy + 1);
+            f *= 0.55f;
+            px(fb, clip, ox + i, y, rgb565((int)(lr * f * 0.4f), (int)(lg * f), (int)(lb * f)));
+        }
+    }
+    /* solid line on top (2px) */
+    for (int i = 0; i < n; ++i) {
+        int gy = oy + h - 2 - (int)(ys[i] * (h - 5));
+        if (gy < oy) gy = oy;
+        px(fb, clip, ox + i, gy, rgb565(lr, lg, lb));
+        px(fb, clip, ox + i, gy - 1, rgb565(lr, lg, lb));
+    }
+}
+
+/* ---- 10: weather icons ---- */
+static void disc(uint16_t *fb, const mxr_rect_t *clip, int cx, int cy, int r, uint16_t col) {
+    for (int y = -r; y <= r; ++y) {
+        for (int x = -r; x <= r; ++x) {
+            if (x * x + y * y <= r * r) px(fb, clip, cx + x, cy + y, col);
+        }
+    }
+}
+
+static void draw_cloud(uint16_t *fb, const mxr_rect_t *clip, int cx, int cy, uint16_t col) {
+    disc(fb, clip, cx - 4, cy, 3, col);
+    disc(fb, clip, cx + 4, cy, 3, col);
+    disc(fb, clip, cx, cy - 3, 4, col);
+    mxr_raster_frect(fb, clip, cx - 7, cy, 15, 4, col);
+}
+
+static void fx_wxicon(uint16_t *fb, const mxr_rect_t *clip, int ox, int oy, int w, int h, uint8_t arg) {
+    int cx = ox + w / 2;
+    int cy = oy + h / 2;
+    uint16_t sun = rgb565(255, 200, 60);
+    uint16_t cloud = rgb565(200, 210, 220);
+    uint16_t dcloud = rgb565(150, 160, 172);
+    uint16_t rain = rgb565(90, 150, 240);
+    uint16_t snow = rgb565(220, 235, 255);
+    uint16_t bolt = rgb565(255, 220, 70);
+    switch (arg) {
+        case 0: /* clear sun */
+            for (int a = 0; a < 8; ++a) {
+                float an = a * 0.7853982f;
+                int rx = cx + (int)(cosf(an) * 9), ry = cy + (int)(sinf(an) * 9);
+                px(fb, clip, rx, ry, sun);
+                px(fb, clip, cx + (int)(cosf(an) * 11), cy + (int)(sinf(an) * 11), sun);
+            }
+            disc(fb, clip, cx, cy, 5, sun);
+            break;
+        case 1: /* partly cloudy */
+            disc(fb, clip, cx - 4, cy - 4, 4, sun);
+            draw_cloud(fb, clip, cx + 2, cy + 3, cloud);
+            break;
+        case 2: /* cloudy */
+            draw_cloud(fb, clip, cx, cy - 1, cloud);
+            draw_cloud(fb, clip, cx + 2, cy + 2, dcloud);
+            break;
+        case 3: /* rain */
+            draw_cloud(fb, clip, cx, cy - 3, dcloud);
+            for (int i = 0; i < 4; ++i) {
+                int dx = cx - 6 + i * 4;
+                mxr_raster_frect(fb, clip, dx, cy + 4, 1, 3, rain);
+            }
+            break;
+        case 4: /* snow */
+            draw_cloud(fb, clip, cx, cy - 3, cloud);
+            for (int i = 0; i < 4; ++i) px(fb, clip, cx - 6 + i * 4, cy + 5, snow);
+            break;
+        case 5: /* thunder */
+            draw_cloud(fb, clip, cx, cy - 3, dcloud);
+            mxr_raster_frect(fb, clip, cx - 1, cy + 3, 2, 3, bolt);
+            mxr_raster_frect(fb, clip, cx - 3, cy + 6, 2, 3, bolt);
+            break;
+        case 6: /* fog */
+            for (int i = 0; i < 4; ++i) mxr_raster_frect(fb, clip, cx - 8, cy - 4 + i * 3, 16, 1, dcloud);
+            break;
+        default: /* clear night */
+            disc(fb, clip, cx, cy, 5, rgb565(220, 224, 200));
+            disc(fb, clip, cx + 3, cy - 2, 5, rgb565(10, 12, 24));
+            break;
+    }
+}
+
 void mxr_fx_render(uint16_t *fb, const mxr_rect_t *clip, uint8_t kind,
                    int x, int y, int w, int h, uint16_t color, uint8_t arg, uint32_t t_ms) {
     if (!fb || !clip || w <= 0 || h <= 0) {
@@ -297,6 +459,10 @@ void mxr_fx_render(uint16_t *fb, const mxr_rect_t *clip, uint8_t kind,
         case 4: fx_flow(fb, clip, x, y, w, h, t_ms); break;
         case 5: fx_rain(fb, clip, x, y, w, h, color, arg, t_ms); break;
         case 6: fx_vu(fb, clip, x, y, w, h, t_ms); break;
+        case 7: fx_moon(fb, clip, x, y, w, h, arg); break;
+        case 8: fx_grass(fb, clip, x, y, w, h, color, t_ms); break;
+        case 9: fx_graph(fb, clip, x, y, w, h, color, arg); break;
+        case 10: fx_wxicon(fb, clip, x, y, w, h, arg); break;
         default: break;
     }
 }

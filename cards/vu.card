@@ -1,3 +1,0 @@
-<card id="vu" name="VU Meter" priority="50">
-  <fx kind="vu" color="#f0d060" />
-</card>

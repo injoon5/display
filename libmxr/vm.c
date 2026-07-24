@@ -748,7 +748,7 @@ int mxr_render(mxr_ctx_t *ctx) {
                 } else {
                     int text_w = 0;
                     int text_h = 0;
-                    int box_w = pc[2];
+                    int box_w = pc[5];
                     mxr_rect_t clip = mxr_rect_intersect(clip_stack[clip_depth - 1], mxr_rect_make(tx + x, ty + y, box_w, (int)mxr_font_info(font)->height));
                     mxr_text_measure(font, s, &text_w, &text_h);
                     if (text_w <= box_w) {

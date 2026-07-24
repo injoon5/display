@@ -130,6 +130,13 @@ function validateNode(node: RenderNode, diagnostics: Diagnostic[]): void {
         diagnostics.push(overflowDiagnostics(`line overflows ${CANVAS_WIDTH}x${CANVAS_HEIGHT}`, node.span));
       }
       return;
+    case "marquee": {
+      const h = measureText(node.font, "").height;
+      if (node.x < 0 || node.y < 0 || node.x + node.w > CANVAS_WIDTH || node.y + h > CANVAS_HEIGHT) {
+        diagnostics.push(overflowDiagnostics(`marquee overflows ${CANVAS_WIDTH}x${CANVAS_HEIGHT}`, node.span));
+      }
+      return;
+    }
     default:
       if (node.x < 0 || node.y < 0 || node.x + node.w > CANVAS_WIDTH || node.y + node.h > CANVAS_HEIGHT) {
         diagnostics.push(overflowDiagnostics(`${node.kind} overflows ${CANVAS_WIDTH}x${CANVAS_HEIGHT}`, node.span));

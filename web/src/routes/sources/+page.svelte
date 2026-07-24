@@ -14,6 +14,7 @@
   let draftJson = $state("{}");
   let lastLoaded = $state<string | null>(null);
   let message = $state<string | null>(null);
+  let busy = $state(false);
 
   $effect(() => {
     if (!selectedSourceId && $sources[0]) {
@@ -43,34 +44,53 @@
   }
 
   async function handleWrite(): Promise<void> {
-    if (!selected) {
+    if (!selected || busy) {
       return;
     }
-    const parsed = JSON.parse(draftJson) as Record<string, unknown>;
-    await writeSource({
-      data: parsed,
-      intervalMs: selected.intervalMs,
-      kind: selected.kind,
-      origin: selected.origin,
-      sourceId: selected.sourceId
-    });
-    message = `Saved data for ${selected.sourceId}.`;
+    busy = true;
+    message = null;
+    try {
+      const parsed = JSON.parse(draftJson) as unknown;
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        throw new Error("Source data must be a JSON object.");
+      }
+      await writeSource({
+        data: parsed as Record<string, unknown>,
+        intervalMs: selected.intervalMs,
+        kind: selected.kind,
+        origin: selected.origin,
+        sourceId: selected.sourceId
+      });
+      message = `Saved data for ${selected.sourceId}.`;
+    } catch (error) {
+      message = error instanceof Error ? error.message : "Couldn’t save source data.";
+    } finally {
+      busy = false;
+    }
   }
 
   async function handleTestFetch(): Promise<void> {
-    if (!selected) {
+    if (!selected || busy) {
       return;
     }
-    const nextPayload = bumpDemoPayload(selected);
-    draftJson = JSON.stringify(nextPayload, null, 2);
-    await writeSource({
-      data: nextPayload,
-      intervalMs: selected.intervalMs,
-      kind: selected.kind,
-      origin: selected.origin,
-      sourceId: selected.sourceId
-    });
-    message = `Refreshed ${selected.sourceId}.`;
+    busy = true;
+    message = null;
+    try {
+      const nextPayload = bumpDemoPayload(selected);
+      draftJson = JSON.stringify(nextPayload, null, 2);
+      await writeSource({
+        data: nextPayload,
+        intervalMs: selected.intervalMs,
+        kind: selected.kind,
+        origin: selected.origin,
+        sourceId: selected.sourceId
+      });
+      message = `Refreshed ${selected.sourceId}.`;
+    } catch (error) {
+      message = error instanceof Error ? error.message : "Couldn’t refresh source.";
+    } finally {
+      busy = false;
+    }
   }
 </script>
 

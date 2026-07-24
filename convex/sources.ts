@@ -1,7 +1,7 @@
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
-import { api, internal } from "./_generated/api";
-import { internalAction } from "./_generated/server";
+import { internal } from "./_generated/api";
+import type { MutationCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { dashboardMutation, dashboardQuery } from "./auth";
 import { bumpAllDevicesDataEtag } from "./devices";
 
@@ -22,6 +22,26 @@ export const sourceValidator = v.object({
 
 const originValidator = v.union(v.literal("convex"), v.literal("oracle-icn"));
 
+const writeArgs = {
+  sourceId: v.string(),
+  kind: v.string(),
+  config: v.any(),
+  intervalMs: v.number(),
+  origin: originValidator,
+  data: v.any(),
+  fetchedAt: v.optional(v.number()),
+};
+
+type WriteArgs = {
+  sourceId: string;
+  kind: string;
+  config: unknown;
+  intervalMs: number;
+  origin: "convex" | "oracle-icn";
+  data: unknown;
+  fetchedAt?: number;
+};
+
 function buildDummyPayload(sourceId: string): Record<string, unknown> | null {
   switch (sourceId) {
     case "spotify":
@@ -40,6 +60,7 @@ function buildDummyPayload(sourceId: string): Record<string, unknown> | null {
           title: "Gangnam dentist check-up",
           startsAt: "2026-07-24T18:30:00+09:00",
           location: "Yeoksam-daero 122",
+          countdownMin: 42,
         },
         countToday: 2,
       };
@@ -63,58 +84,73 @@ function buildDummyPayload(sourceId: string): Record<string, unknown> | null {
   }
 }
 
+async function writeSource(ctx: MutationCtx, args: WriteArgs) {
+  const existing = await ctx.db
+    .query("sources")
+    .withIndex("by_sourceId", (q) => q.eq("sourceId", args.sourceId))
+    .unique();
+
+  const sourceInput = {
+    sourceId: args.sourceId,
+    kind: args.kind,
+    config: args.config,
+    intervalMs: args.intervalMs,
+    origin: args.origin,
+    data: args.data,
+    fetchedAt: args.fetchedAt ?? Date.now(),
+    error: undefined,
+    consecutiveFailures: 0,
+    circuitOpenUntil: undefined,
+  };
+
+  const sourceId = existing?._id ?? (await ctx.db.insert("sources", sourceInput));
+  if (existing) {
+    await ctx.db.patch("sources", existing._id, sourceInput);
+  }
+
+  await bumpAllDevicesDataEtag(ctx, `source-write:${args.sourceId}`);
+  await ctx.scheduler.runAfter(0, internal.rules.evaluate, {});
+
+  const saved = await ctx.db.get("sources", sourceId);
+  if (!saved) {
+    throw new Error("Source write failed");
+  }
+  return saved;
+}
+
 export const getAll = dashboardQuery({
   args: {},
   returns: v.array(sourceValidator),
   handler: async (ctx) => {
-    const sources = await ctx.db.query("sources").collect();
+    const sources = await ctx.db.query("sources").take(200);
     return sources.sort((left, right) => left.sourceId.localeCompare(right.sourceId));
   },
 });
 
-export const write = dashboardMutation({
-  args: {
-    sourceId: v.string(),
-    kind: v.string(),
-    config: v.any(),
-    intervalMs: v.number(),
-    origin: originValidator,
-    data: v.any(),
-    fetchedAt: v.optional(v.number()),
-  },
-  returns: sourceValidator,
+export const getBySourceIdInternal = internalQuery({
+  args: { sourceId: v.string() },
+  returns: v.union(sourceValidator, v.null()),
   handler: async (ctx, args) => {
-    const existing = await ctx.db
+    return await ctx.db
       .query("sources")
       .withIndex("by_sourceId", (q) => q.eq("sourceId", args.sourceId))
       .unique();
+  },
+});
 
-    const sourceInput = {
-      sourceId: args.sourceId,
-      kind: args.kind,
-      config: args.config,
-      intervalMs: args.intervalMs,
-      origin: args.origin,
-      data: args.data,
-      fetchedAt: args.fetchedAt ?? Date.now(),
-      error: undefined,
-      consecutiveFailures: 0,
-      circuitOpenUntil: undefined,
-    };
+export const write = dashboardMutation({
+  args: writeArgs,
+  returns: sourceValidator,
+  handler: async (ctx, args) => {
+    return await writeSource(ctx, args);
+  },
+});
 
-    const sourceId = existing?._id ?? (await ctx.db.insert("sources", sourceInput));
-    if (existing) {
-      await ctx.db.patch("sources", existing._id, sourceInput);
-    }
-
-    await bumpAllDevicesDataEtag(ctx, `source-write:${args.sourceId}`);
-    await ctx.scheduler.runAfter(0, internal.rules.evaluate, {});
-
-    const saved = await ctx.db.get("sources", sourceId);
-    if (!saved) {
-      throw new Error("Source write failed");
-    }
-    return saved;
+export const writeInternal = internalMutation({
+  args: writeArgs,
+  returns: sourceValidator,
+  handler: async (ctx, args) => {
+    return await writeSource(ctx, args);
   },
 });
 
@@ -170,8 +206,9 @@ export const fetchOne = internalAction({
     ok: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    const sources: Doc<"sources">[] = await ctx.runQuery(api.sources.getAll, {});
-    const existing = sources.find((source: Doc<"sources">) => source.sourceId === args.id) ?? null;
+    const existing = await ctx.runQuery(internal.sources.getBySourceIdInternal, {
+      sourceId: args.id,
+    });
 
     if (existing?.circuitOpenUntil && existing.circuitOpenUntil > Date.now()) {
       return { sourceId: args.id, ok: false };
@@ -183,7 +220,7 @@ export const fetchOne = internalAction({
     }
 
     if (!existing) {
-      await ctx.runMutation(api.sources.write, {
+      await ctx.runMutation(internal.sources.writeInternal, {
         sourceId: args.id,
         kind: args.id,
         config: {},
@@ -194,7 +231,7 @@ export const fetchOne = internalAction({
       return { sourceId: args.id, ok: true };
     }
 
-    await ctx.runMutation(api.sources.write, {
+    await ctx.runMutation(internal.sources.writeInternal, {
       sourceId: existing.sourceId,
       kind: existing.kind,
       config: existing.config,

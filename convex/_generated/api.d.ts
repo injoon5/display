@@ -16,6 +16,7 @@ import type * as firmware from "../firmware.js";
 import type * as http from "../http.js";
 import type * as lib_cbor from "../lib/cbor.js";
 import type * as lib_etag from "../lib/etag.js";
+import type * as lib_runtimeScope from "../lib/runtimeScope.js";
 import type * as lib_seed from "../lib/seed.js";
 import type * as programs from "../programs.js";
 import type * as programsActions from "../programsActions.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/cbor": typeof lib_cbor;
   "lib/etag": typeof lib_etag;
+  "lib/runtimeScope": typeof lib_runtimeScope;
   "lib/seed": typeof lib_seed;
   programs: typeof programs;
   programsActions: typeof programsActions;

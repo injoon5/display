@@ -227,27 +227,24 @@ export function hasLiveClient(): boolean {
   return client !== null;
 }
 
+/** True when live Convex subscriptions are ready for reads/writes. */
+export function canUseLiveBackend(): boolean {
+  return get(dashboardStatus).live;
+}
+
 export async function seedLiveDemo(): Promise<void> {
-  await requireClient().client.mutation("lib/seed:seedDemo", {});
+  await requireClient().mutation(api.lib.seed.seedDemo, {});
 }
 
 export async function saveCardLive(input: SaveCardInput): Promise<DashboardCard> {
   return (await requireClient().mutation(api.cards.save, input as never)) as DashboardCard;
 }
 
-export async function deployCardLive(
-  cardIds: string[],
-  deviceId: string,
-  bytecode?: Uint8Array,
-): Promise<DeployCardResult> {
-  const result = (await requireClient().action(
-    api.programsActions.compileAndDeploy,
-    {
-      cardIds,
-      deviceId,
-      ...(bytecode ? { bytecode } : {}),
-    } as never,
-  )) as DeployCardResult;
+export async function deployCardLive(cardIds: string[], deviceId: string): Promise<DeployCardResult> {
+  const result = (await requireClient().action(api.programsActions.compileAndDeploy, {
+    cardIds,
+    deviceId,
+  } as never)) as DeployCardResult;
 
   return {
     etag: result.etag,

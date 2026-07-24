@@ -17,7 +17,7 @@ export default defineSchema({
     fwChannel: v.union(v.literal("dev"), v.literal("stable")),
     online: v.boolean(),
     lastSeen: v.number(),
-  }).index("by_token", ["tokenHash"]),
+  }).index("by_token", ["tokenHash"]).index("by_lastSeen", ["lastSeen"]),
 
   cards: defineTable({
     slug: v.string(),
@@ -46,7 +46,9 @@ export default defineSchema({
     priority: v.number(),
     dwellMs: v.number(),
     updatedAt: v.number(),
-  }).index("by_slug", ["slug"]),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_enabled_priority", ["enabled", "priority"]),
 
   cardVersions: defineTable({
     cardId: v.id("cards"),

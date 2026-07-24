@@ -21,11 +21,12 @@ export const list = dashboardQuery({
       const releases = await ctx.db
         .query("firmware")
         .withIndex("by_channel", (q) => q.eq("channel", channel))
-        .collect();
-      return releases.sort((left, right) => right.releasedAt - left.releasedAt);
+        .order("desc")
+        .take(50);
+      return releases;
     }
 
-    const releases = await ctx.db.query("firmware").collect();
+    const releases = await ctx.db.query("firmware").order("desc").take(50);
     return releases.sort((left, right) => right.releasedAt - left.releasedAt);
   },
 });

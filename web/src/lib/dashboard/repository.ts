@@ -1,6 +1,8 @@
 import { compile } from "$lib/compiler";
+import { get } from "svelte/store";
 import {
   activateSceneLive,
+  canUseLiveBackend,
   deployCardLive,
   hasLiveClient,
   pinCardLive,
@@ -13,6 +15,7 @@ import {
   simulateTelemetryLive,
   unpinCardLive,
   writeSourceLive,
+  dashboardStatus,
 } from "./live-client";
 import { mockState, resetMockState } from "./mock-store";
 import type {
@@ -34,6 +37,20 @@ import type {
   SimulateTelemetryInput,
   WriteSourceInput,
 } from "./types";
+
+function useLiveWrites(): boolean {
+  return canUseLiveBackend();
+}
+
+function assertLiveReadyForSeed(): void {
+  if (!hasLiveClient()) {
+    return;
+  }
+  const status = get(dashboardStatus);
+  if (status.mode === "degraded") {
+    throw new Error(status.lastError ?? "Convex is degraded; fix the connection before seeding.");
+  }
+}
 
 function mapDiagnostics(
   diagnostics: Array<{
@@ -88,6 +105,7 @@ export { resetMockState };
 
 export async function seedLiveDemo(): Promise<void> {
   if (hasLiveClient()) {
+    assertLiveReadyForSeed();
     await seedLiveDemoLive();
     return;
   }
@@ -96,7 +114,7 @@ export async function seedLiveDemo(): Promise<void> {
 }
 
 export async function saveCard(input: SaveCardInput): Promise<DashboardCard> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     return await saveCardLive(input);
   }
 
@@ -141,8 +159,8 @@ export async function deployCard(
   deviceId: string,
   bytecode?: Uint8Array,
 ): Promise<DeployCardResult> {
-  if (hasLiveClient()) {
-    return await deployCardLive(cardIds, deviceId, bytecode);
+  if (useLiveWrites()) {
+    return await deployCardLive(cardIds, deviceId);
   }
 
   const etag = `"mock-${Date.now()}"`;
@@ -166,7 +184,7 @@ export async function deployCard(
 }
 
 export async function saveScene(input: SaveSceneInput): Promise<void> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     await saveSceneLive(input);
     return;
   }
@@ -190,7 +208,7 @@ export async function saveScene(input: SaveSceneInput): Promise<void> {
 }
 
 export async function saveRule(input: SaveRuleInput): Promise<void> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     await saveRuleLive(input);
     return;
   }
@@ -212,7 +230,7 @@ export async function saveRule(input: SaveRuleInput): Promise<void> {
 }
 
 export async function writeSource(input: WriteSourceInput): Promise<void> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     await writeSourceLive(input);
     return;
   }
@@ -239,7 +257,7 @@ export async function writeSource(input: WriteSourceInput): Promise<void> {
 }
 
 export async function publishFirmware(input: PublishFirmwareInput): Promise<void> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     await publishFirmwareLive(input);
     return;
   }
@@ -262,7 +280,7 @@ export async function publishFirmware(input: PublishFirmwareInput): Promise<void
 }
 
 export async function pinCard(input: PinCardInput): Promise<DashboardDevice> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     return await pinCardLive(input);
   }
 
@@ -286,7 +304,7 @@ export async function pinCard(input: PinCardInput): Promise<DashboardDevice> {
 }
 
 export async function unpinCard(deviceId: string): Promise<DashboardDevice> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     return await unpinCardLive(deviceId);
   }
 
@@ -310,7 +328,7 @@ export async function unpinCard(deviceId: string): Promise<DashboardDevice> {
 }
 
 export async function activateScene(input: ActivateSceneInput): Promise<DashboardDevice> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     return await activateSceneLive(input);
   }
 
@@ -338,7 +356,7 @@ export async function activateScene(input: ActivateSceneInput): Promise<Dashboar
 }
 
 export async function simulateTelemetry(input: SimulateTelemetryInput): Promise<DashboardTelemetry> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     return await simulateTelemetryLive(input);
   }
 
@@ -369,7 +387,7 @@ export async function simulateTelemetry(input: SimulateTelemetryInput): Promise<
 }
 
 export async function poke(input: PokeInput): Promise<void> {
-  if (hasLiveClient()) {
+  if (useLiveWrites()) {
     await pokeLive(input);
     return;
   }

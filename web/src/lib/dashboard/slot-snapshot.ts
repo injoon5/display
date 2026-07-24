@@ -1,4 +1,5 @@
 import type { SlotMapEntry } from "$lib/compiler";
+import { buildRuntimeScope, getByPath } from "./runtime-scope";
 import type {
   DashboardDevice,
   DashboardSource,
@@ -21,14 +22,6 @@ export type BuildSlotSnapshotOptions = {
   telemetry?: DashboardTelemetry;
 };
 
-const SEOUL_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  hour: "2-digit",
-  hour12: false,
-  minute: "2-digit",
-  timeZone: "Asia/Seoul",
-  weekday: "short",
-});
-
 let snapshotContext: SnapshotContext | null = null;
 
 export function setSlotSnapshotContext(context: SnapshotContext): void {
@@ -40,63 +33,7 @@ export function sourceIdFromPath(path: string): string {
 }
 
 export function resolvePath(rootData: Record<string, unknown>, path: string): unknown {
-  const parts = path.split(".");
-  let current: unknown = rootData;
-
-  for (const part of parts) {
-    if (!current || typeof current !== "object") {
-      return null;
-    }
-    current = (current as Record<string, unknown>)[part];
-  }
-
-  return current ?? null;
-}
-
-function buildTimeRoot(nowMs: number): Record<string, unknown> {
-  const parts = SEOUL_TIME_FORMATTER.formatToParts(new Date(nowMs));
-  return {
-    hour: Number(parts.find((part) => part.type === "hour")?.value ?? "0"),
-    minute: Number(parts.find((part) => part.type === "minute")?.value ?? "0"),
-    weekday: parts.find((part) => part.type === "weekday")?.value ?? "Mon",
-  };
-}
-
-function buildRootData(
-  sourceList: DashboardSource[],
-  device: DashboardDevice | null,
-  telemetry: DashboardTelemetry,
-  nowMs: number,
-): Record<string, unknown> {
-  const rootData: Record<string, unknown> = Object.fromEntries(
-    sourceList.map((source) => [source.sourceId, source.data]),
-  );
-
-  if (device) {
-    rootData.device = {
-      fwVersion: device.fwVersion,
-      lastSeen: device.lastSeen,
-      name: device.name,
-      online: device.online,
-      programVersion: device.programVersion,
-    };
-  }
-
-  rootData.telemetry = {
-    brightness: telemetry.brightness,
-    estAmps: telemetry.estAmps,
-    governorActive: telemetry.governorActive,
-    heapFree: telemetry.heapFree,
-    humidity: telemetry.humidity,
-    lux: telemetry.lux,
-    presenceBed: telemetry.presenceBed,
-    presenceRoom: telemetry.presenceRoom,
-    rssi: telemetry.rssi,
-    tempC: telemetry.tempC,
-  };
-  rootData.time = buildTimeRoot(nowMs);
-
-  return rootData;
+  return getByPath(rootData, path);
 }
 
 function getSnapshotContext(): SnapshotContext {
@@ -117,7 +54,43 @@ export function buildSlotSnapshot(
   const telemetry = options.telemetry ?? currentState.telemetry;
   const overrides = options.overrides ?? {};
   const sourceMap = new Map(sourceList.map((source) => [source.sourceId, source]));
-  const rootData = buildRootData(sourceList, device, telemetry, options.nowMs);
+  const activeScene = device?.activeSceneId
+    ? currentState.scenes.find((scene) => scene._id === device.activeSceneId)
+    : null;
+
+  const rootData = buildRuntimeScope({
+    device: device
+      ? {
+          fwVersion: device.fwVersion,
+          lastSeen: device.lastSeen,
+          name: device.name,
+          online: device.online,
+          programVersion: device.programVersion,
+        }
+      : null,
+    nowMs: options.nowMs,
+    sceneName: activeScene?.name ?? null,
+    sources: sourceList.map((source) => ({
+      data: source.data,
+      fetchedAt: source.fetchedAt,
+      sourceId: source.sourceId,
+    })),
+    telemetry: {
+      brightness: telemetry.brightness,
+      estAmps: telemetry.estAmps,
+      governorActive: telemetry.governorActive,
+      heapFree: telemetry.heapFree,
+      humidity: telemetry.humidity,
+      lux: telemetry.lux,
+      presenceBed: telemetry.presenceBed,
+      presenceRoom: telemetry.presenceRoom,
+      rssi: telemetry.rssi,
+      tempC: telemetry.tempC,
+    },
+    uptimeSeconds: device
+      ? Math.max(0, Math.floor((options.nowMs - device._creationTime) / 1000))
+      : 0,
+  });
 
   const byIndex: Record<number, SourceSlot> = {};
   const byPath: Record<string, SourceSlot> = {};
@@ -125,7 +98,13 @@ export function buildSlotSnapshot(
   for (const entry of slotMap) {
     const baseValue = resolvePath(rootData, entry.path);
     const value = entry.path in overrides ? overrides[entry.path] : baseValue;
-    const updatedMs = sourceMap.get(entry.sourceId)?.fetchedAt ?? device?.lastSeen ?? options.nowMs;
+    const updatedMs =
+      sourceMap.get(entry.sourceId)?.fetchedAt ??
+      (entry.sourceId === "now" || entry.sourceId === "time" || entry.sourceId === "ambient"
+        ? options.nowMs
+        : entry.sourceId === "room"
+          ? (sourceMap.get("indoor")?.fetchedAt ?? device?.lastSeen ?? options.nowMs)
+          : (device?.lastSeen ?? options.nowMs));
     const slot: SourceSlot = {
       path: entry.path,
       sourceId: entry.sourceId,

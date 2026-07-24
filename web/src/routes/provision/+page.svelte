@@ -50,7 +50,7 @@
 
   function handleMockProvision(): void {
     logs = [
-      `Set up ${deviceName} on ${wifiSsid} and claimed a device token.`,
+      `Demo only: simulated setup for ${deviceName} on ${wifiSsid}. No device was claimed.`,
       ...logs
     ];
   }
@@ -58,7 +58,9 @@
 
 <header class="mb-4 flex flex-col gap-1">
   <h1 class="text-xl font-semibold tracking-tight">Set Up Panel</h1>
-  <p class="text-sm text-muted-foreground">Connect a panel to Wi‑Fi and claim it.</p>
+  <p class="text-sm text-muted-foreground">
+    Demo setup flow. It does not claim a real panel yet.
+  </p>
 </header>
 
 <div class="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
@@ -94,7 +96,7 @@
           class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
           onclick={handleMockProvision}
         >
-          Set Up
+          Simulate Setup
         </Button>
       </div>
     </Card.Content>

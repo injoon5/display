@@ -6,9 +6,11 @@
  * Usage: npm run stack
  *        npm run stack -- --no-web
  *        npm run stack -- --bootstrap-only
+ *        npm run stack -- --doctor
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { createConnection } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,8 +21,9 @@ const noFetcher = args.has("--no-fetcher");
 const noEmulator = args.has("--no-emulator");
 const bootstrapOnly = args.has("--bootstrap-only");
 const skipBootstrap = args.has("--skip-bootstrap");
+const doctorOnly = args.has("--doctor");
 
-/** @type {import('node:child_process').ChildProcess[]} */
+/** @type {Array<{ label: string; child: import('node:child_process').ChildProcess; critical: boolean }>} */
 const children = [];
 let shuttingDown = false;
 
@@ -54,7 +57,44 @@ function purgeConvexJsEmit() {
   walk(join(root, "convex"));
 }
 
-function spawnProc(label, command, cmdArgs, env = {}) {
+function portOpen(port) {
+  return new Promise((resolvePromise) => {
+    const socket = createConnection({ host: "127.0.0.1", port });
+    socket.once("connect", () => {
+      socket.end();
+      resolvePromise(true);
+    });
+    socket.once("error", () => resolvePromise(false));
+  });
+}
+
+async function doctor() {
+  const checks = [];
+  const add = (ok, label, hint) => {
+    checks.push({ ok, label, hint });
+    log(`${ok ? "ok" : "FAIL"}  ${label}${ok || !hint ? "" : ` — ${hint}`}`);
+  };
+
+  add(existsSync(join(root, "node_modules")), "node_modules", "run npm install");
+  add(existsSync(join(root, "node_modules", "typescript")), "typescript", "run npm install");
+  add(existsSync(join(root, "node_modules", "convex")), "convex CLI package", "run npm install");
+
+  const make = spawnSync("make", ["--version"], { encoding: "utf8" });
+  add(make.status === 0, "make available", "install build-essential / Xcode CLT");
+
+  for (const port of [3210, 3211, 5173, 8787]) {
+    const busy = await portOpen(port);
+    add(!busy, `port ${port} free`, busy ? `something is already listening on ${port}` : undefined);
+  }
+
+  const failed = checks.filter((check) => !check.ok);
+  if (failed.length > 0) {
+    throw new Error(`stack doctor found ${failed.length} issue(s)`);
+  }
+  log("doctor passed");
+}
+
+function spawnProc(label, command, cmdArgs, env = {}, critical = true) {
   log(`start ${label}: ${command} ${cmdArgs.join(" ")}`);
   const child = spawn(command, cmdArgs, {
     cwd: root,
@@ -70,18 +110,22 @@ function spawnProc(label, command, cmdArgs, env = {}) {
   child.on("exit", (code, signal) => {
     if (!shuttingDown) {
       log(`${label} exited code=${code} signal=${signal}`);
+      if (critical) {
+        log(`critical process ${label} died — shutting down stack`);
+        shutdown(1);
+      }
     }
   });
-  children.push(child);
+  children.push({ label, child, critical });
   return child;
 }
 
-async function waitForHttp(url, timeoutMs = 180_000) {
+async function waitForHttp(url, timeoutMs = 180_000, predicate = async () => true) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
-      if (res.status >= 0) {
+      if (res.status >= 0 && (await predicate(res))) {
         return;
       }
     } catch {
@@ -103,6 +147,16 @@ async function waitForConvexReady() {
   await sleep(2000);
 }
 
+async function waitForEmulatorReady() {
+  const url = "http://127.0.0.1:8787/readyz";
+  log(`waiting for emulator ready at ${url}`);
+  await waitForHttp(url, 120_000, async (res) => {
+    if (!res.ok) return false;
+    const body = await res.json().catch(() => null);
+    return Boolean(body && body.ready);
+  });
+}
+
 function ensureEnvLocal() {
   const path = join(root, ".env.local");
   if (existsSync(path)) {
@@ -111,8 +165,11 @@ function ensureEnvLocal() {
   writeFileSync(
     path,
     [
+      "# Local Convex anonymous agent mode",
       "CONVEX_AGENT_MODE=anonymous",
+      "# WebSocket / client API used by web + fetcher",
       "CONVEX_URL=http://127.0.0.1:3210",
+      "# HTTP actions used by device/emulator (/device/*, /api/*)",
       "CONVEX_SITE_URL=http://127.0.0.1:3211",
       "",
     ].join("\n"),
@@ -150,9 +207,9 @@ function shutdown(code = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
   log("shutting down…");
-  for (const child of children) {
+  for (const entry of children) {
     try {
-      child.kill("SIGTERM");
+      entry.child.kill("SIGTERM");
     } catch {
       // ignore
     }
@@ -164,6 +221,11 @@ process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 
 async function main() {
+  await doctor();
+  if (doctorOnly) {
+    return;
+  }
+
   purgeConvexJsEmit();
   ensureEnvLocal();
   buildRenderPpm();
@@ -223,6 +285,16 @@ async function main() {
       DEVICE_TOKEN: "dev-token-matrix-panel-demo",
       EMULATOR_PORT: "8787",
     });
+    try {
+      await waitForEmulatorReady();
+    } catch (error) {
+      log(`emulator readiness warning: ${error instanceof Error ? error.message : String(error)}`);
+      log("continuing — first frame may still be rendering");
+    }
+  }
+
+  if (!noWeb) {
+    await waitForHttp("http://127.0.0.1:5173", 60_000);
   }
 
   log("────────────────────────────────────────");
@@ -231,6 +303,7 @@ async function main() {
   log("  Convex HTTP: http://127.0.0.1:3211");
   if (!noWeb) log("  Dashboard  : http://127.0.0.1:5173");
   if (!noEmulator) log("  Emulator   : http://127.0.0.1:8787");
+  log("  Mode       : live after seed/deploy");
   log("  Device tok : dev-token-matrix-panel-demo");
   log("Ctrl+C to stop");
   log("────────────────────────────────────────");

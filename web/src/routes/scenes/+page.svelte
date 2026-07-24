@@ -18,6 +18,7 @@
   let draftCards = $state<string[]>([]);
   let lastLoaded = $state<string | null>(null);
   let message = $state<string | null>(null);
+  let busy = $state(false);
 
   $effect(() => {
     if (!selectedSceneId && $scenes[0]) {
@@ -63,19 +64,27 @@
   }
 
   async function handleSave(): Promise<void> {
-    if (!selectedScene) {
+    if (!selectedScene || busy) {
       return;
     }
-    await saveScene({
-      brightnessCeiling: draftBrightness,
-      cardIds: draftCards,
-      enabled: draftEnabled,
-      homekitIdentifier: selectedScene.homekitIdentifier,
-      name: draftName,
-      sceneId: selectedScene._id,
-      schedule: draftSchedule || undefined
-    });
-    message = `Saved ${draftName}.`;
+    busy = true;
+    message = null;
+    try {
+      await saveScene({
+        brightnessCeiling: draftBrightness,
+        cardIds: draftCards,
+        enabled: draftEnabled,
+        homekitIdentifier: selectedScene.homekitIdentifier,
+        name: draftName,
+        sceneId: selectedScene._id,
+        schedule: draftSchedule || undefined
+      });
+      message = `Saved ${draftName}.`;
+    } catch (error) {
+      message = error instanceof Error ? error.message : "Couldn’t save scene.";
+    } finally {
+      busy = false;
+    }
   }
 </script>
 
@@ -148,9 +157,10 @@
         </div>
         <Button
           class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+          disabled={busy}
           onclick={handleSave}
         >
-          Save Scene
+          {busy ? "Saving…" : "Save Scene"}
         </Button>
       </Card.Header>
 

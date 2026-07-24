@@ -20,6 +20,7 @@
   let actionDurationMs = $state(60_000);
   let lastLoaded = $state<string | null>(null);
   let message = $state<string | null>(null);
+  let busy = $state(false);
 
   $effect(() => {
     if (!selectedRuleId && $rules[0]) {
@@ -58,23 +59,31 @@
   }
 
   async function handleSave(): Promise<void> {
-    if (!selectedRule) {
+    if (!selectedRule || busy) {
       return;
     }
-    await saveRule({
-      action: {
-        cardId: actionCardId || undefined,
-        durationMs: actionDurationMs,
-        kind: actionKind,
-        sceneId: actionSceneId || undefined
-      },
-      condition: draftCondition,
-      enabled: draftEnabled,
-      name: draftName,
-      priority: draftPriority,
-      ruleId: selectedRule._id
-    });
-    message = `Saved ${draftName}.`;
+    busy = true;
+    message = null;
+    try {
+      await saveRule({
+        action: {
+          cardId: actionCardId || undefined,
+          durationMs: actionDurationMs,
+          kind: actionKind,
+          sceneId: actionSceneId || undefined
+        },
+        condition: draftCondition,
+        enabled: draftEnabled,
+        name: draftName,
+        priority: draftPriority,
+        ruleId: selectedRule._id
+      });
+      message = `Saved ${draftName}.`;
+    } catch (error) {
+      message = error instanceof Error ? error.message : "Couldn’t save rule.";
+    } finally {
+      busy = false;
+    }
   }
 </script>
 

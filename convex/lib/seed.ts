@@ -67,6 +67,7 @@ const seedSources = [
       next: {
         title: "Dinner in Seongsu",
         startsAt: "19:30",
+        countdownMin: 42,
       },
     },
   },

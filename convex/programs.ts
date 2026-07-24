@@ -3,6 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery } from "./_generated/server";
 import { cardValidator } from "./cards";
 import { stripEtag } from "./lib/etag";
+import { buildRuntimeScope, getByPath } from "./lib/runtimeScope";
 import { ruleValidator } from "./rules";
 import { sceneValidator } from "./scenes";
 
@@ -13,24 +14,8 @@ type SlotEntry = {
   sourceId: string;
 };
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (typeof value === "object" && value !== null) {
-    return value as Record<string, unknown>;
-  }
-  return null;
-}
-
-function getByPath(data: Record<string, unknown>, path: string): unknown {
-  const parts = path.split(".");
-  let current: unknown = data;
-  for (const part of parts) {
-    const record = asRecord(current);
-    if (!record) {
-      return null;
-    }
-    current = record[part];
-  }
-  return current ?? null;
+function indoorFetchedAt(sources: Array<{ sourceId: string; fetchedAt: number }>): number | undefined {
+  return sources.find((source) => source.sourceId === "indoor")?.fetchedAt;
 }
 
 function buildGlobalSlotMap(cards: Array<{ slotMap: SlotEntry[] }>): SlotEntry[] {
@@ -113,41 +98,55 @@ export const dataFrame = internalQuery({
       throw new Error("Device not found");
     }
 
-    const cards = (await ctx.db.query("cards").collect()).filter((card) => card.enabled);
+    const cards = (await ctx.db.query("cards").take(200)).filter((card) => card.enabled);
     const slotMap = buildGlobalSlotMap(cards);
-    const sources = await ctx.db.query("sources").collect();
+    const sources = await ctx.db.query("sources").take(200);
     const latestTelemetry = await ctx.db
       .query("telemetry")
       .withIndex("by_device_time", (q) => q.eq("deviceId", args.deviceId))
       .order("desc")
       .first();
 
-    const sourceData: Record<string, Record<string, unknown>> = Object.fromEntries(
-      sources.map((source) => [source.sourceId, asRecord(source.data) ?? {}]),
-    );
-    sourceData.device = {
-      name: device.name,
-      fwVersion: device.fwVersion,
-      programVersion: device.programVersion,
-      online: device.online,
-      lastSeen: device.lastSeen,
-    };
-    sourceData.telemetry = latestTelemetry
-      ? {
-          rssi: latestTelemetry.rssi,
-          heapFree: latestTelemetry.heapFree,
-          brightness: latestTelemetry.brightness,
-          lux: latestTelemetry.lux,
-          tempC: latestTelemetry.tempC,
-          humidity: latestTelemetry.humidity,
-          estAmps: latestTelemetry.estAmps,
-          governorActive: latestTelemetry.governorActive,
-        }
-      : {};
+    const activeScene = device.activeSceneId ? await ctx.db.get("scenes", device.activeSceneId) : null;
+    const sourceData = buildRuntimeScope({
+      device: {
+        fwVersion: device.fwVersion,
+        lastSeen: device.lastSeen,
+        name: device.name,
+        online: device.online,
+        programVersion: device.programVersion,
+      },
+      nowMs: args.nowMs,
+      sceneName: activeScene?.name ?? null,
+      sources: sources.map((source) => ({
+        data: source.data,
+        fetchedAt: source.fetchedAt,
+        sourceId: source.sourceId,
+      })),
+      telemetry: latestTelemetry
+        ? {
+            brightness: latestTelemetry.brightness,
+            estAmps: latestTelemetry.estAmps,
+            governorActive: latestTelemetry.governorActive,
+            heapFree: latestTelemetry.heapFree,
+            humidity: latestTelemetry.humidity,
+            lux: latestTelemetry.lux,
+            presenceBed: latestTelemetry.presenceBed,
+            presenceRoom: latestTelemetry.presenceRoom,
+            rssi: latestTelemetry.rssi,
+            tempC: latestTelemetry.tempC,
+          }
+        : null,
+      uptimeSeconds: Math.max(0, Math.floor((args.nowMs - device._creationTime) / 1000)),
+    });
 
     const fetchedAtBySource = new Map(sources.map((source) => [source.sourceId, source.fetchedAt]));
     fetchedAtBySource.set("device", device.lastSeen);
     fetchedAtBySource.set("telemetry", latestTelemetry?.at ?? device.lastSeen);
+    fetchedAtBySource.set("now", args.nowMs);
+    fetchedAtBySource.set("time", args.nowMs);
+    fetchedAtBySource.set("room", indoorFetchedAt(sources) ?? latestTelemetry?.at ?? device.lastSeen);
+    fetchedAtBySource.set("ambient", args.nowMs);
 
     const slots: Record<string, unknown> = {};
     const ages: Record<string, number> = {};

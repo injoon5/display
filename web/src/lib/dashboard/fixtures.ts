@@ -250,6 +250,7 @@ export function createSeedState(nowMs = Date.now()): DashboardState {
       buildSource("source-calendar", "calendar", "google.calendar", { calendarId: "primary" }, 300_000, "convex", nowMs - 43_000, nowMs - 42_000, {
         dateLabel: "Fri 24 Jul",
         next: {
+          countdownMin: 42,
           startsAt: "19:30",
           title: "Dinner in Seongsu",
         },

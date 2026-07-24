@@ -136,7 +136,7 @@ export const latest = dashboardQuery({
   args: {},
   returns: v.union(telemetryValidator, v.null()),
   handler: async (ctx) => {
-    const devices = await ctx.db.query("devices").collect();
+    const devices = await ctx.db.query("devices").take(50);
     const device = devices.sort((left, right) => right.lastSeen - left.lastSeen)[0];
     if (!device) {
       return null;
@@ -155,14 +155,14 @@ export const prune = internalMutation({
   returns: v.object({ deleted: v.number() }),
   handler: async (ctx) => {
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    const devices = await ctx.db.query("devices").collect();
+    const devices = await ctx.db.query("devices").take(50);
     let deleted = 0;
 
     for (const device of devices) {
       const expired = await ctx.db
         .query("telemetry")
         .withIndex("by_device_time", (q) => q.eq("deviceId", device._id).lt("at", cutoff))
-        .collect();
+        .take(100);
 
       for (const item of expired) {
         deleted += 1;

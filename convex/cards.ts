@@ -208,6 +208,17 @@ export const getBySlug = dashboardQuery({
   },
 });
 
+export const getBySlugInternal = internalQuery({
+  args: { slug: v.string() },
+  returns: v.union(cardValidator, v.null()),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("cards")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+  },
+});
+
 export const save = dashboardMutation({
   args: {
     cardId: v.optional(v.id("cards")),
@@ -268,11 +279,12 @@ export const deploy = dashboardMutation({
       throw new Error("Card has not been compiled yet");
     }
 
-    const versions = await ctx.db
+    const latestVersion = await ctx.db
       .query("cardVersions")
       .withIndex("by_card", (q) => q.eq("cardId", args.cardId))
-      .collect();
-    const nextVersion = versions.reduce((maxVersion, version) => Math.max(maxVersion, version.version), 0) + 1;
+      .order("desc")
+      .first();
+    const nextVersion = (latestVersion?.version ?? 0) + 1;
 
     await ctx.db.insert("cardVersions", {
       cardId: args.cardId,
@@ -327,7 +339,7 @@ export const listEnabled = internalQuery({
   args: {},
   returns: v.array(cardValidator),
   handler: async (ctx) => {
-    const cards = await ctx.db.query("cards").collect();
+    const cards = await ctx.db.query("cards").take(200);
     return cards.filter((card) => card.enabled);
   },
 });

@@ -51,7 +51,7 @@
         : "Live",
   );
   let freshSources = $derived(
-    [...$sources].sort((left, right) => left.fetchedAt - right.fetchedAt).slice(0, 5),
+    [...$sources].sort((left, right) => right.fetchedAt - left.fetchedAt).slice(0, 5),
   );
 </script>
 

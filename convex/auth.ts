@@ -9,8 +9,14 @@ import { action, mutation, query } from "./_generated/server";
  * They exist so the bedroom prototype can run without Convex Auth wired yet.
  * HTTP control routes still require `hasDashboardSecret`.
  * Rename/replace with real authed wrappers before exposing beyond LAN/demo.
+ *
+ * Override the shared secret with `DASHBOARD_SECRET` in the Convex deployment env.
  */
 export const DEMO_DASHBOARD_SECRET = "dashboard-secret";
+
+function dashboardSecret(): string {
+  return process.env.DASHBOARD_SECRET?.trim() || DEMO_DASHBOARD_SECRET;
+}
 
 export const demoQuery = customQuery(
   query,
@@ -73,9 +79,10 @@ export async function authDevice(
 }
 
 export function hasDashboardSecret(req: Request): boolean {
+  const expected = dashboardSecret();
   const headerSecret = req.headers.get("x-panel-secret") ?? req.headers.get("x-dashboard-secret");
-  if (headerSecret === DEMO_DASHBOARD_SECRET) {
+  if (headerSecret === expected) {
     return true;
   }
-  return readBearerToken(req.headers.get("authorization")) === DEMO_DASHBOARD_SECRET;
+  return readBearerToken(req.headers.get("authorization")) === expected;
 }

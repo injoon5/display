@@ -65,10 +65,27 @@ function readEnvLocal() {
 
 function writeEnvFile(path, values) {
   mkdirSync(dirname(path), { recursive: true });
-  const body = Object.entries(values)
+  /** @type {Record<string, string>} */
+  const existing = {};
+  if (existsSync(path)) {
+    for (const line of readFileSync(path, "utf8").split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq < 0) continue;
+      existing[trimmed.slice(0, eq)] = trimmed.slice(eq + 1);
+    }
+  }
+
+  const next = { ...existing, ...values };
+  const changed = Object.keys(values).filter((key) => existing[key] !== values[key]);
+  const body = Object.entries(next)
     .map(([k, v]) => `${k}=${v}`)
     .join("\n");
   writeFileSync(path, `${body}\n`, "utf8");
+  if (changed.length > 0) {
+    console.log(`[bootstrap] updated ${path}: ${changed.join(", ")}`);
+  }
 }
 
 function parseJsonLoose(text) {

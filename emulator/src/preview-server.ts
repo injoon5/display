@@ -29,6 +29,15 @@ export function startPreviewServer(
     void handle(req, res, getState, getAssets);
   });
 
+  server.on("error", (error) => {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "EADDRINUSE") {
+      console.error(`[emulator] port ${port} is already in use`);
+    } else {
+      console.error("[emulator] preview server error", error);
+    }
+  });
+
   server.listen(port, "127.0.0.1");
   const url = `http://127.0.0.1:${port}`;
 
@@ -84,9 +93,31 @@ async function handle(
         });
         res.end(assets.ppm);
         return;
-      case "/healthz":
-        sendJson(res, { ok: true, online: state.online });
+      case "/healthz": {
+        const ready = Boolean(state.lastRenderAt) && !state.lastError;
+        sendJson(res, {
+          ok: ready,
+          online: state.online,
+          ready,
+          lastError: state.lastError,
+          lastRenderAt: state.lastRenderAt,
+        }, ready ? 200 : 503);
         return;
+      }
+      case "/readyz": {
+        const ready = Boolean(state.lastRenderAt) && !state.lastError;
+        sendJson(
+          res,
+          {
+            ready,
+            lastError: state.lastError,
+            lastRenderAt: state.lastRenderAt,
+            online: state.online,
+          },
+          ready ? 200 : 503,
+        );
+        return;
+      }
       default:
         sendText(res, 404, "not found");
     }
@@ -95,9 +126,9 @@ async function handle(
   }
 }
 
-function sendJson(res: ServerResponse, body: unknown): void {
+function sendJson(res: ServerResponse, body: unknown, status = 200): void {
   const payload = JSON.stringify(body, null, 2);
-  res.writeHead(200, {
+  res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
   });

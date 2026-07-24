@@ -81,25 +81,29 @@
       actionMessage = "Fix any errors before saving.";
       return;
     }
-    const saved = await saveCard({
-      cardId: card?._id,
-      diagnostics: (compiled?.diagnostics ?? []).map((d) => ({
-        col: d.span?.start.column ?? 1,
-        line: d.span?.start.line ?? 1,
-        message: d.message,
-        severity: d.severity
-      })),
-      dwellMs,
-      enabled,
-      estimatedAmps: compiled?.estimatedAmps ?? card?.estimatedAmps ?? 0.8,
-      name,
-      priority,
-      slug,
-      slotMap: compiled?.slotMap,
-      source,
-      sourceRefs: compiled?.sources
-    });
-    actionMessage = `Saved ${saved.slug}.`;
+    try {
+      const saved = await saveCard({
+        cardId: card?._id,
+        diagnostics: (compiled?.diagnostics ?? []).map((d) => ({
+          col: d.span?.start.column ?? 1,
+          line: d.span?.start.line ?? 1,
+          message: d.message,
+          severity: d.severity
+        })),
+        dwellMs,
+        enabled,
+        estimatedAmps: compiled?.estimatedAmps ?? card?.estimatedAmps ?? 0.8,
+        name,
+        priority,
+        slug,
+        slotMap: compiled?.slotMap,
+        source,
+        sourceRefs: compiled?.sources
+      });
+      actionMessage = `Saved ${saved.slug}.`;
+    } catch (error) {
+      actionMessage = error instanceof Error ? error.message : "Couldn’t save card.";
+    }
   }
 
   async function handleDeploy(): Promise<void> {
@@ -112,8 +116,12 @@
       actionMessage = "Fix any errors before publishing.";
       return;
     }
-    const deployed = await deployCard([card._id], $primaryDevice._id, compiled.bytecode);
-    actionMessage = `Published ${card.slug} (${deployed.size} B).`;
+    try {
+      const deployed = await deployCard([card._id], $primaryDevice._id);
+      actionMessage = `Published ${card.slug} (${deployed.size} B).`;
+    } catch (error) {
+      actionMessage = error instanceof Error ? error.message : "Couldn’t publish card.";
+    }
   }
 </script>
 

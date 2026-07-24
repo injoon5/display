@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import type { Id } from "./_generated/dataModel";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { authDevice, hasDashboardSecret } from "./auth";
 import { encodeSlotFrame } from "./lib/cbor";
@@ -13,15 +13,23 @@ function sleep(ms: number): Promise<void> {
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-  if (typeof value === "object" && value !== null) {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     return value as Record<string, unknown>;
   }
   return null;
 }
 
-async function readJsonRecord(request: Request): Promise<Record<string, unknown>> {
-  const parsed = (await request.json()) as unknown;
-  return asRecord(parsed) ?? {};
+async function readJsonRecord(request: Request): Promise<Record<string, unknown> | Response> {
+  try {
+    const parsed = (await request.json()) as unknown;
+    const record = asRecord(parsed);
+    if (!record) {
+      return new Response("Expected JSON object", { status: 400 });
+    }
+    return record;
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
+  }
 }
 
 http.route({
@@ -38,7 +46,7 @@ http.route({
     const expectedDataEtag = stripEtag(url.searchParams.get("data"));
 
     for (let attempt = 0; attempt < 20; attempt += 1) {
-      const current = await ctx.runQuery(api.devices.get, { id: device._id });
+      const current = await ctx.runQuery(internal.devices.getInternal, { id: device._id });
       if (!current) {
         return new Response("Device not found", { status: 404 });
       }
@@ -150,7 +158,12 @@ http.route({
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const body = await readJsonRecord(req);
+    const bodyOrError = await readJsonRecord(req);
+    if (bodyOrError instanceof Response) {
+      return bodyOrError;
+    }
+    const body = bodyOrError;
+
     await ctx.runMutation(internal.telemetry.record, {
       deviceId: device._id,
       fw: typeof body.fw === "string" ? body.fw : device.fwVersion,
@@ -181,16 +194,23 @@ http.route({
       return new Response("Forbidden", { status: 403 });
     }
 
-    const body = await readJsonRecord(req);
-    const devices = await ctx.runQuery(api.devices.list, {});
-    const deviceId = (typeof body.deviceId === "string" ? body.deviceId : devices[0]?._id) as Id<"devices"> | undefined;
+    const bodyOrError = await readJsonRecord(req);
+    if (bodyOrError instanceof Response) {
+      return bodyOrError;
+    }
+    const body = bodyOrError;
+
+    const devices = await ctx.runQuery(internal.devices.listInternal, {});
+    const deviceId = (typeof body.deviceId === "string" ? body.deviceId : devices[0]?._id) as
+      | Id<"devices">
+      | undefined;
     if (!deviceId) {
       return new Response("Device not found", { status: 404 });
     }
 
     let cardId = typeof body.cardId === "string" ? (body.cardId as Id<"cards">) : undefined;
     if (!cardId && typeof body.slug === "string") {
-      const card = await ctx.runQuery(api.cards.getBySlug, { slug: body.slug });
+      const card = await ctx.runQuery(internal.cards.getBySlugInternal, { slug: body.slug });
       cardId = card?._id;
     }
 
@@ -216,16 +236,23 @@ http.route({
       return new Response("Forbidden", { status: 403 });
     }
 
-    const body = await readJsonRecord(req);
-    const devices = await ctx.runQuery(api.devices.list, {});
-    const deviceId = (typeof body.deviceId === "string" ? body.deviceId : devices[0]?._id) as Id<"devices"> | undefined;
+    const bodyOrError = await readJsonRecord(req);
+    if (bodyOrError instanceof Response) {
+      return bodyOrError;
+    }
+    const body = bodyOrError;
+
+    const devices = await ctx.runQuery(internal.devices.listInternal, {});
+    const deviceId = (typeof body.deviceId === "string" ? body.deviceId : devices[0]?._id) as
+      | Id<"devices">
+      | undefined;
     if (!deviceId) {
       return new Response("Device not found", { status: 404 });
     }
 
     let sceneId = typeof body.sceneId === "string" ? (body.sceneId as Id<"scenes">) : undefined;
     if (!sceneId && typeof body.name === "string") {
-      const scenes = await ctx.runQuery(api.scenes.list, {});
+      const scenes = await ctx.runQuery(internal.scenes.listInternal, {});
       sceneId = scenes.find((scene: { _id: Id<"scenes">; name: string }) => scene.name === body.name)?._id;
     }
 
@@ -249,18 +276,25 @@ http.route({
       return new Response("Forbidden", { status: 403 });
     }
 
-    const body = await readJsonRecord(req);
+    const bodyOrError = await readJsonRecord(req);
+    if (bodyOrError instanceof Response) {
+      return bodyOrError;
+    }
+    const body = bodyOrError;
+
     if (typeof body.message !== "string" || body.message.trim().length === 0) {
       return new Response("message is required", { status: 400 });
     }
 
-    const devices = await ctx.runQuery(api.devices.list, {});
-    const deviceId = (typeof body.deviceId === "string" ? body.deviceId : devices[0]?._id) as Id<"devices"> | undefined;
+    const devices = await ctx.runQuery(internal.devices.listInternal, {});
+    const deviceId = (typeof body.deviceId === "string" ? body.deviceId : devices[0]?._id) as
+      | Id<"devices">
+      | undefined;
     if (!deviceId) {
       return new Response("Device not found", { status: 404 });
     }
 
-    await ctx.runMutation(api.sources.write, {
+    await ctx.runMutation(internal.sources.writeInternal, {
       sourceId: "poke",
       kind: "local.poke",
       config: {},
@@ -273,7 +307,7 @@ http.route({
       fetchedAt: Date.now(),
     });
 
-    const selfStatusCard = await ctx.runQuery(api.cards.getBySlug, { slug: "self-status" });
+    const selfStatusCard = await ctx.runQuery(internal.cards.getBySlugInternal, { slug: "self-status" });
     if (selfStatusCard) {
       await ctx.runMutation(internal.devices.pinCard, {
         deviceId,

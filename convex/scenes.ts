@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { dashboardMutation, dashboardQuery } from "./auth";
 import { bumpAllDevicesDataEtag, deviceValidator } from "./devices";
 
@@ -83,7 +83,16 @@ export const list = dashboardQuery({
   args: {},
   returns: v.array(sceneValidator),
   handler: async (ctx) => {
-    const scenes = await ctx.db.query("scenes").collect();
+    const scenes = await ctx.db.query("scenes").take(100);
+    return scenes.sort((left, right) => left.homekitIdentifier - right.homekitIdentifier);
+  },
+});
+
+export const listInternal = internalQuery({
+  args: {},
+  returns: v.array(sceneValidator),
+  handler: async (ctx) => {
+    const scenes = await ctx.db.query("scenes").take(100);
     return scenes.sort((left, right) => left.homekitIdentifier - right.homekitIdentifier);
   },
 });

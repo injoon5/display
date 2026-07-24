@@ -15,10 +15,22 @@
   let sha256 = $state("abc123demo");
   let signature = $state("ed25519:demo");
   let message = $state<string | null>(null);
+  let busy = $state(false);
 
   async function handlePublish(): Promise<void> {
-    await publishFirmware({ channel, r2Url, sha256, signature, version });
-    message = `Published ${version}.`;
+    if (busy) {
+      return;
+    }
+    busy = true;
+    message = null;
+    try {
+      await publishFirmware({ channel, r2Url, sha256, signature, version });
+      message = `Published ${version}.`;
+    } catch (error) {
+      message = error instanceof Error ? error.message : "Couldn’t publish firmware.";
+    } finally {
+      busy = false;
+    }
   }
 </script>
 

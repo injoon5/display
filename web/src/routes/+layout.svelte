@@ -6,6 +6,7 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import { Toaster } from "$lib/components/ui/sonner/index.js";
   import { dashboardStatus, primaryDevice } from "$lib/convex";
+  import ConnectionBanner from "$lib/components/connection-banner.svelte";
   import { modeLabel } from "$lib/mode-label";
   import { routeChrome } from "$lib/route-chrome";
   import { ModeWatcher } from "mode-watcher";
@@ -143,6 +144,7 @@
     </header>
 
     <div class="flex flex-1 flex-col gap-5 p-4 md:p-6">
+      <ConnectionBanner />
       {@render children?.()}
     </div>
   </Sidebar.Inset>

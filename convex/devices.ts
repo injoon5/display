@@ -73,7 +73,16 @@ export const list = dashboardQuery({
   args: {},
   returns: v.array(deviceValidator),
   handler: async (ctx) => {
-    const devices = await ctx.db.query("devices").collect();
+    const devices = await ctx.db.query("devices").take(100);
+    return devices.sort((left, right) => right.lastSeen - left.lastSeen);
+  },
+});
+
+export const listInternal = internalQuery({
+  args: {},
+  returns: v.array(deviceValidator),
+  handler: async (ctx) => {
+    const devices = await ctx.db.query("devices").take(100);
     return devices.sort((left, right) => right.lastSeen - left.lastSeen);
   },
 });

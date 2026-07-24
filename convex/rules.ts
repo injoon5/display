@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { dashboardMutation, dashboardQuery } from "./auth";
 import { bumpAllDevicesDataEtag } from "./devices";
+import { buildRuntimeScope } from "./lib/runtimeScope";
 
 const ruleActionValidator = v.object({
   kind: v.string(),
@@ -190,27 +191,15 @@ export const evaluate = internalMutation({
   args: {},
   returns: v.object({ matched: v.number(), updated: v.number() }),
   handler: async (ctx) => {
-    const devices = await ctx.db.query("devices").collect();
-    const rules = (await ctx.db.query("rules").collect())
+    const devices = await ctx.db.query("devices").take(50);
+    const rules = (await ctx.db.query("rules").take(200))
       .filter((rule) => rule.enabled)
       .sort((left, right) => right.priority - left.priority);
-    const scenes = await ctx.db.query("scenes").collect();
+    const scenes = await ctx.db.query("scenes").take(100);
     const sceneNames = new Map(scenes.map((scene) => [scene._id, scene.name]));
-    const sources = await ctx.db.query("sources").collect();
-    const sourceData = Object.fromEntries(sources.map((source) => [source.sourceId, asRecord(source.data) ?? {}]));
+    const sources = await ctx.db.query("sources").take(200);
 
     const now = Date.now();
-    const kst = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Seoul",
-      weekday: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).formatToParts(new Date(now));
-    const hour = Number(kst.find((part) => part.type === "hour")?.value ?? "0");
-    const minute = Number(kst.find((part) => part.type === "minute")?.value ?? "0");
-    const weekday = kst.find((part) => part.type === "weekday")?.value ?? "Mon";
-
     let matched = 0;
     let updated = 0;
 
@@ -223,15 +212,42 @@ export const evaluate = internalMutation({
         });
       }
 
-      const context: Record<string, unknown> = {
-        ...sourceData,
-        time: { hour, minute, weekday },
-        scene: device.activeSceneId ? (sceneNames.get(device.activeSceneId) ?? null) : null,
+      const latestTelemetry = await ctx.db
+        .query("telemetry")
+        .withIndex("by_device_time", (q) => q.eq("deviceId", device._id))
+        .order("desc")
+        .first();
+
+      const context = buildRuntimeScope({
         device: {
-          online: device.online,
           fwVersion: device.fwVersion,
+          lastSeen: device.lastSeen,
+          name: device.name,
+          online: device.online,
+          programVersion: device.programVersion,
         },
-      };
+        nowMs: now,
+        sceneName: device.activeSceneId ? (sceneNames.get(device.activeSceneId) ?? null) : null,
+        sources: sources.map((source) => ({
+          data: source.data,
+          fetchedAt: source.fetchedAt,
+          sourceId: source.sourceId,
+        })),
+        telemetry: latestTelemetry
+          ? {
+              brightness: latestTelemetry.brightness,
+              estAmps: latestTelemetry.estAmps,
+              governorActive: latestTelemetry.governorActive,
+              heapFree: latestTelemetry.heapFree,
+              humidity: latestTelemetry.humidity,
+              lux: latestTelemetry.lux,
+              presenceBed: latestTelemetry.presenceBed,
+              presenceRoom: latestTelemetry.presenceRoom,
+              rssi: latestTelemetry.rssi,
+              tempC: latestTelemetry.tempC,
+            }
+          : null,
+      });
 
       const activeRule = rules.find((rule) => evaluateCondition(rule.condition, context));
       if (!activeRule) {

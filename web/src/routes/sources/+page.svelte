@@ -102,6 +102,14 @@
               class="cursor-pointer"
               data-state={selectedSourceId === source.sourceId ? "selected" : undefined}
               onclick={() => (selectedSourceId = source.sourceId)}
+              onkeydown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  selectedSourceId = source.sourceId;
+                }
+              }}
+              role="button"
+              tabindex={0}
             >
               <Table.Cell class="font-medium">{source.sourceId}</Table.Cell>
               <Table.Cell class="font-mono text-xs text-muted-foreground">{source.kind}</Table.Cell>

@@ -2,6 +2,8 @@
 
 Stage 1 MXML sources currently in the repo (`*.card`) — **22 cards**.
 
+Language guide: [`docs/mxml.md`](../docs/mxml.md) · Ops: [`docs/operations.md`](../docs/operations.md) · Roadmap: [`docs/roadmap.md`](../docs/roadmap.md).
+
 | Slug | Name |
 |---|---|
 | `air` | Air Quality |

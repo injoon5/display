@@ -1,5 +1,7 @@
 # Matrix Portal S3 firmware skeleton
 
+Ops / what's left: [`docs/operations.md`](../docs/operations.md) · [`docs/roadmap.md`](../docs/roadmap.md) · device HTTP: [`docs/device-protocol.md`](../docs/device-protocol.md).
+
 ESP-IDF firmware scaffold for the wall matrix panel plan:
 
 - Matrix Portal S3 / ESP32-S3

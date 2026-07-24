@@ -1,5 +1,7 @@
 # CAD sources
 
+Enclosure notes and print order: [`docs/operations.md`](../docs/operations.md) §8 · [`docs/roadmap.md`](../docs/roadmap.md) §C · full optical stack in [`docs/plan.md`](../docs/plan.md) §5.
+
 Minimal parametric OpenSCAD sources for the Wall Matrix Panel printed parts live here.
 
 ## Quick start

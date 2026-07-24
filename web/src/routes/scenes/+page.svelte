@@ -108,6 +108,14 @@
               class="cursor-pointer"
               data-state={selectedSceneId === scene._id ? "selected" : undefined}
               onclick={() => (selectedSceneId = scene._id)}
+              onkeydown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  selectedSceneId = scene._id;
+                }
+              }}
+              role="button"
+              tabindex={0}
             >
               <Table.Cell class="font-medium">{scene.name}</Table.Cell>
               <Table.Cell class="font-mono text-xs text-muted-foreground">

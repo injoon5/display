@@ -92,6 +92,14 @@
               class="cursor-pointer"
               data-state={selectedRuleId === rule._id ? "selected" : undefined}
               onclick={() => (selectedRuleId = rule._id)}
+              onkeydown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  selectedRuleId = rule._id;
+                }
+              }}
+              role="button"
+              tabindex={0}
             >
               <Table.Cell class="font-medium">{rule.name}</Table.Cell>
               <Table.Cell class="font-mono text-xs text-muted-foreground">{rule.action.kind}</Table.Cell>

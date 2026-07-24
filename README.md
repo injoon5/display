@@ -826,7 +826,7 @@ solo projects die: you can spend six weeks on grammar aesthetics with nothing on
 | **2** | `row` / `col` / `pad` / `gap`, text measurement, `MEASURE` opcode, `<each>`. | ~1,400 | Week 5+ |
 
 Stage 0 is deliberately tedious to hand-write. That tedium is your requirements document for
-Stage 1. **Your first eight cards can ship entirely on Stage 0** — it proves the whole pipeline
+Stage 1. **The current cards in `cards/` ship on Stage 1** — that proves the whole pipeline
 (compile → bytecode → device → render → preview matches) without a single line of grammar.
 
 Most people build Stage 2 first, discover the layout engine is 80% of the work, and never ship a
@@ -1885,188 +1885,35 @@ No buttons. No holes in the bezel.
 
 ## 16. Card catalogue
 
-Pick from these. **Tier** = suggested build order: **1** ship first, **2** obvious next,
-**3** nice to have, **4** whenever. **Effort**: ● trivial ●● moderate ●●● involved.
+Current Stage 1 sources in [`cards/`](./cards/) — **22 cards**. This is the live set,
+not a wishlist.
 
-### 16.1 Transit — your anchor use case
+| Slug | Name | Notes |
+|---|---|---|
+| `bus-402` | Bus | Multi-route ETAs (`eta` / `eta2` / `eta3`) |
+| `weather` | Weather | KMA nowcast (`wx.*`) |
+| `upcoming-weather` | Forecast | Hourly / upcoming strip |
+| `air` | Air Quality | PM2.5 + grade (`air.*`) |
+| `indoor` | Indoor | Room temp / humidity (`room.*`) |
+| `calendar-next` | Calendar Next | Next event countdown |
+| `clock` | Clock | Full-bright `now.hhmm` |
+| `clock-dim` | Clock Dim | Night / low-brightness clock |
+| `now-playing` | Now Playing | Ambient `np.*` from Spotify source |
+| `github` | GitHub | Ambient `gh.*` + grass FX |
+| `krw` | KRW/USD | Ambient `krw.*` from FX source |
+| `todo` | Todo | Ambient `todo.*` |
+| `dday` | D-Day | Ambient `dday.*` |
+| `moon` | Moon | Synthesized phase / illumination |
+| `year-progress` | Year | Synthesized day-of-year progress |
+| `self-status` | Self Status | RSSI, uptime, program version |
+| `fireplace` | Fireplace | Ambient FX |
+| `life` | Life | Conway FX |
+| `matrix` | Matrix | Matrix rain FX |
+| `rain-fx` | Rain | Rain FX |
+| `starfield` | Warp | Starfield FX |
+| `iconsheet` | Weather Icons | Icon atlas (not seeded into demo playlist) |
 
-| # | Card | Shows | Source | Effort | Tier |
-|---|---|---|---|---|---|
-| 1 | **Bus arrivals** | Next 2 buses, ETA in minutes, crowding bar. Red at ≤3 min | data.go.kr 버스도착정보 / TOPIS (by `arsId` — the 5-digit code on the stop sign) | ●● | **1** |
-| 2 | **Subway arrivals** | Direction-aware next 2 trains | 서울시 지하철 실시간도착 | ●● | 2 |
-| 3 | **Leave now** | Calendar event + travel time + bus ETA → one number: `LEAVE IN 6` | Composite | ●●● | 2 |
-| 4 | **Last train** (막차) | Countdown to the last train home. Only after 23:00 | 서울교통공사 | ●● | 3 |
-| 5 | Bike share (따릉이) | Bikes available at your nearest 2 docks | 서울열린데이터광장 | ● | 3 |
-| 6 | Traffic to work | Drive time with current traffic | Kakao Mobility / Google | ●● | 4 |
-| 7 | Taxi estimate | Rough fare + wait to a saved destination | Kakao T | ●●● | 4 |
-| 8 | Flight status | Gate + delay for an upcoming flight | AviationStack | ●● | 4 |
-| 9 | Bus route map | 3-stop mini-map showing where your bus is now | TOPIS positions | ●●● | 4 |
-
-### 16.2 Weather & environment
-
-| # | Card | Shows | Source | Effort | Tier |
-|---|---|---|---|---|---|
-| 10 | **Current weather** | Temp, condition icon, feels-like | **KMA 단기예보** (far better than OpenWeather for Korea) | ●● | **1** |
-| 11 | **Hourly forecast strip** | 6-hour temperature sparkline + precip dots | KMA | ●● | **1** |
-| 12 | **Rain in 20 min** | One line, high value | KMA 초단기예보 nowcast | ●● | 2 |
-| 13 | **미세먼지 / 초미세먼지** | PM10 + PM2.5, colour-coded ring. The card you'll check daily | AirKorea | ●● | **1** |
-| 14 | 황사 alert | Yellow-dust warning takeover | KMA | ● | 3 |
-| 15 | **Indoor climate** | Room temp + humidity | SHT41, local | ● | **1** |
-| 16 | **Indoor vs outdoor** | Δ + "open the window" / "close the window" | Composite | ● | 2 |
-| 17 | Daylight bar | Sunrise→sunset progress across the bottom 2 rows | Computed | ● | 2 |
-| 18 | UV index | Number + colour band | KMA | ● | 3 |
-| 19 | **Earthquake alert** | Magnitude + location, takeover. Genuinely useful in Korea | KMA 지진통보 | ●● | 2 |
-| 20 | 재난문자 relay | Emergency alert text as a marquee | 행안부 | ●●● | 3 |
-| 21 | Typhoon tracker | Distance + category during season | KMA | ●●● | 4 |
-| 22 | Laundry index | Drying conditions score | Computed from humidity/wind | ● | 4 |
-| 23 | Pollen count | Seasonal | KMA 생활기상지수 | ● | 4 |
-| 24 | Moon phase | Sprite + illumination % | Computed | ● | 4 |
-| 25 | Freeze warning | Alert when overnight low < 0 (for plants/pipes) | KMA | ● | 4 |
-
-### 16.3 Time & calendar
-
-| # | Card | Shows | Source | Effort | Tier |
-|---|---|---|---|---|---|
-| 26 | **Clock** | Big 7-seg, HH:MM, seconds bar | Local | ● | **1** |
-| 27 | **Night clock** | 14×24 digits at 3%, nothing else | Local | ● | **1** |
-| 28 | Word clock | "TEN PAST SEVEN" | Local | ●● | 3 |
-| 29 | Binary clock | Nerd flex, fits beautifully | Local | ● | 4 |
-| 30 | Analog clock | 32×32 sprite hands | Local | ●● | 4 |
-| 31 | **Date + 음력** | Gregorian + lunar date + 절기 | Computed / KASI | ●● | 2 |
-| 32 | **Next event** | Title marquee + countdown ring | Google Calendar | ●● | **1** |
-| 33 | Day agenda density | 24 columns, height = busy-ness | Google Calendar | ●● | 3 |
-| 34 | Countdown to date | Trip, deadline, birthday. `D-14` | Config | ● | 2 |
-| 35 | Year progress | % of the year elapsed, thin bar | Computed | ● | 4 |
-| 36 | World clocks | 2–3 cities for remote friends | Computed | ● | 3 |
-| 37 | Pomodoro | 25/5 timer, tap to start | Local | ●● | 3 |
-| 38 | Time until alarm | Hours of sleep remaining, shown at night | iOS Shortcut | ●● | 4 |
-| 39 | Holiday countdown | Next Korean public holiday | 공공데이터포털 특일정보 | ● | 4 |
-
-### 16.4 Work & productivity
-
-| # | Card | Shows | Source | Effort | Tier |
-|---|---|---|---|---|---|
-| 40 | **Habit streak grid** | 7×5 dots, GitHub-contribution style. Fits 64×32 perfectly | Convex-native | ●● | 2 |
-| 41 | **GitHub contributions** | Last 5 weeks as a dot grid | GitHub GraphQL | ●● | 2 |
-| 42 | **CI / build status** | Solid green is a nice thing to glance at | GitHub Actions | ● | 2 |
-| 43 | Open PRs awaiting review | Count + oldest age | GitHub | ● | 3 |
-| 44 | Next task | Top todo, marquee | Todoist / Reminders | ●● | 2 |
-| 45 | Todo count | Number + overdue in red | Todoist | ● | 3 |
-| 46 | Unread email | Count only, never a list | Gmail | ● | 3 |
-| 47 | Slack/Discord mentions | Badge count | Webhook | ●● | 3 |
-| 48 | Deploy status | Last deploy + time since | Vercel / GitHub API | ● | 4 |
-| 49 | Uptime / error rate | Your own service's health | Better Stack | ●● | 4 |
-| 50 | On-call indicator | Are you on call right now | PagerDuty | ● | 4 |
-| 51 | Anki cards due | Study nudge | AnkiConnect | ●● | 4 |
-| 52 | Writing progress | Words today vs goal, bar | Manual/API | ● | 4 |
-| 53 | Days since X | "42 days without an incident" | Convex-native | ● | 4 |
-
-### 16.5 Home & HomeKit *(Direction B, phase 2)*
-
-| # | Card | Shows | Source | Effort | Tier |
-|---|---|---|---|---|---|
-| 54 | **Lights left on** | One dot per room, lit = on | Homebridge REST | ●● | 3 |
-| 55 | **Door lock state** | The card you actually check on the way out | Homebridge | ● | 3 |
-| 56 | Aircon status | Setpoint vs actual, mode icon | Homebridge | ● | 3 |
-| 57 | Washer/dryer done | Takeover when the power-plug draw drops | Homebridge | ●● | 3 |
-| 58 | Robot vacuum | Docked / cleaning / stuck | Homebridge | ● | 4 |
-| 59 | Air purifier filter | % life remaining | Homebridge | ● | 4 |
-| 60 | Device batteries | Lowest-battery accessory | Homebridge | ● | 4 |
-| 61 | Leak / smoke status | All-clear dot row | Homebridge | ● | 4 |
-| 62 | Other rooms' temps | 2–3 rooms beside yours | Homebridge | ● | 3 |
-| 63 | Room CO2 | Add an SCD41 (#5190); ventilation nudge | Local sensor | ●● | 4 |
-| 64 | Plant watering | Days since watered, per plant | Soil sensor / manual | ● | 4 |
-
-### 16.6 Media
-
-| # | Card | Shows | Source | Effort | Tier |
-|---|---|---|---|---|---|
-| 65 | **Now playing** | Scrolling title + artist + progress bar | Spotify API | ●● | 2 |
-| 66 | Album colour bloom | Dominant colour extracted server-side, ambient wash behind the title | Spotify + server render | ●●● | 3 |
-| 67 | Album art | 32×32 dithered cover | Spotify + server render | ●●● | 4 |
-| 68 | Podcast remaining | Minutes left in the episode | Spotify/Overcast | ● | 4 |
-| 69 | Audio spectrum | Add an I²S mic (#3421); 32-band FFT | Local | ●●● | 4 |
-| 70 | Scrobble count | Tracks played today | Last.fm | ● | 4 |
-
-### 16.7 Money
-
-| # | Card | Shows | Source | Effort | Tier |
-|---|---|---|---|---|---|
-| 71 | **KRW/USD** | Rate + daily change arrow | 한국수출입은행 / exchangerate.host | ● | 2 |
-| 72 | Stock ticker | Price + sparkline | Alpha Vantage / 한국투자증권 | ●● | 3 |
-| 73 | Crypto | Same, if you care | CoinGecko | ● | 4 |
-| 74 | Budget burn | Spend vs monthly budget, bar | Manual / bank API | ●● | 4 |
-| 75 | Subscription due | Next renewal + amount | Convex-native | ● | 4 |
-
-### 16.8 Health
-
-| # | Card | Shows | Source | Effort | Tier |
-|---|---|---|---|---|---|
-| 76 | Step count | Today vs goal, ring | Apple Health via Shortcut → `/api/health` | ●● | 3 |
-| 77 | Sleep score | Last night, one number | Health / wearable | ●● | 3 |
-| 78 | Activity rings | 3 concentric arcs, 32 px | Apple Health | ●● | 4 |
-| 79 | Water intake | Cups today, tap frame to add one | Local + Convex | ●● | 4 |
-| 80 | Screen time | Hours today | Shortcut | ● | 4 |
-
-### 16.9 Delivery & errands
-
-| # | Card | Shows | Source | Effort | Tier |
-|---|---|---|---|---|---|
-| 81 | **Package tracking** | "도착 예정 오늘", carrier icon | 스마트택배 / CJ대한통운 | ●● | 2 |
-| 82 | Food delivery ETA | Minutes out | 배민/쿠팡이츠 (scrape or Shortcut) | ●●● | 4 |
-| 83 | **분리수거 day** | Which category tonight | Config + calendar | ● | 3 |
-| 84 | Bill due | Next payment + days | Convex-native | ● | 4 |
-| 85 | Grocery list count | Items remaining | Reminders | ● | 4 |
-
-### 16.10 Ambient & delight
-
-| # | Card | Shows | Effort | Tier |
-|---|---|---|---|---|
-| 86 | **Digital sand** | LIS3DH-driven falling-sand sim. The classic, and the S3 has the accelerometer | ●● | 2 |
-| 87 | **Conway's Life** | Date-seeded, so it's different every day | ● | 2 |
-| 88 | **Real-weather rain** | If it's raining outside, rain falls on the screen. Snow in winter | ●● | 2 |
-| 89 | Pixel art gallery | Rotating sprites you drew in the dashboard's own editor | ● | 2 |
-| 90 | Flow field | Perlin-noise particle wash | ●● | 3 |
-| 91 | Starfield / warp | Classic | ● | 3 |
-| 92 | Matrix rain | Obligatory | ● | 3 |
-| 93 | Fireplace | Flickering ember sim — lovely at 5% at night | ●● | 3 |
-| 94 | Aquarium | Sprite fish drifting across | ●● | 4 |
-| 95 | Lava lamp | Metaball blobs | ●●● | 4 |
-| 96 | Colour field | Slow gradient drift — pure ambient night light | ● | 3 |
-| 97 | VU meter | Analog-style needle, from the I²S mic | ●● | 4 |
-| 98 | Nyan-cat scroll | Rainbow trail sprite | ● | 4 |
-
-### 16.11 Words & knowledge
-
-| # | Card | Shows | Effort | Tier |
-|---|---|---|---|---|
-| 99 | **Word of the day** | KO ↔ EN, one word big + reading | ● | 3 |
-| 100 | Hanja of the day | 한자 + 음훈 | ● | 4 |
-| 101 | Quote of the day | Short only — marquee | ● | 4 |
-| 102 | On this day | One historical fact | ● | 4 |
-| 103 | ISS overhead | Notification when it passes over Seoul | ●● | 4 |
-| 104 | Aurora / Kp index | Space weather | ● | 4 |
-| 105 | KBO score | Your team's game | ●● | 4 |
-
-### 16.12 Interactive & system
-
-| # | Card | Shows | Effort | Tier |
-|---|---|---|---|---|
-| 106 | **Poke** | A friend POSTs to `/api/poke`; message takes over for 10 s. Ridiculous and delightful | ●● | 2 |
-| 107 | **Birthday takeover** | Confetti + name on the day | ● | 3 |
-| 108 | Dice / coin flip | Double-tap the frame to roll | ● | 4 |
-| 109 | Homelab status | NAS disk %, Homebridge uptime | ●● | 4 |
-| 110 | Internet health | Ping + down/up, tiny sparkline | ●● | 4 |
-| 111 | **Panel self-status** | RSSI, uptime, est. amps, program version. Your debug card | ● | **1** |
-
-### 16.13 Suggested first eight
-
-If you want a shipping list rather than a menu:
-
-`bus-402` · `weather` · `air` · `clock` · `clock-dim` · `indoor` · `calendar-next` · `self-status`
-
-That's a genuinely useful panel, uses four data sources, and exercises every part of the
-pipeline. Everything else is additive from the dashboard, without touching firmware.
+Compile check: `npm run golden` (all 22 through `libmxr`).
 
 ---
 

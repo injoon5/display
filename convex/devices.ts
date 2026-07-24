@@ -15,11 +15,14 @@ export const deviceValidator = v.object({
   programVersion: v.number(),
   programEtag: v.string(),
   programStorageId: v.optional(v.id("_storage")),
+  playlistCardIds: v.optional(v.array(v.id("cards"))),
+  playlistCardId: v.optional(v.id("cards")),
   dataVersion: v.number(),
   dataEtag: v.string(),
   activeSceneId: v.optional(v.id("scenes")),
   pinnedCardId: v.optional(v.id("cards")),
   pinnedUntil: v.optional(v.number()),
+  brightnessCeiling: v.optional(v.number()),
   fwVersion: v.string(),
   fwChannel: fwChannelValidator,
   online: v.boolean(),
@@ -301,6 +304,14 @@ export const applyProgramDeployment = internalMutation({
   args: {
     deviceId: v.id("devices"),
     cardIds: v.array(v.id("cards")),
+    primaryCardId: v.id("cards"),
+    cardStorage: v.array(
+      v.object({
+        cardId: v.id("cards"),
+        storageId: v.id("_storage"),
+        bytecodeHash: v.string(),
+      }),
+    ),
     storageId: v.id("_storage"),
     bytecodeHash: v.string(),
   },
@@ -309,29 +320,38 @@ export const applyProgramDeployment = internalMutation({
     programVersion: v.number(),
   }),
   handler: async (ctx, args) => {
-    const selectedCardIds = new Set(args.cardIds);
-    const allCards = await ctx.db.query("cards").collect();
+    const storageByCard = new Map(
+      args.cardStorage.map((entry) => [entry.cardId, entry] as const),
+    );
 
-    for (const card of allCards) {
-      if (selectedCardIds.has(card._id)) {
-        await ctx.db.patch("cards", card._id, {
-          compiledStorageId: args.storageId,
-        });
-
-        const versions = await ctx.db
-          .query("cardVersions")
-          .withIndex("by_card", (q) => q.eq("cardId", card._id))
-          .collect();
-        const nextVersion = versions.reduce((maxVersion, version) => Math.max(maxVersion, version.version), 0) + 1;
-
-        await ctx.db.insert("cardVersions", {
-          cardId: card._id,
-          version: nextVersion,
-          source: card.source,
-          compiledStorageId: args.storageId,
-          deployedAt: Date.now(),
-        });
+    for (const cardId of args.cardIds) {
+      const entry = storageByCard.get(cardId);
+      if (!entry) {
+        continue;
       }
+      const card = await ctx.db.get("cards", cardId);
+      if (!card) {
+        continue;
+      }
+
+      await ctx.db.patch("cards", cardId, {
+        compiledStorageId: entry.storageId,
+      });
+
+      const versions = await ctx.db
+        .query("cardVersions")
+        .withIndex("by_card", (q) => q.eq("cardId", cardId))
+        .collect();
+      const nextVersion =
+        versions.reduce((maxVersion, version) => Math.max(maxVersion, version.version), 0) + 1;
+
+      await ctx.db.insert("cardVersions", {
+        cardId,
+        version: nextVersion,
+        source: card.source,
+        compiledStorageId: entry.storageId,
+        deployedAt: Date.now(),
+      });
     }
 
     const device = await ctx.db.get("devices", args.deviceId);
@@ -343,6 +363,8 @@ export const applyProgramDeployment = internalMutation({
       programVersion: device.programVersion + 1,
       programEtag: toEtag(args.bytecodeHash),
       programStorageId: args.storageId,
+      playlistCardIds: args.cardIds,
+      playlistCardId: args.primaryCardId,
     });
 
     const updated = await ctx.db.get("devices", args.deviceId);
@@ -353,6 +375,101 @@ export const applyProgramDeployment = internalMutation({
       deviceId: updated._id,
       programVersion: updated.programVersion,
     };
+  },
+});
+
+function pickPlaylistCardId(
+  cardIds: Id<"cards">[],
+  cardsById: Map<Id<"cards">, Doc<"cards">>,
+  nowMs: number,
+  pinnedCardId: Id<"cards"> | undefined,
+  pinnedUntil: number | undefined,
+): Id<"cards"> | null {
+  if (pinnedCardId && pinnedUntil && pinnedUntil > nowMs && cardsById.has(pinnedCardId)) {
+    return pinnedCardId;
+  }
+  const ordered = cardIds
+    .map((id) => cardsById.get(id))
+    .filter((card): card is Doc<"cards"> => card !== undefined && card.enabled);
+  if (ordered.length === 0) {
+    return null;
+  }
+  const totalDwell = ordered.reduce((sum, card) => sum + Math.max(1_000, card.dwellMs), 0);
+  let offset = nowMs % totalDwell;
+  for (const card of ordered) {
+    const dwell = Math.max(1_000, card.dwellMs);
+    if (offset < dwell) {
+      return card._id;
+    }
+    offset -= dwell;
+  }
+  return ordered[0]!._id;
+}
+
+export const rotatePlaylist = internalMutation({
+  args: {},
+  returns: v.object({ rotated: v.number() }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    const devices = await ctx.db.query("devices").collect();
+    let rotated = 0;
+
+    for (const device of devices) {
+      let playlistIds = device.playlistCardIds ?? [];
+      if (playlistIds.length === 0 && device.activeSceneId) {
+        const scene = await ctx.db.get("scenes", device.activeSceneId);
+        playlistIds = scene?.cardIds ?? [];
+      }
+      if (playlistIds.length === 0) {
+        continue;
+      }
+
+      const cards = await Promise.all(playlistIds.map((id) => ctx.db.get("cards", id)));
+      const cardsById = new Map(
+        cards
+          .filter((card): card is Doc<"cards"> => card !== null)
+          .map((card) => [card._id, card] as const),
+      );
+
+      const nextCardId = pickPlaylistCardId(
+        playlistIds,
+        cardsById,
+        now,
+        device.pinnedCardId,
+        device.pinnedUntil,
+      );
+      if (!nextCardId) {
+        continue;
+      }
+
+      const nextCard = cardsById.get(nextCardId);
+      if (!nextCard?.compiledStorageId) {
+        continue;
+      }
+
+      const scene = device.activeSceneId ? await ctx.db.get("scenes", device.activeSceneId) : null;
+      const brightnessCeiling = scene?.brightnessCeiling ?? device.brightnessCeiling;
+
+      if (
+        device.playlistCardId === nextCardId &&
+        device.programStorageId === nextCard.compiledStorageId &&
+        device.brightnessCeiling === brightnessCeiling
+      ) {
+        continue;
+      }
+
+      const hashSource = `${nextCard.compiledStorageId}:${nextCard.updatedAt}:${nextCardId}`;
+      rotated += 1;
+      await ctx.db.patch("devices", device._id, {
+        playlistCardId: nextCardId,
+        programStorageId: nextCard.compiledStorageId,
+        programVersion: device.programVersion + 1,
+        programEtag: toEtag(await sha256Hex(hashSource)),
+        brightnessCeiling,
+      });
+    }
+
+    return { rotated };
   },
 });
 

@@ -278,6 +278,15 @@ export async function pinCardLive(input: PinCardInput): Promise<DashboardDevice>
   return (await requireClient().mutation(api.devices.pin, input as never)) as DashboardDevice;
 }
 
+export async function registerDeviceLive(input: {
+  name: string;
+  token: string;
+  fwVersion: string;
+  fwChannel: "dev" | "stable";
+}): Promise<DashboardDevice> {
+  return (await requireClient().mutation(api.devices.register, input as never)) as DashboardDevice;
+}
+
 export async function unpinCardLive(deviceId: string): Promise<DashboardDevice> {
   return (await requireClient().mutation(api.devices.unpin, { deviceId } as never)) as DashboardDevice;
 }

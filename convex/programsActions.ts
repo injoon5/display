@@ -42,13 +42,38 @@ function assertMxr1(bytecode: Uint8Array): void {
   }
 }
 
+async function uploadBytecode(
+  ctx: { storage: { generateUploadUrl: () => Promise<string> } },
+  bytecode: Uint8Array,
+): Promise<Id<"_storage">> {
+  // Prefer generateUploadUrl + POST. Direct `ctx.storage.store(Blob)` hits
+  // "BadHeader / Digest" on local anonymous Convex backends.
+  const uploadUrl = await ctx.storage.generateUploadUrl();
+  const uploadResponse = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/octet-stream",
+    },
+    body: Buffer.from(bytecode),
+  });
+  if (!uploadResponse.ok) {
+    const detail = await uploadResponse.text();
+    throw new Error(`Program upload failed (${uploadResponse.status}): ${detail}`);
+  }
+  const uploaded = (await uploadResponse.json()) as { storageId?: Id<"_storage"> };
+  if (!uploaded.storageId) {
+    throw new Error("Program upload missing storageId");
+  }
+  return uploaded.storageId;
+}
+
 /**
  * Canonical deploy path: always compile card sources with @matrix-panel/compiler
  * on the server. Client-supplied bytecode is never trusted.
  *
- * Firmware currently loads one MXR program blob. When multiple cards are selected,
- * the highest-priority card becomes the active program; every selected card still
- * gets its compiler artifacts persisted for slot frames / editor state.
+ * Each selected card gets its own MXR blob. The highest-priority card becomes the
+ * initial active program; `devices.rotatePlaylist` rotates through the playlist
+ * using each card's `dwellMs`.
  */
 export const compileAndDeploy = demoAction({
   args: {
@@ -80,6 +105,7 @@ export const compileAndDeploy = demoAction({
       Id<"cards">,
       {
         bytecode: Uint8Array;
+        bytecodeHash: string;
         slotMap: Array<{ index: number; path: string; type: string; sourceId: string }>;
         sources: string[];
         estimatedAmps: number;
@@ -101,6 +127,7 @@ export const compileAndDeploy = demoAction({
       assertMxr1(result.bytecode);
       compiledById.set(card._id, {
         bytecode: result.bytecode,
+        bytecodeHash: await sha256Hex(result.bytecode),
         slotMap: result.slotMap.map((slot) => ({
           index: slot.index,
           path: slot.path,
@@ -118,6 +145,12 @@ export const compileAndDeploy = demoAction({
       throw new Error("Primary card compile missing");
     }
 
+    const cardStorage: Array<{
+      cardId: Id<"cards">;
+      storageId: Id<"_storage">;
+      bytecodeHash: string;
+    }> = [];
+
     for (const card of cards) {
       const compiled = compiledById.get(card._id);
       if (!compiled) {
@@ -130,41 +163,31 @@ export const compileAndDeploy = demoAction({
         estimatedAmps: compiled.estimatedAmps,
         sourceRefs: compiled.sources,
       });
+      const storageId = await uploadBytecode(ctx, compiled.bytecode);
+      cardStorage.push({
+        cardId: card._id,
+        storageId,
+        bytecodeHash: compiled.bytecodeHash,
+      });
     }
 
-    const bytecode = primaryCompiled.bytecode;
-    const bytecodeHash = await sha256Hex(bytecode);
-
-    // Prefer generateUploadUrl + POST. Direct `ctx.storage.store(Blob)` hits
-    // "BadHeader / Digest" on local anonymous Convex backends.
-    const uploadUrl = await ctx.storage.generateUploadUrl();
-    const uploadResponse = await fetch(uploadUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-      },
-      body: Buffer.from(bytecode),
-    });
-    if (!uploadResponse.ok) {
-      const detail = await uploadResponse.text();
-      throw new Error(`Program upload failed (${uploadResponse.status}): ${detail}`);
+    const primaryStorage = cardStorage.find((entry) => entry.cardId === primary._id);
+    if (!primaryStorage) {
+      throw new Error("Primary card storage missing");
     }
-    const uploaded = (await uploadResponse.json()) as { storageId?: Id<"_storage"> };
-    if (!uploaded.storageId) {
-      throw new Error("Program upload missing storageId");
-    }
-    const storageId = uploaded.storageId;
 
     await ctx.runMutation(internal.devices.applyProgramDeployment, {
       deviceId: args.deviceId,
       cardIds: args.cardIds,
-      storageId,
-      bytecodeHash,
+      primaryCardId: primary._id,
+      cardStorage,
+      storageId: primaryStorage.storageId,
+      bytecodeHash: primaryStorage.bytecodeHash,
     });
 
     return {
-      etag: toEtag(bytecodeHash),
-      size: bytecode.length,
+      etag: toEtag(primaryStorage.bytecodeHash),
+      size: primaryCompiled.bytecode.length,
       warnings,
     };
   },

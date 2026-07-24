@@ -320,4 +320,22 @@ http.route({
   }),
 });
 
+http.route({
+  path: "/api/health",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    const devices = await ctx.runQuery(internal.devices.listInternal, {});
+    const online = devices.filter((device) => device.online).length;
+    return Response.json({
+      ok: true,
+      service: "wall-matrix-panel",
+      devices: {
+        total: devices.length,
+        online,
+      },
+      ts: Date.now(),
+    });
+  }),
+});
+
 export default http;

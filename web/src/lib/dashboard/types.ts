@@ -28,6 +28,7 @@ export type DashboardDevice = {
   _creationTime: number;
   _id: string;
   activeSceneId?: string;
+  brightnessCeiling?: number;
   dataEtag: string;
   dataVersion: number;
   fwChannel: "dev" | "stable";
@@ -37,6 +38,8 @@ export type DashboardDevice = {
   online: boolean;
   pinnedCardId?: string;
   pinnedUntil?: number;
+  playlistCardId?: string;
+  playlistCardIds?: string[];
   programEtag: string;
   programStorageId?: string;
   programVersion: number;

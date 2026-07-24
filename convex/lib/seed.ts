@@ -25,9 +25,14 @@ const seedSources = [
     data: {
       eta_min: 4,
       next_eta_min: 12,
+      eta2_min: 8,
+      next2_eta_min: 21,
+      eta3_min: 12,
+      next3_eta_min: 27,
       crowding: 2,
       headsign: "402번 강남역 방면",
       urgent: false,
+      route: "402",
     },
   },
   {
@@ -81,6 +86,9 @@ const seedSources = [
       isPlaying: true,
       track: "Seoul",
       artist: "Balming Tiger",
+      title: "Seoul",
+      playing: true,
+      ago: "NOW PLAYING",
     },
   },
   {
@@ -93,6 +101,49 @@ const seedSources = [
       failingChecks: 0,
       openPullRequests: 2,
       latest: "Convex backend bootstrap",
+      total: 1284,
+      streak: 47,
+      contributions: 1284,
+      contributionStreak: 47,
+    },
+  },
+  {
+    sourceId: "fx",
+    kind: "fx.usdkrw",
+    config: { pair: "USD/KRW" },
+    intervalMs: 1_800_000,
+    origin: "convex" as const,
+    data: {
+      usdKrw: 1384.2,
+      rate: 1384,
+      change_pct: 0.4,
+      changePct: 0.4,
+      asOf: "2026-07-24T13:20:00+09:00",
+    },
+  },
+  {
+    sourceId: "todo",
+    kind: "todo.list",
+    config: { list: "personal" },
+    intervalMs: 300_000,
+    origin: "convex" as const,
+    data: {
+      total: 5,
+      done: 2,
+      i1: "Ship the display",
+      i2: "Buy oat milk",
+      i3: "Call mom",
+    },
+  },
+  {
+    sourceId: "dday",
+    kind: "dday.countdown",
+    config: { label: "EXAM", target: "2026-11-29" },
+    intervalMs: 3_600_000,
+    origin: "convex" as const,
+    data: {
+      days: 128,
+      label: "EXAM",
     },
   },
   {
@@ -472,8 +523,11 @@ export const seedDemo = dashboardMutation({
 
     const daySceneId = sceneIdByName.get("day");
     if (daySceneId) {
+      const dayScene = await ctx.db.get("scenes", daySceneId);
       await ctx.db.patch("devices", deviceId, {
         activeSceneId: daySceneId,
+        brightnessCeiling: dayScene?.brightnessCeiling ?? 100,
+        playlistCardIds: dayScene?.cardIds ?? [],
       });
     }
 

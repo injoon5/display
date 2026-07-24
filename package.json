@@ -7,7 +7,6 @@
     "compiler",
     "emulator",
     "fetcher",
-    "packages/*",
     "web"
   ],
   "scripts": {
@@ -23,9 +22,11 @@
     "lint:compiler": "npm run typecheck -w @matrix-panel/compiler",
     "lint:fetcher": "npm run typecheck -w @wall-matrix-panel/fetcher",
     "lint:web": "npm run check -w web",
+    "preview:cards": "node scripts/preview-cards.mjs",
     "stack": "node scripts/dev-stack.mjs",
     "stack:bootstrap": "node scripts/dev-stack.mjs --bootstrap-only",
     "stack:doctor": "node scripts/dev-stack.mjs --doctor",
+    "sync:seed-cards": "node scripts/sync-seed-cards.mjs",
     "test": "npm run test -w compiler && npm run golden",
     "typecheck": "npm run typecheck -w compiler && npm run typecheck -w fetcher && npm run typecheck -w @matrix-panel/emulator && npm run typecheck:convex && npm run web:check",
     "typecheck:convex": "tsc -p convex/tsconfig.json --noEmit",

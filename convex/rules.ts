@@ -291,8 +291,16 @@ export const evaluate = internalMutation({
           });
           break;
         }
-        case "brightness":
+        case "brightness": {
+          if (typeof activeRule.action.value !== "number") {
+            break;
+          }
+          updated += 1;
+          await ctx.db.patch("devices", device._id, {
+            brightnessCeiling: Math.max(0, Math.min(100, activeRule.action.value)),
+          });
           break;
+        }
         default: {
           const exhaustiveCheck: never = activeRule.action.kind as never;
           void exhaustiveCheck;

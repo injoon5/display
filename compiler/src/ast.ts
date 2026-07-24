@@ -55,6 +55,7 @@ export interface ElementNode extends BaseNode {
     | "box"
     | "col"
     | "frect"
+    | "fx"
     | "icon"
     | "line"
     | "pixel"

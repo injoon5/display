@@ -260,6 +260,7 @@ class Parser {
       "box",
       "col",
       "frect",
+      "fx",
       "icon",
       "line",
       "pixel",

@@ -2,7 +2,7 @@ CC ?= gcc
 CFLAGS ?= -std=c99 -Wall -Wextra -Wpedantic -O2
 LDFLAGS ?= -lm
 
-LIBMXR_SRCS := vm.c raster.c text.c fonts.c anim.c gamma.c
+LIBMXR_SRCS := vm.c raster.c text.c fonts.c anim.c gamma.c effects.c
 NATIVE_BIN := test_native
 VALIDATE_BIN := validate_file
 RENDER_BIN := render_ppm

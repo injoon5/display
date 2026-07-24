@@ -53,6 +53,18 @@ export interface IconDrawable {
   y: number;
 }
 
+export interface FxDrawable {
+  arg: number;
+  color: LiteralOrExpr<string>;
+  fx: number;
+  h: number;
+  kind: "fx";
+  span: Span;
+  w: number;
+  x: number;
+  y: number;
+}
+
 export interface GroupNode {
   blinkRateMs?: number;
   children: RenderNode[];
@@ -61,7 +73,7 @@ export interface GroupNode {
   test?: Expr;
 }
 
-export type DrawNode = BarDrawable | IconDrawable | RectDrawable | TextDrawable;
+export type DrawNode = BarDrawable | FxDrawable | IconDrawable | RectDrawable | TextDrawable;
 export type RenderNode = DrawNode | GroupNode;
 
 export interface LayoutResult {
@@ -388,6 +400,25 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
         span: node.span,
         x,
         y
+      }
+    ];
+  }
+
+  if (node.tagName === "fx") {
+    const kinds: Record<string, number> = { starfield: 0, warp: 0, matrix: 1, fire: 2, fireplace: 2, life: 3, conway: 3, flow: 4, rain: 5, vu: 6 };
+    const kindName = literalValue(node.attrs, "kind") ?? "starfield";
+    const fx = kinds[kindName] ?? 0;
+    return [
+      {
+        arg: parseInteger(node.attrs, "arg", node.span, diagnostics, 0) ?? 0,
+        color: colorValue(node.attrs, "color", "#8fb8ff"),
+        fx,
+        h: parseInteger(node.attrs, "h", node.span, diagnostics, 32) ?? 32,
+        kind: "fx",
+        span: node.span,
+        w: parseInteger(node.attrs, "w", node.span, diagnostics, 64) ?? 64,
+        x: parseInteger(node.attrs, "x", node.span, diagnostics, 0) ?? 0,
+        y: parseInteger(node.attrs, "y", node.span, diagnostics, 0) ?? 0
       }
     ];
   }

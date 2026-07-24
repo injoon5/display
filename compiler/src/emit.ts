@@ -13,6 +13,7 @@ const OPCODES = {
   BLIT: 0x30,
   BLITC: 0x31,
   FRECT: 0x10,
+  FX: 0x70,
   HALT: 0xff,
   JMP: 0x40,
   JMPCMP: 0x42,
@@ -483,6 +484,16 @@ function emitDrawNode(writer: ByteWriter, node: DrawNode, context: TypecheckCont
     }
     case "bar":
       emitBar(writer, node, context, slots, diagnostics);
+      return;
+    case "fx":
+      writer.writeU8(OPCODES.FX);
+      writer.writeU8(node.fx);
+      writer.writeU8(node.x);
+      writer.writeU8(node.y);
+      writer.writeU8(node.w);
+      writer.writeU8(node.h);
+      writer.writeU16(ensureLiteralColor(node.color.value ?? "#8fb8ff", diagnostics, node.span));
+      writer.writeU8(node.arg);
       return;
     default: {
       const exhaustive: never = node;

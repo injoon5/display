@@ -1,13 +1,13 @@
 <card id="bus-402" name="Bus" priority="90">
   <source id="bus" kind="seoul.bus" arsId="23-005" route="402" every="20s" />
   <text x="2" y="2" font="5x7" color="#f0a030">402</text>
-  <text x="21" y="2" font="5x7" color="#f0f0f0">{{ bus.eta_min }}m</text>
-  <text x="41" y="2" font="5x7" color="#7c8a86">{{ bus.next_eta_min | default('--') }}m</text>
+  <text x="28" y="2" font="5x7" color="#f0f0f0">{{ bus.eta_min }}'</text>
+  <text x="47" y="2" font="5x7" color="#7c8a86">{{ bus.next_eta_min | default('--') }}'</text>
   <text x="2" y="13" font="5x7" color="#52d6a7">146</text>
-  <text x="21" y="13" font="5x7" color="#f0f0f0">{{ bus.eta2_min | default('--') }}m</text>
-  <text x="41" y="13" font="5x7" color="#7c8a86">{{ bus.next2_eta_min | default('--') }}m</text>
-  <text x="2" y="24" font="5x7" color="#6fb1ff">341</text>
-  <text x="21" y="24" font="5x7" color="#f0f0f0">{{ bus.eta3_min | default('--') }}m</text>
-  <text x="41" y="24" font="5x7" color="#7c8a86">{{ bus.next3_eta_min | default('--') }}m</text>
+  <text x="28" y="13" font="5x7" color="#f0f0f0">{{ bus.eta2_min | default('--') }}'</text>
+  <text x="47" y="13" font="5x7" color="#7c8a86">{{ bus.next2_eta_min | default('--') }}'</text>
+  <text x="2" y="24" font="5x7" color="#6fb1ff">6411</text>
+  <text x="28" y="24" font="5x7" color="#f0f0f0">{{ bus.eta3_min | default('--') }}'</text>
+  <text x="47" y="24" font="5x7" color="#7c8a86">{{ bus.next3_eta_min | default('--') }}'</text>
   <stale after="90s" style="dim" />
 </card>

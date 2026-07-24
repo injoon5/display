@@ -389,6 +389,10 @@ static int validate_code(const mxr_program_view_t *view, mxr_diag_t *diag) {
                 if (remain < 4u) goto bad_bounds;
                 pc += 4;
                 break;
+            case MXR_OP_FX:
+                if (remain < 8u) goto bad_bounds;
+                pc += 8;
+                break;
             case MXR_OP_TEXT:
                 if (remain < 6u) goto bad_bounds;
                 if ((pc[5] & 0x80u) != 0u) {
@@ -574,6 +578,7 @@ static int validate_code(const mxr_program_view_t *view, mxr_diag_t *diag) {
             case MXR_OP_FRECT: case MXR_OP_RECT: pc += 6; break;
             case MXR_OP_LINE: pc += 6; break;
             case MXR_OP_PIXEL: pc += 4; break;
+            case MXR_OP_FX: pc += 8; break;
             case MXR_OP_GRADV: pc += 8; break;
             case MXR_OP_TEXT: pc += 6; break;
             case MXR_OP_MARQUEE: pc += 8; break;
@@ -713,6 +718,12 @@ int mxr_render(mxr_ctx_t *ctx) {
                 uint16_t c0 = mxr_dim_color(rd16(pc + 4), (uint8_t)current_dim(dim_stack, dim_depth));
                 uint16_t c1 = mxr_dim_color(rd16(pc + 6), (uint8_t)current_dim(dim_stack, dim_depth));
                 mxr_raster_gradv(ctx->fb, &clip_stack[clip_depth - 1], tx + pc[0], ty + pc[1], pc[2], pc[3], c0, c1);
+                pc += 8;
+                break;
+            }
+            case MXR_OP_FX: {
+                uint16_t color = mxr_dim_color(rd16(pc + 5), (uint8_t)current_dim(dim_stack, dim_depth));
+                mxr_fx_render(ctx->fb, &clip_stack[clip_depth - 1], pc[0], tx + pc[1], ty + pc[2], pc[3], pc[4], color, pc[7], ctx->t_ms);
                 pc += 8;
                 break;
             }

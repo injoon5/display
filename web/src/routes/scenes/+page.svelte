@@ -79,11 +79,16 @@
   }
 </script>
 
+<header class="mb-4 flex flex-col gap-1">
+  <h1 class="text-xl font-semibold tracking-tight">Scenes</h1>
+  <p class="text-sm text-muted-foreground">Build and schedule card playlists.</p>
+</header>
+
 <div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
   <section class="overflow-hidden rounded-xl border bg-card/40">
     <div class="border-b px-4 py-3">
-      <h2 class="text-sm font-semibold">Scenes</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Build and schedule card playlists.</p>
+      <h2 class="text-sm font-semibold">All scenes</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Select a scene to edit.</p>
     </div>
     {#if $scenes.length === 0}
       <Empty.Root class="border-none py-6">
@@ -107,6 +112,7 @@
             <Table.Row
               class="cursor-pointer"
               data-state={selectedSceneId === scene._id ? "selected" : undefined}
+              aria-selected={selectedSceneId === scene._id}
               onclick={() => (selectedSceneId = scene._id)}
               onkeydown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -114,7 +120,6 @@
                   selectedSceneId = scene._id;
                 }
               }}
-              role="button"
               tabindex={0}
             >
               <Table.Cell class="font-medium">{scene.name}</Table.Cell>

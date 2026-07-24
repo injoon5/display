@@ -22,11 +22,16 @@
   }
 </script>
 
+<header class="mb-4 flex flex-col gap-1">
+  <h1 class="text-xl font-semibold tracking-tight">Publish Firmware</h1>
+  <p class="text-sm text-muted-foreground">Publish a release for your panels to download.</p>
+</header>
+
 <div class="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
   <Card.Root>
     <Card.Header>
-      <Card.Title class="text-xl">Publish Firmware</Card.Title>
-      <Card.Description>Publish a release for your panels to download.</Card.Description>
+      <Card.Title>New release</Card.Title>
+      <Card.Description>Version, channel, and download details.</Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
       <div class="flex flex-col gap-1.5">

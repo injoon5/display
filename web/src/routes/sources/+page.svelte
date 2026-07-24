@@ -74,11 +74,16 @@
   }
 </script>
 
+<header class="mb-4 flex flex-col gap-1">
+  <h1 class="text-xl font-semibold tracking-tight">Sources</h1>
+  <p class="text-sm text-muted-foreground">View and update the data each card reads.</p>
+</header>
+
 <div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
   <section class="overflow-hidden rounded-xl border bg-card/40">
     <div class="border-b px-4 py-3">
-      <h2 class="text-sm font-semibold">Sources</h2>
-      <p class="mt-1 text-sm text-muted-foreground">View and update the data each card reads.</p>
+      <h2 class="text-sm font-semibold">All sources</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Select a source to inspect.</p>
     </div>
     {#if $sources.length === 0}
       <Empty.Root class="border-none py-6">
@@ -101,6 +106,7 @@
             <Table.Row
               class="cursor-pointer"
               data-state={selectedSourceId === source.sourceId ? "selected" : undefined}
+              aria-selected={selectedSourceId === source.sourceId}
               onclick={() => (selectedSourceId = source.sourceId)}
               onkeydown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -108,7 +114,6 @@
                   selectedSourceId = source.sourceId;
                 }
               }}
-              role="button"
               tabindex={0}
             >
               <Table.Cell class="font-medium">{source.sourceId}</Table.Cell>

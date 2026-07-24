@@ -56,15 +56,20 @@
   }
 </script>
 
+<header class="mb-4 flex flex-col gap-1">
+  <h1 class="text-xl font-semibold tracking-tight">Set Up Panel</h1>
+  <p class="text-sm text-muted-foreground">Connect a panel to Wi‑Fi and claim it.</p>
+</header>
+
 <div class="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
   <Card.Root>
     <Card.Header class="flex flex-col gap-2">
       <StatusBadge tone={bluetoothAvailable ? "success" : "warning"}>
         {bluetoothAvailable ? "Bluetooth Ready" : "Demo"}
       </StatusBadge>
-      <Card.Title class="text-xl">Set Up Panel</Card.Title>
+      <Card.Title>Panel details</Card.Title>
       <Card.Description>
-        Connect a panel to Wi‑Fi and claim it.
+        Name the panel and join a network.
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">

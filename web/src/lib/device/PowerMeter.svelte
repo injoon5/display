@@ -32,11 +32,11 @@
   });
 </script>
 
-<Card.Root size="sm">
+<Card.Root size="sm" class="glass border-0 shadow-none">
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
       <Card.Title>Power</Card.Title>
-      <Card.Description>Estimated current against your budget.</Card.Description>
+      <Card.Description>Estimated draw vs budget.</Card.Description>
     </div>
     <StatusBadge tone={tone} class="tabular">{amps.toFixed(2)} A</StatusBadge>
   </Card.Header>

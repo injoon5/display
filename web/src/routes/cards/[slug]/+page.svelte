@@ -141,7 +141,7 @@
           <StatusBadge tone="success">Editing</StatusBadge>
           <StatusBadge tone="warning">{card.slug}</StatusBadge>
         </div>
-        <Card.Title class="text-xl">{card.name}</Card.Title>
+        <h1 class="text-xl font-semibold tracking-tight">{card.name}</h1>
         <Card.Description>
           Edit the card and preview it live.
         </Card.Description>

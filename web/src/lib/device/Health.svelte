@@ -8,22 +8,23 @@
     device: DashboardDevice | null;
     statusLabel: string;
     telemetry: DashboardTelemetry;
+    nowMs?: number;
   };
 
-  let { device, statusLabel, telemetry }: Props = $props();
+  let { device, statusLabel, telemetry, nowMs }: Props = $props();
 
   function minutesAgo(value: number): string {
-    const delta = Math.max(0, Date.now() - value);
+    const delta = Math.max(0, (nowMs ?? Date.now()) - value);
     if (delta < 60_000) return `${Math.round(delta / 1000)}s ago`;
     return `${Math.round(delta / 60_000)}m ago`;
   }
 </script>
 
-<Card.Root size="sm">
+<Card.Root size="sm" class="glass border-0 shadow-none">
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
       <Card.Title>Status</Card.Title>
-      <Card.Description>Connection, firmware, and sensors.</Card.Description>
+      <Card.Description>Connection and sensors.</Card.Description>
     </div>
     <StatusBadge tone={device?.online ? "success" : "destructive"}>
       {device?.online ? "Online" : "Offline"}

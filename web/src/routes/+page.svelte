@@ -11,6 +11,7 @@
     getActiveScene,
     primaryDevice,
     rules,
+    scenes,
     sources,
     telemetry,
   } from "$lib/convex";
@@ -75,7 +76,16 @@
     </Card.Root>
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-      <Mirror card={activeCard} nowMs={nowMs} snapshot={snapshot} />
+      <Mirror
+        card={activeCard}
+        cards={$cards}
+        device={device}
+        nowMs={nowMs}
+        scene={scene}
+        scenes={$scenes}
+        snapshot={snapshot}
+        telemetry={$telemetry}
+      />
       <div class="flex flex-col gap-4">
         <Health device={device} statusLabel={statusLabel} telemetry={$telemetry} />
         <PowerMeter amps={$telemetry.estAmps} budget={4} label="telemetry draw" />

@@ -1,42 +1,47 @@
 <script lang="ts">
-  import { blitFramebuffer, locateHotspot, type RenderHotspot } from "$lib/mxr";
+  import {
+    blitLedMatrix,
+    locateHotspot,
+    matrixPixelFromEvent,
+    type RenderHotspot,
+  } from "$lib/mxr";
 
   type Props = {
+    brightness?: number;
     class?: string;
     framebuffer: Uint16Array;
+    glow?: boolean;
     hotspots?: RenderHotspot[];
     hovered?: RenderHotspot | null;
-    scale?: number;
+    pitch?: number;
     title?: string;
   };
 
   let {
+    brightness = 100,
     class: className = "",
     framebuffer,
+    glow = true,
     hotspots = [],
     hovered = $bindable<RenderHotspot | null>(null),
-    scale = 8,
-    title = "Matrix framebuffer"
+    pitch = 10,
+    title = "Matrix framebuffer",
   }: Props = $props();
 
   let canvas = $state<HTMLCanvasElement | null>(null);
 
   $effect(() => {
-    if (!canvas) {
-      return;
-    }
-    blitFramebuffer(canvas, framebuffer, scale);
+    if (!canvas) return;
+    blitLedMatrix(canvas, framebuffer, { brightness, fill: 0.58, glow, pitch });
   });
 
   function handleMove(event: MouseEvent): void {
-    const bounds = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : null;
-    if (!bounds) {
+    if (!(event.currentTarget instanceof HTMLElement)) {
       hovered = null;
       return;
     }
-    const x = Math.floor((event.clientX - bounds.left) / scale);
-    const y = Math.floor((event.clientY - bounds.top) / scale);
-    hovered = locateHotspot(hotspots, x, y);
+    const pixel = matrixPixelFromEvent(event, event.currentTarget, pitch);
+    hovered = pixel ? locateHotspot(hotspots, pixel.x, pixel.y) : null;
   }
 
   function handleLeave(): void {
@@ -46,16 +51,22 @@
 
 <div
   aria-label={title}
-  class={`relative inline-flex rounded-2xl border border-[color:var(--line)] bg-black/60 p-2 ${className}`}
+  class={`relative inline-flex overflow-hidden bg-black ${className}`}
   onmousemove={handleMove}
   onmouseleave={handleLeave}
   role="img"
 >
-  <canvas bind:this={canvas} aria-label={title} class="block rounded-lg bg-black shadow-[0_0_0_1px_rgba(255,255,255,0.03)]" height="256" width="512"></canvas>
+  <canvas
+    bind:this={canvas}
+    aria-label={title}
+    class="block"
+    height={32 * pitch}
+    width={64 * pitch}
+  ></canvas>
   {#if hovered}
     <div
-      class="pointer-events-none absolute rounded-md border border-amber-400/60 bg-amber-400/10"
-      style={`left:${hovered.x * scale + 8}px;top:${hovered.y * scale + 8}px;width:${Math.max(1, hovered.w) * scale}px;height:${Math.max(1, hovered.h) * scale}px;`}
+      class="pointer-events-none absolute rounded-[1px] border border-amber-300/70 bg-amber-300/15 shadow-[0_0_12px_rgba(251,191,36,0.35)]"
+      style={`left:${(hovered.x / 64) * 100}%;top:${(hovered.y / 32) * 100}%;width:${(Math.max(1, hovered.w) / 64) * 100}%;height:${(Math.max(1, hovered.h) / 32) * 100}%;`}
     ></div>
   {/if}
 </div>

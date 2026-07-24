@@ -16,7 +16,6 @@
     sources,
     telemetry
   } from "$lib/convex";
-  import Mirror from "$lib/device/Mirror.svelte";
   import IconLibrary from "$lib/design/IconLibrary.svelte";
   import CardEditor from "$lib/editor/CardEditor.svelte";
   import Diagnostics from "$lib/editor/Diagnostics.svelte";
@@ -205,7 +204,6 @@
     <div class="flex flex-col gap-4">
       <div class="grid gap-4 xl:grid-cols-2 2xl:grid-cols-1">
         <Preview bind:hovered {compiled} {nowMs} {source} snapshot={snapshot} />
-        <Mirror card={card} {nowMs} snapshot={snapshot} />
       </div>
       <SlotInspector hovered={hovered} slotMap={compiled?.slotMap ?? []} snapshot={snapshot} />
       <SimulatePanel bind:nowMs bind:overrides slotMap={compiled?.slotMap ?? []} snapshot={snapshot} />

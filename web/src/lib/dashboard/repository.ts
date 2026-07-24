@@ -1,26 +1,37 @@
 import { compile } from "$lib/compiler";
 import {
+  activateSceneLive,
   deployCardLive,
   hasLiveClient,
+  pinCardLive,
+  pokeLive,
   publishFirmwareLive,
   saveCardLive,
   saveRuleLive,
   saveSceneLive,
   seedLiveDemo as seedLiveDemoLive,
+  simulateTelemetryLive,
+  unpinCardLive,
   writeSourceLive,
 } from "./live-client";
 import { mockState, resetMockState } from "./mock-store";
 import type {
+  ActivateSceneInput,
   DashboardCard,
+  DashboardDevice,
   DashboardDiagnostic,
   DashboardFirmware,
   DashboardRule,
   DashboardScene,
+  DashboardTelemetry,
   DeployCardResult,
+  PinCardInput,
+  PokeInput,
   PublishFirmwareInput,
   SaveCardInput,
   SaveRuleInput,
   SaveSceneInput,
+  SimulateTelemetryInput,
   WriteSourceInput,
 } from "./types";
 
@@ -248,4 +259,143 @@ export async function publishFirmware(input: PublishFirmwareInput): Promise<void
     ...state,
     firmware: [next, ...state.firmware],
   }));
+}
+
+export async function pinCard(input: PinCardInput): Promise<DashboardDevice> {
+  if (hasLiveClient()) {
+    return await pinCardLive(input);
+  }
+
+  let updated: DashboardDevice | null = null;
+  mockState.update((state) => {
+    const devices = state.devices.map((device) => {
+      if (device._id !== input.deviceId) return device;
+      updated = {
+        ...device,
+        dataVersion: device.dataVersion + 1,
+        pinnedCardId: input.cardId,
+        pinnedUntil: Date.now() + (input.durationMs ?? 60_000),
+      };
+      return updated;
+    });
+    return { ...state, devices };
+  });
+
+  if (!updated) throw new Error("Device not found");
+  return updated;
+}
+
+export async function unpinCard(deviceId: string): Promise<DashboardDevice> {
+  if (hasLiveClient()) {
+    return await unpinCardLive(deviceId);
+  }
+
+  let updated: DashboardDevice | null = null;
+  mockState.update((state) => {
+    const devices = state.devices.map((device) => {
+      if (device._id !== deviceId) return device;
+      updated = {
+        ...device,
+        dataVersion: device.dataVersion + 1,
+        pinnedCardId: undefined,
+        pinnedUntil: undefined,
+      };
+      return updated;
+    });
+    return { ...state, devices };
+  });
+
+  if (!updated) throw new Error("Device not found");
+  return updated;
+}
+
+export async function activateScene(input: ActivateSceneInput): Promise<DashboardDevice> {
+  if (hasLiveClient()) {
+    return await activateSceneLive(input);
+  }
+
+  let updated: DashboardDevice | null = null;
+  mockState.update((state) => {
+    const scene = state.scenes.find((entry) => entry._id === input.sceneId);
+    if (!scene) throw new Error("Scene not found");
+
+    const devices = state.devices.map((device) => {
+      if (device._id !== input.deviceId) return device;
+      updated = {
+        ...device,
+        activeSceneId: input.sceneId,
+        dataVersion: device.dataVersion + 1,
+        pinnedCardId: undefined,
+        pinnedUntil: undefined,
+      };
+      return updated;
+    });
+    return { ...state, devices };
+  });
+
+  if (!updated) throw new Error("Device not found");
+  return updated;
+}
+
+export async function simulateTelemetry(input: SimulateTelemetryInput): Promise<DashboardTelemetry> {
+  if (hasLiveClient()) {
+    return await simulateTelemetryLive(input);
+  }
+
+  let next: DashboardTelemetry | null = null;
+  mockState.update((state) => {
+    next = {
+      ...state.telemetry,
+      at: Date.now(),
+      brightness: input.brightness ?? state.telemetry.brightness,
+      estAmps: input.estAmps ?? state.telemetry.estAmps,
+      lux: input.lux ?? state.telemetry.lux,
+      presenceBed: input.presenceBed ?? state.telemetry.presenceBed,
+      presenceRoom: input.presenceRoom ?? state.telemetry.presenceRoom,
+    };
+    return {
+      ...state,
+      devices: state.devices.map((device) =>
+        device._id === input.deviceId
+          ? { ...device, lastSeen: Date.now(), online: true }
+          : device,
+      ),
+      telemetry: next,
+    };
+  });
+
+  if (!next) throw new Error("Telemetry simulate failed");
+  return next;
+}
+
+export async function poke(input: PokeInput): Promise<void> {
+  if (hasLiveClient()) {
+    await pokeLive(input);
+    return;
+  }
+
+  await writeSource({
+    data: {
+      message: input.message.trim(),
+      updatedAt: new Date().toISOString(),
+    },
+    intervalMs: 60_000,
+    kind: "local.poke",
+    origin: "convex",
+    sourceId: "poke",
+  });
+
+  let selfStatusId: string | null = null;
+  mockState.update((state) => {
+    selfStatusId = state.cards.find((card) => card.slug === "self-status")?._id ?? null;
+    return state;
+  });
+
+  if (selfStatusId) {
+    await pinCard({
+      cardId: selfStatusId,
+      deviceId: input.deviceId,
+      durationMs: input.durationMs ?? 10_000,
+    });
+  }
 }

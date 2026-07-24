@@ -184,6 +184,60 @@ export const claim = dashboardMutation({
   },
 });
 
+export const pin = dashboardMutation({
+  args: {
+    deviceId: v.id("devices"),
+    cardId: v.id("cards"),
+    durationMs: v.optional(v.number()),
+  },
+  returns: deviceValidator,
+  handler: async (ctx, args) => {
+    const device = await ctx.db.get("devices", args.deviceId);
+    if (!device) {
+      throw new Error("Device not found");
+    }
+    const card = await ctx.db.get("cards", args.cardId);
+    if (!card) {
+      throw new Error("Card not found");
+    }
+
+    await ctx.db.patch("devices", args.deviceId, {
+      pinnedCardId: args.cardId,
+      pinnedUntil: Date.now() + (args.durationMs ?? 60_000),
+    });
+    await bumpAllDevicesDataEtag(ctx, "pin-card");
+
+    const updated = await ctx.db.get("devices", args.deviceId);
+    if (!updated) {
+      throw new Error("Pin update failed");
+    }
+    return updated;
+  },
+});
+
+export const unpin = dashboardMutation({
+  args: { deviceId: v.id("devices") },
+  returns: deviceValidator,
+  handler: async (ctx, args) => {
+    const device = await ctx.db.get("devices", args.deviceId);
+    if (!device) {
+      throw new Error("Device not found");
+    }
+
+    await ctx.db.patch("devices", args.deviceId, {
+      pinnedCardId: undefined,
+      pinnedUntil: undefined,
+    });
+    await bumpAllDevicesDataEtag(ctx, "clear-pin");
+
+    const updated = await ctx.db.get("devices", args.deviceId);
+    if (!updated) {
+      throw new Error("Clear pin failed");
+    }
+    return updated;
+  },
+});
+
 export const pinCard = internalMutation({
   args: {
     deviceId: v.id("devices"),

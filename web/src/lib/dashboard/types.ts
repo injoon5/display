@@ -195,5 +195,31 @@ export type PublishFirmwareInput = {
   version: string;
 };
 
+export type PinCardInput = {
+  cardId: string;
+  deviceId: string;
+  durationMs?: number;
+};
+
+export type ActivateSceneInput = {
+  deviceId: string;
+  sceneId: string;
+};
+
+export type SimulateTelemetryInput = {
+  brightness?: number;
+  deviceId: string;
+  estAmps?: number;
+  lux?: number;
+  presenceBed?: boolean;
+  presenceRoom?: boolean;
+};
+
+export type PokeInput = {
+  deviceId: string;
+  durationMs?: number;
+  message: string;
+};
+
 export type LiveDashboardState = DashboardState;
 export type PartialLiveDashboardState = Partial<LiveDashboardState>;

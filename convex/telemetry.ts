@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
-import { dashboardQuery } from "./auth";
+import { dashboardMutation, dashboardQuery } from "./auth";
+import { bumpAllDevicesDataEtag } from "./devices";
 
 export const telemetryValidator = v.object({
   _id: v.id("telemetry"),
@@ -72,6 +73,60 @@ export const record = internalMutation({
     const saved = await ctx.db.get("telemetry", telemetryId);
     if (!saved) {
       throw new Error("Telemetry record failed");
+    }
+    return saved;
+  },
+});
+
+/** Dashboard-only sensor simulation for local emulation / HomeKit mirrors. */
+export const simulate = dashboardMutation({
+  args: {
+    deviceId: v.id("devices"),
+    brightness: v.optional(v.number()),
+    lux: v.optional(v.number()),
+    presenceRoom: v.optional(v.boolean()),
+    presenceBed: v.optional(v.boolean()),
+    estAmps: v.optional(v.number()),
+  },
+  returns: telemetryValidator,
+  handler: async (ctx, args) => {
+    const device = await ctx.db.get("devices", args.deviceId);
+    if (!device) {
+      throw new Error("Device not found");
+    }
+
+    const latest = await ctx.db
+      .query("telemetry")
+      .withIndex("by_device_time", (q) => q.eq("deviceId", args.deviceId))
+      .order("desc")
+      .first();
+
+    const at = Date.now();
+    const telemetryId = await ctx.db.insert("telemetry", {
+      deviceId: args.deviceId,
+      at,
+      rssi: latest?.rssi ?? -50,
+      heapFree: latest?.heapFree ?? 180_000,
+      brightness: args.brightness ?? latest?.brightness ?? 48,
+      lux: args.lux ?? latest?.lux ?? 120,
+      tempC: latest?.tempC ?? 36.5,
+      humidity: latest?.humidity ?? 41,
+      presenceRoom: args.presenceRoom ?? latest?.presenceRoom ?? false,
+      presenceBed: args.presenceBed ?? latest?.presenceBed ?? false,
+      estAmps: args.estAmps ?? latest?.estAmps ?? 0.6,
+      governorActive: latest?.governorActive ?? false,
+      lastError: latest?.lastError,
+    });
+
+    await ctx.db.patch("devices", args.deviceId, {
+      online: true,
+      lastSeen: at,
+    });
+    await bumpAllDevicesDataEtag(ctx, "telemetry-simulate");
+
+    const saved = await ctx.db.get("telemetry", telemetryId);
+    if (!saved) {
+      throw new Error("Telemetry simulate failed");
     }
     return saved;
   },

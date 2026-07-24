@@ -3,7 +3,7 @@
   import StatusBadge from "$lib/components/status-badge.svelte";
   import * as Card from "$lib/components/ui/card/index.js";
   import type { SlotSnapshot } from "$lib/convex";
-  import PixelCanvas from "$lib/design/PixelCanvas.svelte";
+  import LedMatrixPanel from "$lib/device/LedMatrixPanel.svelte";
   import { MXR_DIMENSIONS, render, type RenderHotspot } from "$lib/mxr";
 
   type Props = {
@@ -19,7 +19,7 @@
     hovered = $bindable<RenderHotspot | null>(null),
     nowMs,
     source,
-    snapshot
+    snapshot,
   }: Props = $props();
 
   let frame = $derived.by(() => {
@@ -27,10 +27,10 @@
       return {
         framebuffer: new Uint16Array(MXR_DIMENSIONS.width * MXR_DIMENSIONS.height),
         height: MXR_DIMENSIONS.height,
-        hotspots: [],
+        hotspots: [] as RenderHotspot[],
         mode: "bytecode" as const,
-        warnings: ["No compiled program"],
-        width: MXR_DIMENSIONS.width
+        warnings: ["No compiled program"] as string[],
+        width: MXR_DIMENSIONS.width,
       };
     }
     return render({
@@ -39,7 +39,7 @@
       slotMap: compiled.slotMap,
       slots: snapshot.byIndex,
       source,
-      sourceSlots: snapshot.byPath
+      sourceSlots: snapshot.byPath,
     });
   });
 </script>
@@ -48,7 +48,7 @@
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
       <Card.Title class="tracking-[0.18em] uppercase">Live preview</Card.Title>
-      <Card.Description>64×32 framebuffer with 8× nearest-neighbour upscale.</Card.Description>
+      <Card.Description>64×32 discrete LED matrix (HUB75-style).</Card.Description>
     </div>
     <div class="flex items-center gap-2">
       <StatusBadge tone="success">{frame.mode}</StatusBadge>
@@ -57,15 +57,13 @@
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-3">
-    <div class="overflow-hidden rounded-lg ring-1 ring-foreground/10">
-      <PixelCanvas
-        framebuffer={frame.framebuffer}
-        hotspots={frame.hotspots}
-        bind:hovered
-        scale={8}
-        title="Live card preview"
-      />
-    </div>
+    <LedMatrixPanel
+      framebuffer={frame.framebuffer}
+      hotspots={frame.hotspots}
+      pitch={8}
+      title="Live card preview"
+      bind:hovered
+    />
 
     {#if frame.warnings.length > 0}
       <div class="flex flex-col gap-2">

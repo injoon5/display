@@ -4,6 +4,7 @@ import { api } from "../../../../convex/_generated/api.js";
 import { ConvexClient } from "convex/browser";
 import { derived, get, writable } from "svelte/store";
 import type {
+  ActivateSceneInput,
   DashboardCard,
   DashboardDevice,
   DashboardFirmware,
@@ -14,10 +15,13 @@ import type {
   DashboardTelemetry,
   DeployCardResult,
   PartialLiveDashboardState,
+  PinCardInput,
+  PokeInput,
   PublishFirmwareInput,
   SaveCardInput,
   SaveRuleInput,
   SaveSceneInput,
+  SimulateTelemetryInput,
   WriteSourceInput,
 } from "./types";
 
@@ -271,4 +275,58 @@ export async function writeSourceLive(input: WriteSourceInput): Promise<void> {
 
 export async function publishFirmwareLive(input: PublishFirmwareInput): Promise<void> {
   await requireClient().mutation(api.firmware.publish, input as never);
+}
+
+export async function pinCardLive(input: PinCardInput): Promise<DashboardDevice> {
+  return (await requireClient().mutation(api.devices.pin, input as never)) as DashboardDevice;
+}
+
+export async function unpinCardLive(deviceId: string): Promise<DashboardDevice> {
+  return (await requireClient().mutation(api.devices.unpin, { deviceId } as never)) as DashboardDevice;
+}
+
+export async function activateSceneLive(input: ActivateSceneInput): Promise<DashboardDevice> {
+  return (await requireClient().mutation(api.scenes.activate, input as never)) as DashboardDevice;
+}
+
+export async function simulateTelemetryLive(input: SimulateTelemetryInput): Promise<DashboardTelemetry> {
+  const result = (await requireClient().mutation(api.telemetry.simulate, input as never)) as DashboardTelemetry & {
+    at: number;
+  };
+  return {
+    at: result.at,
+    brightness: result.brightness,
+    estAmps: result.estAmps,
+    governorActive: result.governorActive,
+    heapFree: result.heapFree,
+    humidity: result.humidity,
+    lux: result.lux,
+    presenceBed: result.presenceBed,
+    presenceRoom: result.presenceRoom,
+    rssi: result.rssi,
+    tempC: result.tempC,
+  };
+}
+
+export async function pokeLive(input: PokeInput): Promise<void> {
+  await writeSourceLive({
+    data: {
+      message: input.message.trim(),
+      updatedAt: new Date().toISOString(),
+    },
+    intervalMs: 60_000,
+    kind: "local.poke",
+    origin: "convex",
+    sourceId: "poke",
+  });
+
+  const cards = (await requireClient().query(api.cards.list, {})) as DashboardCard[];
+  const selfStatus = cards.find((card) => card.slug === "self-status");
+  if (selfStatus) {
+    await pinCardLive({
+      cardId: selfStatus._id,
+      deviceId: input.deviceId,
+      durationMs: input.durationMs ?? 10_000,
+    });
+  }
 }

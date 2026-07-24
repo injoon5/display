@@ -2,17 +2,23 @@ import { derived, get, type Readable } from "svelte/store";
 import { liveState, dashboardStatus } from "./live-client";
 import { mockState } from "./mock-store";
 import {
+  activateScene,
   deployCard,
+  pinCard,
+  poke,
   publishFirmware,
   resetMockState,
   saveCard,
   saveRule,
   saveScene,
   seedLiveDemo,
+  simulateTelemetry,
+  unpinCard,
   writeSource,
 } from "./repository";
 import { buildSlotSnapshot, resolvePath, setSlotSnapshotContext, sourceIdFromPath } from "./slot-snapshot";
 import type {
+  ActivateSceneInput,
   DashboardCard,
   DashboardDevice,
   DashboardDiagnostic,
@@ -24,6 +30,9 @@ import type {
   DashboardStatus,
   DashboardTelemetry,
   DeployCardResult,
+  PinCardInput,
+  PokeInput,
+  SimulateTelemetryInput,
   SlotSnapshot,
   SourceOrigin,
   SourceSlot,
@@ -62,9 +71,12 @@ export function getActiveScene(device: DashboardDevice | null): DashboardScene |
 }
 
 export {
+  activateScene,
   buildSlotSnapshot,
   dashboardStatus,
   deployCard,
+  pinCard,
+  poke,
   publishFirmware,
   resetMockState,
   resolvePath,
@@ -72,11 +84,14 @@ export {
   saveRule,
   saveScene,
   seedLiveDemo,
+  simulateTelemetry,
   sourceIdFromPath,
+  unpinCard,
   writeSource,
 };
 
 export type {
+  ActivateSceneInput,
   DashboardCard,
   DashboardDevice,
   DashboardDiagnostic,
@@ -88,6 +103,9 @@ export type {
   DashboardStatus,
   DashboardTelemetry,
   DeployCardResult,
+  PinCardInput,
+  PokeInput,
+  SimulateTelemetryInput,
   SlotSnapshot,
   SourceOrigin,
   SourceSlot,

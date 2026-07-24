@@ -1,0 +1,32 @@
+{
+  "name": "wall-matrix-panel",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Wall Matrix Panel monorepo",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "convex:codegen": "npx convex codegen",
+    "convex:dev:once": "CONVEX_AGENT_MODE=anonymous npx convex dev --once",
+    "typecheck": "tsc -p convex/tsconfig.json --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/injoon5/display.git"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/injoon5/display/issues"
+  },
+  "homepage": "https://github.com/injoon5/display#readme",
+  "dependencies": {
+    "convex": "^1.42.3",
+    "convex-helpers": "^0.1.120"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^6.0.3"
+  }
+}

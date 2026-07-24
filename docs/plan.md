@@ -9,7 +9,7 @@ dashboard-authored card templating language, LAN control (Shortcuts/`/api/*`, op
 IDF-native HomeKit — **no Arduino**), and appliance-grade reliability.
 
 **Locked decisions:** Matrix Portal S3 · Convex · Oracle Cloud ICN · no MQTT · SvelteKit ·
-ESP-IDF only (**no Arduino / HomeSpan**) · mmWave + load-cell presence · furniture-mounted.
+ESP-IDF only (**no Arduino / HomeSpan**) · mmWave room presence · furniture-mounted.
 LAN control via Shortcuts/`/api/*`; optional IDF-native HAP later.
 
 ---
@@ -168,7 +168,6 @@ wood door plus a ground-plane-heavy LED PCB is a real signal loss.
 | Temp + humidity | SHT41 (#4885) | I²C | Indoor climate card, HomeKit sensors |
 | Room presence | **LD2410C** | UART1 | Static presence — someone is in the room |
 | Room zones | LD2450 *(optional)* | UART2 | x/y tracking — desk vs bed vs door |
-| Bed occupancy | HX711 + 50 kg load cell | GPIO | Binary, unambiguous, never wrong |
 | Orientation / tap | LIS3DH (onboard) | I²C | Tap frame to advance card |
 | RTC *(optional)* | PCF8523 (#5189) | I²C | Clock survives multi-day outages |
 
@@ -177,13 +176,9 @@ energy per distance gate* as a first-class concept with independent per-gate sen
 2450 is a tracking radar — better at zones, worse at holding a motionless target. If you want
 both, run both; they're ~₩7,000 each and the S3 has spare UARTs.
 
-**On bed detection.** Radar measures velocity along the beam axis. Breathing moves your chest
-vertically; a sensor at the foot of the bed looks horizontally, so the radial component is tiny.
-It will be flaky. **The load cell under one bed leg is unambiguous, has zero false positives,
-and costs ₩10,000.** Use radar for the room, the load cell for the bed.
-
-If you want radar-only bed sensing anyway: mount an LD2410C on the wall above the headboard on a
-1 m lead, angled ~30° down at your torso, so chest motion is along the beam.
+**No load cell.** Bed occupancy is intentionally out of scope — room presence from the LD2410C
+is enough for sleep/away automations. (Radar-only bed sensing is flaky at foot-of-bed angles;
+don't pretend otherwise.)
 
 ---
 
@@ -225,7 +220,6 @@ show colour shift before they brown out.
 |---|---:|---:|---|
 | **LD2410C** 24 GHz mmWave module | 1 | ₩7,000 | 알리 / 디바이스마트 |
 | LD2450 mmWave tracking module *(optional, zones)* | 1 | ₩10,000 | 알리 |
-| HX711 amp + 50 kg half-bridge load cell | 1 | ₩10,000 | 알리 / 엘레파츠 |
 | JST-PH 1.25 mm 4-pin cable, 300 mm (mmWave) | 2 | ₩2,000 | |
 | Bambu **ASA Black** 1 kg *(enclosed/warm mount)* | 1 | ₩45,000 | Bambu KR |
 | Bambu **Matte PLA Charcoal** 1 kg *(cool mount only)* | 1 | ₩33,000 | Bambu KR |
@@ -237,19 +231,19 @@ show colour shift before they brown out.
 | Light-diffusing film / 0.5 mm white PP sheet *(optional)* | 1 | ₩5,000 | |
 | Matte anti-glare screen film, A5 *(optional)* | 1 | ₩8,000 | |
 | Cord raceway 10 mm, 1 m *(only if wall-mounted)* | 1 | ₩6,000 | 다이소 |
-| | | **≈ ₩167,000** | |
+| | | **≈ ₩157,000** | |
 
 ### 4.4 Totals
 
 | | |
 |---|---:|
 | Adafruit (core + sensors, incl. optionals) | **≈ $129** |
-| Local parts & filament | **≈ ₩167,000** |
+| Local parts & filament | **≈ ₩157,000** |
 | Cloud hosting, year 1 | **$0** (Convex free tier, Oracle Always Free ICN, Cloudflare — see §18.1) |
-| **Approx. total** | **≈ ₩350,000 / $255** |
+| **Approx. total** | **≈ ₩340,000 / $245** |
 
 Excluding printer time. Drop the optional RTC, LD2450, standoff set, and second filament roll
-and it's closer to ₩260,000.
+and it's closer to ₩250,000.
 
 ---
 
@@ -319,7 +313,6 @@ strip drops in with room to spare.
 | 7 | Cleat, wall/carcass half | 1 | PETG-HF | 30° bevel, slotted screw holes, bubble-level pocket |
 | 8 | Cleat, panel half | 1 | PETG-HF | Built-in downward tilt (see §6) |
 | 9 | Cable strain relief | 1 | PETG | Right-angle exit, bottom-centre |
-| 10 | Load-cell foot cup | 1 | PETG | Seats a bed leg on the load cell |
 
 ### 5.4 Print settings
 
@@ -481,7 +474,7 @@ C99 for the renderer, C++ for the glue. LAN control is Shortcuts/dashboard → C
 | 0 | `renderer` | 10 | Walks the display list into the back buffer, swaps on vsync |
 | **1** | `hap` *(optional)* | 8 | Native HomeKit (IDF HAP) crypto + mDNS. **Must not touch core 0.** |
 | 1 | `net_sync` | 6 | HTTPS long-poll, program/data fetch, heartbeat |
-| 1 | `sensors` | 5 | I²C poll, UART parse, HX711 read |
+| 1 | `sensors` | 5 | I²C poll, UART parse (mmWave) |
 | 1 | `ota` | 4 | Only alive during an update |
 
 Putting HAP/mDNS work on core 0 produces visible tearing whenever the Home app polls. This is the
@@ -576,7 +569,7 @@ POST /device/heartbeat
   "rssi": -54, "heapFree": 184320, "psramFree": 1638400,
   "brightness": 42, "lux": 118.4,
   "tempC": 24.1, "humidity": 51.2,
-  "presenceRoom": true, "presenceBed": false,
+  "presenceRoom": true,
   "estAmps": 0.84, "governorActive": false,
   "lastError": null
 }
@@ -640,7 +633,6 @@ No captive portal, no serial console, no `secrets.py`.
 | SHT41 | 0.1 Hz | Median of 3 |
 | LD2410C | 10 Hz UART | Debounce: 3 consecutive frames to assert, 30 s to clear |
 | LD2450 | 10 Hz UART | Point-in-polygon against dashboard-defined zones |
-| HX711 | 2 Hz | Tare on boot; threshold at 15 kg; 5 s debounce both ways |
 | LIS3DH | interrupt | Double-tap → next card. Single tap ignored (too many false positives) |
 
 **Auto-brightness curve** — perceptual, not linear:
@@ -664,8 +656,8 @@ down, and it feels broken.
 - Set per-gate static sensitivity individually. High for the bed/desk gates, zero beyond.
 - **Do not trigger background recalibration from bed or on boot.** If the LD2410 re-learns the
   background while you're lying still, it absorbs you into it and goes blind.
-- Expect false positives from curtains and bedsheets in aircon airflow. That's why the bed
-  signal comes from the load cell, not the radar.
+- Expect false positives from curtains and bedsheets in aircon airflow. Debounce generously
+  (assert fast, clear slow) and gate far distance gates to zero.
 
 ---
 
@@ -706,7 +698,6 @@ Services to expose (same product intent as the old HomeSpan sketch):
 |---|---|---|
 | **Lightbulb** | `On`, `Brightness` | Siri, Home app slider, "Good Night" scenes |
 | **Occupancy Sensor** — Room | `OccupancyDetected` | LD2410C → whole-home presence |
-| **Occupancy Sensor** — Bed | `OccupancyDetected` | Load cell — automation-grade |
 | **Temperature Sensor** | `CurrentTemperature` | SHT41 |
 | **Humidity Sensor** | `CurrentRelativeHumidity` | SHT41 |
 | **Light Sensor** | `CurrentAmbientLightLevel` | VEML7700 |
@@ -728,7 +719,7 @@ on a sticker for the back of the rear shell.
 selection are HAP characteristics, the Home app handles:
 
 - "When bedroom lights turn off after 22:00 → panel to night scene"
-- "When bed occupancy becomes true → panel to 3%, lights off, aircon to sleep"
+- "When room occupancy clears for 15m → panel sleep"
 - "When I arrive home → panel on"
 
 ...with a real UI, on your phone, that you did not write and do not maintain.
@@ -935,7 +926,7 @@ Always available, no `<source>` needed:
 | `now.ts` | unix seconds |
 | `weekday` `weekend` | bool |
 | `device.lux` `device.brightness` `device.rssi` `device.uptime_s` | int |
-| `device.presence` `device.bed_occupied` `device.online` | bool |
+| `device.presence` `device.online` | bool |
 | `room.temp_c` `room.humidity` | float |
 | `scene` | string |
 
@@ -1322,7 +1313,7 @@ export default defineSchema({
     rssi: v.number(), heapFree: v.number(),
     brightness: v.number(), lux: v.number(),
     tempC: v.number(), humidity: v.number(),
-    presenceRoom: v.boolean(), presenceBed: v.boolean(),
+    presenceRoom: v.boolean(),
     estAmps: v.number(), governorActive: v.boolean(),
     lastError: v.optional(v.string()),
   }).index("by_device_time", ["deviceId", "at"]),
@@ -1825,7 +1816,7 @@ rules:
     priority: 85
 
   - name: "Sleep"
-    when: "presence.bed == true for 10m and now.hour >= 22"
+    when: "presence.room == true for 10m and now.hour >= 22"
     then: scene(night)
     priority: 70
 
@@ -1845,7 +1836,7 @@ Same expression grammar as the DSL, so the compiler and the editor autocomplete 
 | **Siri: "show me the bus"** | Stateless switch → `pin(bus-402, 60s)` |
 | **Home app scene picker** | Direct scene select |
 | **iPhone Shortcut → `/api/poke`** | Takeover message, 10 s |
-| **Bed occupancy true** | Night scene via HomeKit automation |
+| **Room empty 15m** | Sleep via rule / HomeKit automation |
 
 No buttons. No holes in the bezel.
 
@@ -2032,11 +2023,9 @@ Adafruit pinout guide for your board revision before wiring.
 | I²C — VEML7700, SHT41, LIS3DH, RTC | **STEMMA QT** → 5-port hub | Zero soldering |
 | LD2410C | UART: TX/RX breakout pins | 256000 baud default |
 | LD2450 *(optional)* | Second UART on two spare GPIO | Software UART if needed |
-| HX711 | 2 × GPIO (DOUT, SCK) | Bit-banged, 2 Hz is plenty |
 | Address E | Solder jumper | 64×32 doesn't need it; leave it |
 
-If you run out of pins: drop the LD2450 (the LD2410C + load cell cover the actual need), or move
-the HX711 to an I²C ADC.
+A2/A3 are free. If you run out of pins: drop the LD2450 (LD2410C covers room presence).
 
 ### B. Korean API registration
 

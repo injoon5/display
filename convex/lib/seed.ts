@@ -156,7 +156,6 @@ const seedSources = [
       tempC: 24.1,
       humidity: 51.2,
       presenceRoom: true,
-      presenceBed: false,
     },
   },
 ];

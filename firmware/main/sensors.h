@@ -7,7 +7,6 @@ struct SensorSnapshot {
     float temperature_c = 24.0f;
     float humidity_pct = 50.0f;
     bool presence_room = false;
-    bool presence_bed = false;
     bool tapped = false;
     uint32_t updated_ms = 0;
 };

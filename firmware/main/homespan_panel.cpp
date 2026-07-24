@@ -107,7 +107,6 @@ struct SceneSwitch : Service::StatelessProgrammableSwitch {
 };
 
 OccupancyBridge *s_room_sensor = nullptr;
-OccupancyBridge *s_bed_sensor = nullptr;
 TemperatureBridge *s_temp_sensor = nullptr;
 HumidityBridge *s_humidity_sensor = nullptr;
 LightSensorBridge *s_light_sensor = nullptr;
@@ -132,9 +131,6 @@ void add_scene_input(int identifier, const char *name) {
 void homespan_panel_publish(const SensorSnapshot &snapshot) {
     if (s_room_sensor) {
         s_room_sensor->publish(snapshot.presence_room);
-    }
-    if (s_bed_sensor) {
-        s_bed_sensor->publish(snapshot.presence_bed);
     }
     if (s_temp_sensor) {
         s_temp_sensor->publish(snapshot.temperature_c);
@@ -172,10 +168,6 @@ void homespan_task(void *arg) {
     new SpanAccessory();
     add_accessory_info("Bedroom Presence");
     s_room_sensor = new OccupancyBridge();
-
-    new SpanAccessory();
-    add_accessory_info("Bed Presence");
-    s_bed_sensor = new OccupancyBridge();
 
     new SpanAccessory();
     add_accessory_info("Bedroom Temperature");

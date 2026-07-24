@@ -241,7 +241,6 @@ export const evaluate = internalMutation({
               heapFree: latestTelemetry.heapFree,
               humidity: latestTelemetry.humidity,
               lux: latestTelemetry.lux,
-              presenceBed: latestTelemetry.presenceBed,
               presenceRoom: latestTelemetry.presenceRoom,
               rssi: latestTelemetry.rssi,
               tempC: latestTelemetry.tempC,

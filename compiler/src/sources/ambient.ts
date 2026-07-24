@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const ambientScopeSchema = z.object({
   device: z.object({
-    bed_occupied: z.boolean(),
     brightness: z.number().int(),
     lux: z.number().int(),
     online: z.boolean(),

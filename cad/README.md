@@ -28,4 +28,3 @@ openscad -o out/pixel_grid_tile.stl cad/pixel_grid_tile.scad
   - cleat bevel: `30 deg`
   - panel tilt: `8 deg`
   - mmWave radome wall: `1.0 mm`
-  - load-cell foot: cup above, sensor post below the base

@@ -49,7 +49,7 @@ Locally, the Matrix Portal is replaced by `emulator/` which speaks the same `/de
 | HomeKit / LAN | Shortcuts + `/api/*` (optional IDF-native HAP later — **no Arduino**) | LAN control plane, no cloud for on/off |
 | Transport | HTTPS long-poll | **No MQTT** — retained msgs, LWT, QoS replaced by Convex |
 
-Deep design rationale (why no MQTT, power governor, mmWave vs load cell, etc.) lives in the [full plan](./plan.md).
+Deep design rationale (why no MQTT, power governor, mmWave tuning, etc.) lives in the [full plan](./plan.md).
 
 ## Data flow (happy path)
 

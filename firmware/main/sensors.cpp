@@ -30,10 +30,6 @@ bool s_room_presence_state = false;
 int s_room_assert_count = 0;
 uint64_t s_room_last_true_ms = 0;
 
-bool s_bed_presence_state = false;
-bool s_bed_candidate_state = false;
-uint64_t s_bed_candidate_since_ms = 0;
-
 uint64_t s_last_tap_ms = 0;
 uint32_t s_tap_count = 0;
 
@@ -59,11 +55,6 @@ bool stub_ld2410_presence(uint64_t now_ms) {
     // Synthetic room presence: toggles slowly (~90s asserted / 90s clear). Not real radar.
     const float phase = sinf(static_cast<float>(now_ms % 180'000) / 180'000.0f * 6.28318f);
     return phase > 0.0f;
-}
-
-float stub_hx711_weight_kg() {
-    // Synthetic bed scale: no load. Not a real HX711 reading.
-    return 0.0f;
 }
 
 void ensure_mutex() {
@@ -185,13 +176,11 @@ void sensors_init() {
     ESP_LOGI(
         kTag,
         "Sensors ready (synthetic stubs active until real drivers are wired; "
-        "I2C SDA=%d SCL=%d, LD2410 TX=%d RX=%d, HX711 DOUT=%d SCK=%d)",
+        "I2C SDA=%d SCL=%d, LD2410 TX=%d RX=%d)",
         MX_PIN_I2C_SDA,
         MX_PIN_I2C_SCL,
         MX_PIN_LD2410_UART_TX,
-        MX_PIN_LD2410_UART_RX,
-        MX_PIN_HX711_DOUT,
-        MX_PIN_HX711_SCK);
+        MX_PIN_LD2410_UART_RX);
 }
 
 SensorSnapshot sensors_get_snapshot() {
@@ -251,17 +240,6 @@ void sensors_task(void *arg) {
             }
         }
         current.presence_room = s_room_presence_state;
-
-        if (tick_100ms % 5 == 0) {
-            const bool bed_candidate = stub_hx711_weight_kg() >= 15.0f;
-            if (bed_candidate != s_bed_candidate_state) {
-                s_bed_candidate_state = bed_candidate;
-                s_bed_candidate_since_ms = now_ms;
-            } else if ((now_ms - s_bed_candidate_since_ms) >= 5'000) {
-                s_bed_presence_state = s_bed_candidate_state;
-            }
-            current.presence_bed = s_bed_presence_state;
-        }
 
         current.tapped = poll_double_tap(now_ms);
         current.updated_ms = static_cast<uint32_t>(now_ms);

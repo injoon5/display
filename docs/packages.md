@@ -123,7 +123,7 @@ cd firmware && idf.py set-target esp32s3 && idf.py build
 
 ### `cad/`
 
-OpenSCAD parts — pixel grid tiles, bezel, rear shell, cleat, mmWave radome, load-cell foot. See [`cad/README.md`](../cad/README.md).
+OpenSCAD parts — pixel grid tiles, bezel, rear shell, cleat, mmWave radome. See [`cad/README.md`](../cad/README.md).
 
 ## CI
 

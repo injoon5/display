@@ -90,10 +90,9 @@ Staleness is measured from the device uptime clock at the moment a live `/device
 | I²C SDA / SCL | 16 / 17 | STEMMA QT + onboard LIS3DH |
 | LIS3DH INT1 | 15 | Double-tap edge stub |
 | LD2410C UART TX / RX | 18 / 8 | Labeled TXO / RXI header |
-| LD2450 UART TX / RX | 12 / 3 | A0 / A1 |
-| HX711 DOUT / SCK | 9 / 10 | A2 / A3 |
+| LD2450 UART TX / RX | 12 / 3 | A0 / A1 (optional) |
 
-Do not reuse HUB75 pins (`2,14,21,35–42,45,47,48`).
+A2/A3 (GPIO 9/10) are free. Do not reuse HUB75 pins (`2,14,21,35–42,45,47,48`).
 
 ### Net sync status
 

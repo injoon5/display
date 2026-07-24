@@ -109,7 +109,6 @@ export type DashboardTelemetry = {
   heapFree: number;
   humidity: number;
   lux: number;
-  presenceBed: boolean;
   presenceRoom: boolean;
   rssi: number;
   tempC: number;
@@ -214,7 +213,6 @@ export type SimulateTelemetryInput = {
   deviceId: string;
   estAmps?: number;
   lux?: number;
-  presenceBed?: boolean;
   presenceRoom?: boolean;
 };
 

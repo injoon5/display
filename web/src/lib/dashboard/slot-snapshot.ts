@@ -82,7 +82,6 @@ export function buildSlotSnapshot(
       heapFree: telemetry.heapFree,
       humidity: telemetry.humidity,
       lux: telemetry.lux,
-      presenceBed: telemetry.presenceBed,
       presenceRoom: telemetry.presenceRoom,
       rssi: telemetry.rssi,
       tempC: telemetry.tempC,

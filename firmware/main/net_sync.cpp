@@ -784,7 +784,6 @@ bool send_heartbeat() {
     cJSON_AddNumberToObject(root, "tempC", sensors.temperature_c);
     cJSON_AddNumberToObject(root, "humidity", sensors.humidity_pct);
     cJSON_AddBoolToObject(root, "presenceRoom", sensors.presence_room);
-    cJSON_AddBoolToObject(root, "presenceBed", sensors.presence_bed);
     cJSON_AddNumberToObject(root, "estAmps", power_governor_last_estimate_amps());
     cJSON_AddBoolToObject(root, "governorActive", power_governor_active());
     cJSON_AddNullToObject(root, "lastError");

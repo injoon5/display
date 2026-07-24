@@ -184,12 +184,12 @@
     });
   }
 
-  async function handlePresence(kind: "room" | "bed", value: boolean): Promise<void> {
+  async function handlePresence(value: boolean): Promise<void> {
     if (!device) return;
-    await runAction(`${kind === "room" ? "Room" : "Bed"} ${value ? "occupied" : "empty"}`, async () => {
+    await runAction(`Room ${value ? "occupied" : "empty"}`, async () => {
       await simulateTelemetry({
         deviceId: device._id,
-        ...(kind === "room" ? { presenceRoom: value } : { presenceBed: value }),
+        presenceRoom: value,
       });
     });
   }
@@ -324,16 +324,9 @@
           <Button
             disabled={!device || busy !== null}
             variant={telemetry.presenceRoom ? "default" : "outline"}
-            onclick={() => void handlePresence("room", !telemetry.presenceRoom)}
+            onclick={() => void handlePresence(!telemetry.presenceRoom)}
           >
             Room {telemetry.presenceRoom ? "Occupied" : "Empty"}
-          </Button>
-          <Button
-            disabled={!device || busy !== null}
-            variant={telemetry.presenceBed ? "default" : "outline"}
-            onclick={() => void handlePresence("bed", !telemetry.presenceBed)}
-          >
-            Bed {telemetry.presenceBed ? "Occupied" : "Empty"}
           </Button>
         </div>
       </div>

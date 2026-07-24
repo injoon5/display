@@ -177,7 +177,6 @@ http.route({
       tempC: typeof body.tempC === "number" ? body.tempC : 0,
       humidity: typeof body.humidity === "number" ? body.humidity : 0,
       presenceRoom: body.presenceRoom === true,
-      presenceBed: body.presenceBed === true,
       estAmps: typeof body.estAmps === "number" ? body.estAmps : 0,
       governorActive: body.governorActive === true,
       lastError: typeof body.lastError === "string" ? body.lastError : undefined,

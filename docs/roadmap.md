@@ -37,15 +37,14 @@ Ordered roughly by "unblock the wall appliance," not by calendar weeks.
 | `stub_lux` | VEML7700 I²C |
 | `stub_temperature` / `stub_humidity` | SHT41 |
 | `stub_ld2410_presence` | LD2410C UART (gate max distance) |
-| `stub_hx711_weight_kg` | HX711 + 50 kg load cell under a bed leg |
 | LIS3DH INT1 edge stub | Full double-tap click-detect → advance card |
 
-Tune mmWave per [plan §8.9](./plan.md#89-mmwave-tuning). Prefer load cell for bed; radar for room.
+Tune mmWave per [plan §8.9](./plan.md#89-mmwave-tuning). Room presence only — no bed load cell.
 
 ### C. Enclosure & mount
 
 1. Print **pixel grid tiles** alone; dial wall thickness/depth on the bare panel.
-2. Print bezel halves, rear shell, French cleat, mmWave radome, load-cell foot (`cad/`).
+2. Print bezel halves, rear shell, French cleat, mmWave radome (`cad/`).
 3. Diffusion acrylic + adhesive; furniture-mounted cleat (not the flap door) — [plan §5–6](./plan.md#5-enclosure--3d-printing).
 4. Reprint in ASA if PLA bows in summer heat.
 
@@ -67,7 +66,7 @@ Fetcher stays on Oracle ICN; Convex keeps global APIs. Circuit breakers already 
 **Hard rule: do not add Arduino-as-component or HomeSpan.** Firmware stays pure ESP-IDF.
 
 1. **Ship control plane without native HAP first** — iPhone Shortcuts / dashboard → `POST /api/pin|scene|poke` (already in Convex). On/off + scene select work over HTTPS on the LAN/VPN.
-2. **Optional later: native HomeKit on ESP-IDF only** — Apple HomeKit ADK / an IDF-native HAP stack on core 1. Same service set (lightbulb, occupancy, temp/humidity, scene TV inputs). Never pull Arduino.
+2. **Optional later: native HomeKit on ESP-IDF only** — Apple HomeKit ADK / an IDF-native HAP stack on core 1. Service set: lightbulb, room occupancy, temp/humidity/light, scene TV inputs. Never pull Arduino.
 3. Pair / automate; **verify NVS survives OTA twice** if HAP pairing state lives there.
 4. Pin HAP + networking to **core 1**; matrix stays on core 0.
 5. Optional: Direction B (show other accessories on-panel) via a backend controller — [plan §9](./plan.md#9-homekit--lan-control).

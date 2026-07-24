@@ -401,7 +401,6 @@ export function createSeedState(nowMs = Date.now()): DashboardState {
         nowMs - 5_000,
         {
           humidity: 51.2,
-          presenceBed: false,
           presenceRoom: true,
           tempC: 24.1,
         },
@@ -428,7 +427,6 @@ export function createSeedState(nowMs = Date.now()): DashboardState {
       heapFree: 183_000,
       humidity: 51.2,
       lux: 128,
-      presenceBed: false,
       presenceRoom: true,
       rssi: -54,
       tempC: 24.1,

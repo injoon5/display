@@ -1,5 +1,7 @@
 <script lang="ts">
   import { compile } from "$lib/compiler";
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import * as Card from "$lib/components/ui/card/index.js";
   import type { DashboardCard, SlotSnapshot } from "$lib/convex";
   import PixelCanvas from "$lib/design/PixelCanvas.svelte";
   import { MXR_DIMENSIONS, render } from "$lib/mxr";
@@ -26,9 +28,7 @@
   });
 
   let compiled = $derived.by(() => {
-    if (!card) {
-      return null;
-    }
+    if (!card) return null;
     return compile(card.source);
   });
 
@@ -40,7 +40,7 @@
         hotspots: [],
         mode: "bytecode" as const,
         warnings: [],
-        width: MXR_DIMENSIONS.width
+        width: MXR_DIMENSIONS.width,
       };
     }
     return render({
@@ -49,18 +49,27 @@
       slotMap: compiled.slotMap,
       slots: snapshot.byIndex,
       source: card.source,
-      sourceSlots: snapshot.byPath
+      sourceSlots: snapshot.byPath,
     });
   });
 </script>
 
-<section class="panel rounded-2xl p-4">
-  <div class="mb-3 flex items-center justify-between">
+<Card.Root size="sm">
+  <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <h2 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">Device mirror</h2>
-      <p class="mt-1 text-xs text-[color:var(--muted)]">2 fps local mirror of the currently selected frame.</p>
+      <Card.Title>Device mirror</Card.Title>
+      <Card.Description>Local mirror of the currently selected frame.</Card.Description>
     </div>
-    <span class="badge badge-amber">{card?.slug ?? "no-card"}</span>
-  </div>
-  <PixelCanvas framebuffer={frame.framebuffer} hotspots={[]} scale={8} title="Device mirror framebuffer" />
-</section>
+    <StatusBadge tone="warning">{card?.slug ?? "no-card"}</StatusBadge>
+  </Card.Header>
+  <Card.Content>
+    <div class="overflow-hidden rounded-lg ring-1 ring-foreground/10 outline outline-1 outline-white/10">
+      <PixelCanvas
+        framebuffer={frame.framebuffer}
+        hotspots={[]}
+        scale={8}
+        title="Device mirror framebuffer"
+      />
+    </div>
+  </Card.Content>
+</Card.Root>

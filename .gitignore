@@ -24,3 +24,4 @@ convex/**/*.js
 
 # Compiler build output — rebuild via npm run build -w compiler
 compiler/dist/
+.agents/

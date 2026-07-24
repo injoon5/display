@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { CompileResult } from "$lib/compiler";
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import * as Card from "$lib/components/ui/card/index.js";
   import type { SlotSnapshot } from "$lib/convex";
   import PixelCanvas from "$lib/design/PixelCanvas.svelte";
   import { MXR_DIMENSIONS, render, type RenderHotspot } from "$lib/mxr";
@@ -42,27 +44,37 @@
   });
 </script>
 
-<section class="panel rounded-2xl p-4">
-  <div class="mb-3 flex items-center justify-between gap-3">
+<Card.Root size="sm">
+  <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <h2 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">Live preview</h2>
-      <p class="mt-1 text-xs text-[color:var(--muted)]">64×32 framebuffer with 8× nearest-neighbour upscale.</p>
+      <Card.Title class="tracking-[0.18em] uppercase">Live preview</Card.Title>
+      <Card.Description>64×32 framebuffer with 8× nearest-neighbour upscale.</Card.Description>
     </div>
     <div class="flex items-center gap-2">
-      <span class="badge badge-green">{frame.mode}</span>
-      <span class="badge badge-amber">{compiled?.slotMap.length ?? 0} slots</span>
+      <StatusBadge tone="success">{frame.mode}</StatusBadge>
+      <StatusBadge class="tabular-nums" tone="warning">{compiled?.slotMap.length ?? 0} slots</StatusBadge>
     </div>
-  </div>
+  </Card.Header>
 
-  <PixelCanvas framebuffer={frame.framebuffer} hotspots={frame.hotspots} bind:hovered scale={8} title="Live card preview" />
-
-  {#if frame.warnings.length > 0}
-    <div class="mt-3 space-y-2">
-      {#each frame.warnings as warning}
-        <div class="rounded-xl border border-amber-500/15 bg-amber-500/7 px-3 py-2 text-xs text-amber-100">
-          {warning}
-        </div>
-      {/each}
+  <Card.Content class="flex flex-col gap-3">
+    <div class="overflow-hidden rounded-lg ring-1 ring-foreground/10">
+      <PixelCanvas
+        framebuffer={frame.framebuffer}
+        hotspots={frame.hotspots}
+        bind:hovered
+        scale={8}
+        title="Live card preview"
+      />
     </div>
-  {/if}
-</section>
+
+    {#if frame.warnings.length > 0}
+      <div class="flex flex-col gap-2">
+        {#each frame.warnings as warning (warning)}
+          <div class="rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-100 ring-1 ring-amber-500/20">
+            {warning}
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </Card.Content>
+</Card.Root>

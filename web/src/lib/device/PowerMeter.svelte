@@ -1,4 +1,7 @@
 <script lang="ts">
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import * as Card from "$lib/components/ui/card/index.js";
+
   type Props = {
     amps: number;
     budget?: number;
@@ -8,30 +11,47 @@
   let { amps, budget = 4, label = "draw" }: Props = $props();
 
   let percent = $derived(Math.min(100, Math.max(0, (amps / budget) * 100)));
-  let state = $derived(percent > 85 ? "red" : percent > 60 ? "amber" : "green");
+  let tone = $derived.by((): "success" | "warning" | "destructive" => {
+    if (percent > 85) return "destructive";
+    if (percent > 60) return "warning";
+    return "success";
+  });
+  let barClass = $derived.by(() => {
+    switch (tone) {
+      case "destructive":
+        return "bg-destructive";
+      case "warning":
+        return "bg-amber-400";
+      case "success":
+        return "bg-emerald-400";
+      default: {
+        const _exhaustive: never = tone;
+        return _exhaustive;
+      }
+    }
+  });
 </script>
 
-<section class="panel rounded-2xl p-4">
-  <div class="mb-3 flex items-center justify-between">
+<Card.Root size="sm">
+  <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <h2 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">Power meter</h2>
-      <p class="mt-1 text-xs text-[color:var(--muted)]">Estimated panel current versus supply headroom.</p>
+      <Card.Title>Power meter</Card.Title>
+      <Card.Description>Estimated panel current versus supply headroom.</Card.Description>
     </div>
-    <span class={`badge ${state === "red" ? "badge-red" : state === "amber" ? "badge-amber" : "badge-green"}`}>
-      {amps.toFixed(2)} A
-    </span>
-  </div>
-
-  <div class="rounded-xl border border-white/5 bg-black/20 p-3">
-    <div class="mb-2 flex items-end justify-between text-xs text-[color:var(--muted)]">
-      <span>{label}</span>
-      <span>{budget.toFixed(1)} A budget</span>
+    <StatusBadge tone={tone} class="tabular">{amps.toFixed(2)} A</StatusBadge>
+  </Card.Header>
+  <Card.Content>
+    <div class="rounded-lg bg-muted/40 p-3 ring-1 ring-foreground/10">
+      <div class="mb-2 flex items-end justify-between text-xs text-muted-foreground">
+        <span>{label}</span>
+        <span class="tabular">{budget.toFixed(1)} A budget</span>
+      </div>
+      <div class="h-3 rounded-full bg-background/60 p-0.5 ring-1 ring-foreground/10">
+        <div
+          class={`h-full rounded-full transition-[width] duration-200 ease-[var(--ease-out)] ${barClass}`}
+          style={`width:${percent}%`}
+        ></div>
+      </div>
     </div>
-    <div class="h-4 rounded-full bg-white/5 p-1">
-      <div
-        class={`h-full rounded-full ${state === "red" ? "bg-red-400" : state === "amber" ? "bg-amber-400" : "bg-lime-400"}`}
-        style={`width:${percent}%`}
-      ></div>
-    </div>
-  </div>
-</section>
+  </Card.Content>
+</Card.Root>

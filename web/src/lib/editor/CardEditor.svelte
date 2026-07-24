@@ -5,6 +5,8 @@
   import { oneDark } from "@codemirror/theme-one-dark";
   import { EditorView } from "@codemirror/view";
   import { basicSetup } from "codemirror";
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import * as Card from "$lib/components/ui/card/index.js";
   import { onMount } from "svelte";
 
   type Props = {
@@ -112,13 +114,18 @@
   });
 </script>
 
-<section class="panel rounded-2xl overflow-hidden">
-  <div class="flex items-center justify-between border-b border-white/5 bg-black/20 px-4 py-3">
+<Card.Root class="gap-0 overflow-hidden py-0" size="sm">
+  <Card.Header class="flex-row items-start justify-between gap-3 border-b border-border/60 py-(--card-spacing)">
     <div>
-      <h2 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">{label}</h2>
-      <p class="mt-1 font-mono text-[11px] text-[color:var(--muted)]">{filename}</p>
+      <Card.Title class="tracking-[0.18em] uppercase">{label}</Card.Title>
+      <Card.Description class="mt-1 font-mono text-[11px]">{filename}</Card.Description>
     </div>
-    <span class="badge badge-green">{value.trim().startsWith("<") ? "mxml" : "stage0-json"}</span>
-  </div>
-  <div bind:this={host} class="min-h-[28rem] bg-[linear-gradient(180deg,rgba(8,11,8,0.94),rgba(8,11,8,0.98))]"></div>
-</section>
+    <StatusBadge tone="success">{value.trim().startsWith("<") ? "mxml" : "stage0-json"}</StatusBadge>
+  </Card.Header>
+  <Card.Content class="px-0">
+    <div
+      bind:this={host}
+      class="min-h-[28rem] bg-[linear-gradient(180deg,rgba(8,11,8,0.94),rgba(8,11,8,0.98))]"
+    ></div>
+  </Card.Content>
+</Card.Root>

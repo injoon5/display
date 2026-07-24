@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { SlotMapEntry } from "$lib/compiler";
-  import type { RenderHotspot } from "$lib/mxr";
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import * as Card from "$lib/components/ui/card/index.js";
   import type { SlotSnapshot } from "$lib/convex";
+  import type { RenderHotspot } from "$lib/mxr";
 
   type Props = {
     hovered: RenderHotspot | null;
@@ -25,38 +27,49 @@
   }
 </script>
 
-<section class="panel rounded-2xl p-4">
-  <div class="mb-3 flex items-center justify-between">
+<Card.Root size="sm">
+  <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <h2 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">Slot inspector</h2>
-      <p class="mt-1 text-xs text-[color:var(--muted)]">Hover the preview to inspect bound values and freshness.</p>
+      <Card.Title class="tracking-[0.18em] uppercase">Slot inspector</Card.Title>
+      <Card.Description>Hover the preview to inspect bound values and freshness.</Card.Description>
     </div>
-    <span class="badge badge-amber">{slotMap.length} slots</span>
-  </div>
+    <StatusBadge class="tabular-nums" tone="warning">{slotMap.length} slots</StatusBadge>
+  </Card.Header>
 
-  {#if hovered}
-    <div class="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/8 p-3">
-      <div class="flex items-center justify-between gap-3">
-        <code class="font-mono text-sm text-amber-100">{hovered.path}</code>
-        <span class="font-mono text-[11px] text-amber-200/70">{hovered.sourceId}</span>
-      </div>
-      <p class="mt-2 text-sm text-zinc-100">{formatValue(hovered.value)}</p>
-    </div>
-  {/if}
-
-  <div class="max-h-[26rem] space-y-2 overflow-auto pr-1">
-    {#each slotMap as entry (entry.path)}
-      {@const slot = snapshot.byIndex[entry.index]}
-      <div class={`rounded-xl border px-3 py-2 ${hovered?.path === entry.path ? "border-amber-500/35 bg-amber-500/8" : "border-white/5 bg-black/15"}`}>
+  <Card.Content class="flex flex-col gap-3">
+    {#if hovered}
+      <div class="rounded-lg bg-amber-500/10 p-3 ring-1 ring-amber-500/25">
         <div class="flex items-center justify-between gap-3">
-          <code class="font-mono text-xs text-zinc-200">{entry.path}</code>
-          <span class="font-mono text-[11px] text-[color:var(--muted)]">#{entry.index}</span>
+          <code class="font-mono text-sm text-amber-100">{hovered.path}</code>
+          <span class="font-mono text-[11px] text-amber-200/70">{hovered.sourceId}</span>
         </div>
-        <div class="mt-1 flex items-center justify-between gap-3">
-          <span class="text-sm text-zinc-100">{formatValue(slot?.value)}</span>
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">{entry.type}</span>
-        </div>
+        <p class="mt-2 text-sm">{formatValue(hovered.value)}</p>
       </div>
-    {/each}
-  </div>
-</section>
+    {/if}
+
+    <div class="flex max-h-[26rem] flex-col gap-2 overflow-auto pr-1">
+      {#each slotMap as entry (entry.path)}
+        {@const slot = snapshot.byIndex[entry.index]}
+        <div
+          class={[
+            "rounded-lg px-3 py-2 ring-1",
+            hovered?.path === entry.path
+              ? "bg-amber-500/10 ring-amber-500/35"
+              : "bg-muted/40 ring-foreground/10"
+          ]}
+        >
+          <div class="flex items-center justify-between gap-3">
+            <code class="font-mono text-xs">{entry.path}</code>
+            <span class="font-mono text-[11px] tabular-nums text-muted-foreground">#{entry.index}</span>
+          </div>
+          <div class="mt-1 flex items-center justify-between gap-3">
+            <span class="text-sm tabular-nums">{formatValue(slot?.value)}</span>
+            <span class="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase"
+              >{entry.type}</span
+            >
+          </div>
+        </div>
+      {/each}
+    </div>
+  </Card.Content>
+</Card.Root>

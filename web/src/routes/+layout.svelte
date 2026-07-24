@@ -1,79 +1,137 @@
 <script lang="ts">
   import "../app.css";
+  import { page } from "$app/state";
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import StatTile from "$lib/components/stat-tile.svelte";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import { Toaster } from "$lib/components/ui/sonner/index.js";
   import { dashboardStatus, primaryDevice } from "$lib/convex";
+  import { ModeWatcher } from "mode-watcher";
+  import BoxIcon from "@lucide/svelte/icons/box";
+  import CpuIcon from "@lucide/svelte/icons/cpu";
+  import LayersIcon from "@lucide/svelte/icons/layers";
+  import MonitorIcon from "@lucide/svelte/icons/monitor";
+  import RadioIcon from "@lucide/svelte/icons/radio";
+  import ShieldIcon from "@lucide/svelte/icons/shield";
+  import WorkflowIcon from "@lucide/svelte/icons/workflow";
+  import type { Component } from "svelte";
 
   let { children } = $props();
 
-  const nav = [
-    { href: "/", label: "device" },
-    { href: "/cards", label: "cards" },
-    { href: "/scenes", label: "scenes" },
-    { href: "/rules", label: "rules" },
-    { href: "/sources", label: "sources" },
-    { href: "/firmware", label: "firmware" },
-    { href: "/provision", label: "provision" }
+  const nav: Array<{ href: string; label: string; icon: Component }> = [
+    { href: "/", label: "Device", icon: MonitorIcon },
+    { href: "/cards", label: "Cards", icon: LayersIcon },
+    { href: "/scenes", label: "Scenes", icon: BoxIcon },
+    { href: "/rules", label: "Rules", icon: WorkflowIcon },
+    { href: "/sources", label: "Sources", icon: RadioIcon },
+    { href: "/firmware", label: "Firmware", icon: CpuIcon },
+    { href: "/provision", label: "Provision", icon: ShieldIcon },
   ];
 
   let status = $derived($dashboardStatus);
   let device = $derived($primaryDevice);
+
+  function isActive(href: string): boolean {
+    if (href === "/") return page.url.pathname === "/";
+    return page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
+  }
+
+  function modeTone(mode: string): "success" | "warning" | "destructive" | "secondary" {
+    switch (mode) {
+      case "live":
+        return "success";
+      case "degraded":
+        return "warning";
+      case "mock":
+        return "secondary";
+      default:
+        return "destructive";
+    }
+  }
 </script>
 
-<svelte:head>
-  <title>Wall Matrix Panel Dashboard</title>
-</svelte:head>
+<ModeWatcher defaultMode="dark" track={false} />
+<Toaster richColors position="top-right" />
 
-<div class="min-h-screen bg-[color:var(--bg)]">
-  <div class="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 lg:px-8">
-    <header class="panel panel-grid mb-4 rounded-3xl px-5 py-4">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <div class="flex items-center gap-3">
-            <span class="badge badge-amber">wall matrix panel</span>
-            <span class={`badge ${status.mode === "live" ? "badge-green" : status.mode === "degraded" ? "badge-amber" : "badge-red"}`}>
-              {status.mode}
-            </span>
-          </div>
-          <h1 class="mt-3 text-2xl font-semibold tracking-tight text-zinc-50">Industrial LED matrix control surface</h1>
-          <p class="mt-1 text-sm text-[color:var(--muted)]">
-            Dense dashboard for cards, scenes, rules, sources, firmware, and provisioning.
-          </p>
+<Sidebar.Provider>
+  <Sidebar.Root collapsible="icon" variant="inset">
+    <Sidebar.Header class="gap-3 px-3 py-3">
+      <div class="flex items-center gap-2 px-1">
+        <div class="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+          <MonitorIcon class="size-4" />
         </div>
-
-        <div class="grid gap-2 text-sm sm:grid-cols-3">
-          <div class="rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-            <p class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">panel</p>
-            <p class="mt-1 font-mono text-zinc-100">{device?.name ?? "mock panel"}</p>
-          </div>
-          <div class="rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-            <p class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">firmware</p>
-            <p class="mt-1 font-mono text-zinc-100">{device?.fwVersion ?? "n/a"}</p>
-          </div>
-          <div class="rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-            <p class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">program</p>
-            <p class="mt-1 font-mono text-zinc-100">v{device?.programVersion ?? 0}</p>
-          </div>
+        <div class="min-w-0 group-data-[collapsible=icon]:hidden">
+          <p class="truncate text-sm font-semibold tracking-tight">Wall Matrix</p>
+          <p class="truncate text-xs text-muted-foreground">Panel control</p>
         </div>
       </div>
+      <div class="flex flex-wrap gap-1.5 px-1 group-data-[collapsible=icon]:hidden">
+        <StatusBadge tone="secondary">panel</StatusBadge>
+        <StatusBadge tone={modeTone(status.mode)}>{status.mode}</StatusBadge>
+      </div>
+    </Sidebar.Header>
+
+    <Sidebar.Content>
+      <Sidebar.Group>
+        <Sidebar.GroupLabel>Navigate</Sidebar.GroupLabel>
+        <Sidebar.GroupContent>
+          <Sidebar.Menu>
+            {#each nav as item}
+              {@const Icon = item.icon}
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  isActive={isActive(item.href)}
+                  tooltipContent={item.label}
+                >
+                  {#snippet child({ props })}
+                    <a href={item.href} {...props}>
+                      <Icon />
+                      <span>{item.label}</span>
+                    </a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            {/each}
+          </Sidebar.Menu>
+        </Sidebar.GroupContent>
+      </Sidebar.Group>
+    </Sidebar.Content>
+
+    <Sidebar.Footer class="gap-2 px-3 pb-3 group-data-[collapsible=icon]:hidden">
+      <StatTile label="Panel" value={device?.name ?? "mock panel"} />
+      <div class="grid grid-cols-2 gap-2">
+        <StatTile label="FW" value={device?.fwVersion ?? "n/a"} />
+        <StatTile label="Program" value={`v${device?.programVersion ?? 0}`} />
+      </div>
+    </Sidebar.Footer>
+    <Sidebar.Rail />
+  </Sidebar.Root>
+
+  <Sidebar.Inset>
+    <header
+      class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur-md supports-backdrop-filter:bg-background/70"
+    >
+      <Sidebar.Trigger class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]" />
+      <div class="min-w-0 flex-1">
+        <h1 class="truncate text-sm font-semibold tracking-tight text-balance">
+          Industrial LED matrix control
+        </h1>
+        <p class="truncate text-xs text-muted-foreground">
+          Cards, scenes, rules, sources, firmware, provisioning
+        </p>
+      </div>
+      <Button
+        href="/cards"
+        size="sm"
+        class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+      >
+        Open cards
+      </Button>
     </header>
 
-    <div class="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <aside class="panel rounded-3xl p-3">
-        <nav class="space-y-1">
-          {#each nav as item}
-            <a
-              class="block rounded-2xl border border-transparent px-4 py-3 text-sm text-zinc-200 transition hover:border-lime-400/15 hover:bg-lime-400/8 hover:text-white"
-              href={item.href}
-            >
-              <span class="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">/{item.label}</span>
-              <div class="mt-1 text-sm font-medium text-current">{item.label}</div>
-            </a>
-          {/each}
-        </nav>
-      </aside>
-
-      <main class="min-w-0">
-        {@render children?.()}
-      </main>
+    <div class="flex flex-1 flex-col gap-4 p-4 md:p-6">
+      {@render children?.()}
     </div>
-  </div>
-</div>
+  </Sidebar.Inset>
+</Sidebar.Provider>

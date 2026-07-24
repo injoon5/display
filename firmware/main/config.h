@@ -57,20 +57,31 @@ static constexpr uint32_t MX_STACK_NET_SYNC = 12288;
 static constexpr uint32_t MX_STACK_SENSORS = 6144;
 static constexpr uint32_t MX_STACK_OTA = 8192;
 
-// Sensor and peripheral pins. Verify against the exact Matrix Portal S3 revision before wiring.
-static constexpr int MX_PIN_I2C_SDA = 8;
-static constexpr int MX_PIN_I2C_SCL = 9;
-static constexpr int MX_PIN_LD2410_UART_TX = 14;
-static constexpr int MX_PIN_LD2410_UART_RX = 13;
-static constexpr int MX_PIN_LD2450_UART_TX = 12;
-static constexpr int MX_PIN_LD2450_UART_RX = 11;
-static constexpr int MX_PIN_HX711_DOUT = 10;
-static constexpr int MX_PIN_HX711_SCK = 16;
+// Matrix Portal S3 pin map (Adafruit board / CircuitPython pins.c).
+// HUB75 owns GPIO 2,14,21,35-42,45,47,48 — never reuse those.
+// STEMMA QT I²C is GPIO16/17 (shared with onboard LIS3DH @ 0x19).
+static constexpr int MX_PIN_I2C_SDA = 16;
+static constexpr int MX_PIN_I2C_SCL = 17;
+static constexpr int MX_PIN_LIS3DH_INT = 15;
+// Labeled UART header: MCU TXO=GPIO18, RXI=GPIO8.
+static constexpr int MX_PIN_LD2410_UART_TX = 18;
+static constexpr int MX_PIN_LD2410_UART_RX = 8;
+// Spare analog breakout pins for the optional LD2450.
+static constexpr int MX_PIN_LD2450_UART_TX = 12;  // A0
+static constexpr int MX_PIN_LD2450_UART_RX = 3;   // A1
+// HX711 on A2 / A3.
+static constexpr int MX_PIN_HX711_DOUT = 9;   // A2
+static constexpr int MX_PIN_HX711_SCK = 10;   // A3
 
 static constexpr int MX_UART_LD2410 = 1;
 static constexpr int MX_UART_LD2450 = 2;
 static constexpr uint32_t MX_LD2410_BAUD = 256000;
 static constexpr uint32_t MX_LD2450_BAUD = 256000;
+
+// BLE provisioning proof-of-possession (WIFI_PROV_SECURITY_1).
+#ifndef MX_PROV_POP
+#define MX_PROV_POP "mxpanel"
+#endif
 
 static constexpr size_t MX_MAX_PROGRAM_BYTES = 32 * 1024;
 static constexpr size_t MX_SLOT_CAPACITY = 64;

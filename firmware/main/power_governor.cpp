@@ -1,5 +1,7 @@
 #include "power_governor.h"
 
+#include <algorithm>
+
 #include "brightness.h"
 #include "config.h"
 
@@ -22,12 +24,15 @@ static float estimate_amps(const uint16_t *fb, size_t n) {
 }  // namespace
 
 void apply_power_governor(uint16_t *fb, size_t n) {
-    float a = estimate_amps(fb, n);
+    // estimate_amps() is calibrated at full OE. Scale by the current brightness
+    // duty so we don't over-throttle frames that are already dim.
+    const float duty = static_cast<float>(global_brightness) / 100.0f;
+    float a = CAL_IDLE_A + (estimate_amps(fb, n) - CAL_IDLE_A) * duty;
     s_last_estimate_amps = a;
     s_governor_active = false;
-    if (a > BUDGET_A) {
-        float scale = BUDGET_A / a;
-        global_brightness = (uint8_t)(global_brightness * scale);
+    if (a > BUDGET_A && global_brightness > 0) {
+        const float scale = BUDGET_A / a;
+        global_brightness = static_cast<uint8_t>(std::max(1.0f, global_brightness * scale));
         s_governor_active = true;
     }
 }

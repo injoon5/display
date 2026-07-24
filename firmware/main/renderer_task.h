@@ -41,6 +41,7 @@ void renderer_init();
 bool renderer_load_fallback_program();
 bool renderer_set_program_blob(const uint8_t *program, size_t len, uint32_t version);
 bool renderer_apply_slot_frame(const SlotFrame &frame);
+void renderer_mark_data_fresh();
 bool renderer_snapshot_framebuffer(uint16_t *out_fb, size_t pixel_count, uint8_t *out_brightness);
 uint32_t renderer_get_program_version();
 uint64_t renderer_get_last_data_ms();

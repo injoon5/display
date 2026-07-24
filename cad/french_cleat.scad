@@ -10,14 +10,15 @@ slot_width = 4.5;
 bevel_drop = tan(bevel_deg) * thickness;
 tilt_rise = tan(tilt_deg) * height;
 
-module screw_slot(x) {
+// Elongated mounting hole through the wall half thickness, along the cleat length.
+module screw_slot(z) {
   hull() {
-    translate([x - slot_length / 2, height * 0.45, thickness / 2])
-      rotate([90, 0, 0])
-      cylinder(h = 3, d = slot_width, $fn = 20);
-    translate([x + slot_length / 2, height * 0.45, thickness / 2])
-      rotate([90, 0, 0])
-      cylinder(h = 3, d = slot_width, $fn = 20);
+    translate([-0.1, height * 0.55, z - slot_length / 2])
+      rotate([0, 90, 0])
+      cylinder(h = thickness + 0.2, d = slot_width, $fn = 24);
+    translate([-0.1, height * 0.55, z + slot_length / 2])
+      rotate([0, 90, 0])
+      cylinder(h = thickness + 0.2, d = slot_width, $fn = 24);
   }
 }
 
@@ -31,12 +32,8 @@ module wall_half() {
         [0, height]
       ]);
 
-    rotate([0, 0, 90]) {
-      translate([length * 0.25, -2, thickness / 2])
-        screw_slot(length * 0.0);
-      translate([length * 0.75, -2, thickness / 2])
-        screw_slot(length * 0.0);
-    }
+    screw_slot(length * 0.25);
+    screw_slot(length * 0.75);
   }
 }
 

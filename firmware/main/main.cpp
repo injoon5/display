@@ -75,6 +75,7 @@ extern "C" void app_main(void) {
     ota_mark_running_image_valid();
     renderer_init();
     offline_init();
+    sensors_init();
 
     OfflineCache cache;
     if (offline_load_last_good(&cache)) {

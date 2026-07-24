@@ -50,7 +50,11 @@ module half_mask(side = "left") {
 intersection() {
   union() {
     bezel_frame();
-    seam_tabs();
+    // Male tabs only on the left half so the overlapping seam does not
+    // solidify the same tabs twice when both halves are printed.
+    if (half == "left") {
+      seam_tabs();
+    }
   }
   half_mask(half);
 }

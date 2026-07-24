@@ -6,6 +6,7 @@
 #include <cstring>
 
 #include "config.h"
+#include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "driver/uart.h"
 #include "esp_log.h"
@@ -23,6 +24,7 @@ constexpr float kLuxHysteresis = 1.0f;
 StaticSemaphore_t s_snapshot_mutex_storage;
 SemaphoreHandle_t s_snapshot_mutex = nullptr;
 SensorSnapshot s_snapshot{};
+bool s_hardware_ready = false;
 
 bool s_room_presence_state = false;
 int s_room_assert_count = 0;
@@ -31,6 +33,9 @@ uint64_t s_room_last_true_ms = 0;
 bool s_bed_presence_state = false;
 bool s_bed_candidate_state = false;
 uint64_t s_bed_candidate_since_ms = 0;
+
+uint64_t s_last_tap_ms = 0;
+uint32_t s_tap_count = 0;
 
 float stub_lux(uint64_t now_ms) {
     const float wave = (sinf(static_cast<float>(now_ms % 60'000) / 60'000.0f * 6.28318f) + 1.0f) * 0.5f;
@@ -53,6 +58,12 @@ float stub_hx711_weight_kg() {
     return 0.0f;
 }
 
+void ensure_mutex() {
+    if (!s_snapshot_mutex) {
+        s_snapshot_mutex = xSemaphoreCreateMutexStatic(&s_snapshot_mutex_storage);
+    }
+}
+
 void maybe_init_i2c() {
     i2c_config_t conf = {};
     conf.mode = I2C_MODE_MASTER;
@@ -61,11 +72,20 @@ void maybe_init_i2c() {
     conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = 400000;
-    i2c_param_config(I2C_NUM_0, &conf);
-    i2c_driver_install(I2C_NUM_0, conf.mode, 0, 0, 0);
+
+    esp_err_t err = i2c_param_config(I2C_NUM_0, &conf);
+    if (err != ESP_OK) {
+        ESP_LOGW(kTag, "i2c_param_config failed: %s", esp_err_to_name(err));
+        return;
+    }
+
+    err = i2c_driver_install(I2C_NUM_0, conf.mode, 0, 0, 0);
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(kTag, "i2c_driver_install failed: %s", esp_err_to_name(err));
+    }
 }
 
-void maybe_init_uart(int uart_num, int tx_pin, int rx_pin, int baud) {
+void maybe_init_uart(uart_port_t uart_num, int tx_pin, int rx_pin, int baud) {
     uart_config_t conf = {};
     conf.baud_rate = baud;
     conf.data_bits = UART_DATA_8_BITS;
@@ -73,12 +93,62 @@ void maybe_init_uart(int uart_num, int tx_pin, int rx_pin, int baud) {
     conf.stop_bits = UART_STOP_BITS_1;
     conf.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
     conf.source_clk = UART_SCLK_DEFAULT;
-    uart_param_config(uart_num, &conf);
-    uart_set_pin(uart_num, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-    uart_driver_install(uart_num, 1024, 0, 0, nullptr, 0);
+
+    esp_err_t err = uart_param_config(uart_num, &conf);
+    if (err != ESP_OK) {
+        ESP_LOGW(kTag, "uart_param_config(%d) failed: %s", static_cast<int>(uart_num), esp_err_to_name(err));
+        return;
+    }
+
+    err = uart_set_pin(uart_num, tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    if (err != ESP_OK) {
+        ESP_LOGW(kTag, "uart_set_pin(%d) failed: %s", static_cast<int>(uart_num), esp_err_to_name(err));
+        return;
+    }
+
+    err = uart_driver_install(uart_num, 1024, 0, 0, nullptr, 0);
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(kTag, "uart_driver_install(%d) failed: %s", static_cast<int>(uart_num), esp_err_to_name(err));
+    }
+}
+
+void maybe_init_lis3dh_interrupt() {
+    gpio_config_t conf = {};
+    conf.pin_bit_mask = 1ULL << MX_PIN_LIS3DH_INT;
+    conf.mode = GPIO_MODE_INPUT;
+    conf.pull_up_en = GPIO_PULLUP_ENABLE;
+    conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&conf);
+}
+
+bool poll_double_tap(uint64_t now_ms) {
+    // Edge stub: the LIS3DH INT1 line is wired, but the full click-detect register
+    // setup still needs the real driver. Treat a falling edge as a tap candidate.
+    static int last_level = 1;
+    const int level = gpio_get_level(static_cast<gpio_num_t>(MX_PIN_LIS3DH_INT));
+    const bool edge = (last_level == 1 && level == 0);
+    last_level = level;
+    if (!edge) {
+        if (s_tap_count > 0 && (now_ms - s_last_tap_ms) > MX_DOUBLE_TAP_WINDOW_MS) {
+            s_tap_count = 0;
+        }
+        return false;
+    }
+
+    if (s_tap_count > 0 && (now_ms - s_last_tap_ms) <= MX_DOUBLE_TAP_WINDOW_MS) {
+        s_tap_count = 0;
+        s_last_tap_ms = now_ms;
+        return true;
+    }
+
+    s_tap_count = 1;
+    s_last_tap_ms = now_ms;
+    return false;
 }
 
 void store_snapshot(const SensorSnapshot &next) {
+    ensure_mutex();
     xSemaphoreTake(s_snapshot_mutex, portMAX_DELAY);
     s_snapshot = next;
     xSemaphoreGive(s_snapshot_mutex);
@@ -86,17 +156,38 @@ void store_snapshot(const SensorSnapshot &next) {
 }  // namespace
 
 void sensors_init() {
-    if (!s_snapshot_mutex) {
-        s_snapshot_mutex = xSemaphoreCreateMutexStatic(&s_snapshot_mutex_storage);
+    ensure_mutex();
+    if (s_hardware_ready) {
+        return;
     }
+
     maybe_init_i2c();
-    maybe_init_uart(MX_UART_LD2410, MX_PIN_LD2410_UART_TX, MX_PIN_LD2410_UART_RX, MX_LD2410_BAUD);
-    maybe_init_uart(MX_UART_LD2450, MX_PIN_LD2450_UART_TX, MX_PIN_LD2450_UART_RX, MX_LD2450_BAUD);
-    ESP_LOGI(kTag, "Sensor stubs initialized");
+    maybe_init_uart(
+        static_cast<uart_port_t>(MX_UART_LD2410),
+        MX_PIN_LD2410_UART_TX,
+        MX_PIN_LD2410_UART_RX,
+        static_cast<int>(MX_LD2410_BAUD));
+    maybe_init_uart(
+        static_cast<uart_port_t>(MX_UART_LD2450),
+        MX_PIN_LD2450_UART_TX,
+        MX_PIN_LD2450_UART_RX,
+        static_cast<int>(MX_LD2450_BAUD));
+    maybe_init_lis3dh_interrupt();
+    s_hardware_ready = true;
+    ESP_LOGI(
+        kTag,
+        "Sensors ready (I2C SDA=%d SCL=%d, LD2410 TX=%d RX=%d, HX711 DOUT=%d SCK=%d)",
+        MX_PIN_I2C_SDA,
+        MX_PIN_I2C_SCL,
+        MX_PIN_LD2410_UART_TX,
+        MX_PIN_LD2410_UART_RX,
+        MX_PIN_HX711_DOUT,
+        MX_PIN_HX711_SCK);
 }
 
 SensorSnapshot sensors_get_snapshot() {
-    SensorSnapshot snapshot;
+    SensorSnapshot snapshot{};
+    ensure_mutex();
     xSemaphoreTake(s_snapshot_mutex, portMAX_DELAY);
     snapshot = s_snapshot;
     xSemaphoreGive(s_snapshot_mutex);
@@ -163,7 +254,7 @@ void sensors_task(void *arg) {
             current.presence_bed = s_bed_presence_state;
         }
 
-        current.tapped = false;
+        current.tapped = poll_double_tap(now_ms);
         current.updated_ms = static_cast<uint32_t>(now_ms);
         store_snapshot(current);
         homespan_panel_publish(current);

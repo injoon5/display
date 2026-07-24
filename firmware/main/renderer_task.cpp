@@ -183,10 +183,15 @@ bool renderer_set_program_blob(const uint8_t *program, size_t len, uint32_t vers
 bool renderer_apply_slot_frame(const SlotFrame &frame) {
     xSemaphoreTake(s_mutex, portMAX_DELAY);
     s_slot_frame = frame;
-    s_last_data_ms = frame.server_ms;
+    // Staleness is measured against device uptime, not server wall time.
+    // Cache restores leave s_last_data_ms alone (0 → dim until a live sync).
     rebuild_runtime_slots_locked();
     xSemaphoreGive(s_mutex);
     return true;
+}
+
+void renderer_mark_data_fresh() {
+    s_last_data_ms = static_cast<uint64_t>(esp_timer_get_time() / 1000ULL);
 }
 
 bool renderer_snapshot_framebuffer(uint16_t *out_fb, size_t pixel_count, uint8_t *out_brightness) {
@@ -242,6 +247,10 @@ void renderer_task(void *arg) {
 
     while (true) {
         const SensorSnapshot sensors = sensors_get_snapshot();
+        if (sensors.tapped) {
+            const int next_scene = (renderer_active_scene() % 6) + 1;
+            scene_select(next_scene);
+        }
         panel_compute_brightness(sensors.lux);
 
         xSemaphoreTake(s_mutex, portMAX_DELAY);

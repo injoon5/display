@@ -33,7 +33,7 @@ function estimateExpressionLength(expr: Expr): number {
     case "path":
     case "unary":
     case "binary":
-      return 6;
+      return 2;
     case "ternary":
       return Math.max(estimateExpressionLength(expr.consequent), estimateExpressionLength(expr.alternate));
     case "filter":
@@ -63,6 +63,10 @@ function estimateExpressionLength(expr: Expr): number {
         case "lower":
         case "comma":
         case "fixed":
+        case "round":
+        case "floor":
+        case "ceil":
+        case "abs":
           return estimateExpressionLength(expr.input);
         default:
           return 10;
@@ -126,6 +130,13 @@ function validateNode(node: RenderNode, diagnostics: Diagnostic[]): void {
         diagnostics.push(overflowDiagnostics(`line overflows ${CANVAS_WIDTH}x${CANVAS_HEIGHT}`, node.span));
       }
       return;
+    case "marquee": {
+      const h = measureText(node.font, "").height;
+      if (node.x < 0 || node.y < 0 || node.x + node.w > CANVAS_WIDTH || node.y + h > CANVAS_HEIGHT) {
+        diagnostics.push(overflowDiagnostics(`marquee overflows ${CANVAS_WIDTH}x${CANVAS_HEIGHT}`, node.span));
+      }
+      return;
+    }
     default:
       if (node.x < 0 || node.y < 0 || node.x + node.w > CANVAS_WIDTH || node.y + node.h > CANVAS_HEIGHT) {
         diagnostics.push(overflowDiagnostics(`${node.kind} overflows ${CANVAS_WIDTH}x${CANVAS_HEIGHT}`, node.span));

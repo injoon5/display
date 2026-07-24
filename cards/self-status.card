@@ -1,13 +1,13 @@
 <card id="self-status" name="Self Status" priority="58">
   <source id="telemetry" kind="panel.telemetry" every="60s" />
   <source id="device" kind="panel.device" every="60s" />
-  <text x="1" y="3" font="3x5" color="#8f9f8d">RSSI</text>
-  <text x="18" y="3" font="3x5" color="#e0e0e0">{{ telemetry.rssi }}dB</text>
-  <text x="1" y="13" font="3x5" color="#8f9f8d">UP</text>
-  <text x="18" y="13" font="3x5" color="#e0e0e0">{{ telemetry.uptime_s | default(0) | duration }}</text>
-  <text x="1" y="23" font="3x5" color="#8f9f8d">PRG</text>
-  <text x="16" y="23" font="3x5" color="#e0e0e0">{{ device.programVersion }}</text>
-  <text x="31" y="23" font="3x5" color="#8f9f8d">FW</text>
-  <text x="41" y="23" font="3x5" color="#e0e0e0">{{ device.fwVersion | trunc(5) }}</text>
+  <text x="2" y="0" font="5x7" color="#8f9f8d">RSSI</text>
+  <text x="27" y="0" font="5x7" color="#f0f0f0">{{ telemetry.rssi }}</text>
+  <text x="2" y="8" font="5x7" color="#8f9f8d">UP</text>
+  <text x="20" y="8" font="5x7" color="#f0f0f0">{{ telemetry.uptime_s | default(0) | duration }}</text>
+  <text x="2" y="16" font="5x7" color="#8f9f8d">PRG</text>
+  <text x="26" y="16" font="5x7" color="#f0f0f0">{{ device.programVersion }}</text>
+  <text x="2" y="24" font="5x7" color="#8f9f8d">FW</text>
+  <text x="20" y="24" font="5x7" color="#f0f0f0">{{ device.fwVersion | trunc(6) }}</text>
   <stale after="3m" style="dim" />
 </card>

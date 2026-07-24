@@ -31,7 +31,7 @@ int mxr_text_tabular_advance(uint8_t font) {
     switch (font) {
         case 0: return 4;
         case 1: return 6;
-        case 2: return 8;
+        case 2: return 12;
         case 3: return 12;
         default: return 6;
     }
@@ -50,17 +50,26 @@ static void draw_rows(uint16_t *fb, const mxr_rect_t *clip, int x, int y, const 
     }
 }
 
+/*
+ * The large font is a clean integer 2x scale of the 5x7 bitmap: every source
+ * pixel becomes a 2x2 block, so strokes are a constant 2px everywhere (no
+ * uneven 1px/2px stems like a fractional upscale would produce). Result is a
+ * 10x14 glyph on a 12px advance.
+ */
 static void draw_scaled_5x7(uint16_t *fb, const mxr_rect_t *clip, int x, int y, char c, uint16_t color) {
     unsigned idx = char_index(c) - 32u;
-    int yy;
-    for (yy = 0; yy < 16; ++yy) {
-        int sy = (yy * 7) / 16;
+    int sy;
+    for (sy = 0; sy < 7; ++sy) {
         uint8_t row = mxr_font5x7_rows[idx][sy];
-        int xx;
-        for (xx = 0; xx < 8; ++xx) {
-            int sx = (xx * 5) / 8;
+        int sx;
+        for (sx = 0; sx < 5; ++sx) {
             if (row & (uint8_t)(1u << (4 - sx))) {
-                mxr_raster_pixel(fb, clip, x + xx, y + yy, color);
+                int px = x + sx * 2;
+                int py = y + sy * 2;
+                mxr_raster_pixel(fb, clip, px, py, color);
+                mxr_raster_pixel(fb, clip, px + 1, py, color);
+                mxr_raster_pixel(fb, clip, px, py + 1, color);
+                mxr_raster_pixel(fb, clip, px + 1, py + 1, color);
             }
         }
     }
@@ -99,7 +108,7 @@ static int char_advance(uint8_t font, char c) {
         case 1:
             return 6;
         case 2:
-            return 8;
+            return 12;
         case 3:
             return seg7_advance_for(c);
         default:

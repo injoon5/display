@@ -53,6 +53,30 @@ export interface IconDrawable {
   y: number;
 }
 
+export interface MarqueeDrawable {
+  color: LiteralOrExpr<string>;
+  font: string;
+  kind: "marquee";
+  span: Span;
+  speed: number;
+  template: TemplatePart[];
+  w: number;
+  x: number;
+  y: number;
+}
+
+export interface FxDrawable {
+  arg: number;
+  color: LiteralOrExpr<string>;
+  fx: number;
+  h: number;
+  kind: "fx";
+  span: Span;
+  w: number;
+  x: number;
+  y: number;
+}
+
 export interface GroupNode {
   blinkRateMs?: number;
   children: RenderNode[];
@@ -61,7 +85,7 @@ export interface GroupNode {
   test?: Expr;
 }
 
-export type DrawNode = BarDrawable | IconDrawable | RectDrawable | TextDrawable;
+export type DrawNode = BarDrawable | FxDrawable | IconDrawable | MarqueeDrawable | RectDrawable | TextDrawable;
 export type RenderNode = DrawNode | GroupNode;
 
 export interface LayoutResult {
@@ -224,6 +248,10 @@ function estimateExpressionLength(expr: Expr, typeContext: TypecheckContext): nu
         case "lower":
         case "comma":
         case "fixed":
+        case "round":
+        case "floor":
+        case "ceil":
+        case "abs":
           return estimateExpressionLength(expr.input, typeContext);
         default:
           return estimateTypeLength(typeName(inferExpressionType(expr, typeContext)));
@@ -384,6 +412,47 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
         span: node.span,
         x,
         y
+      }
+    ];
+  }
+
+  if (node.tagName === "marquee") {
+    const x = parseInteger(node.attrs, "x", node.span, diagnostics);
+    const y = parseInteger(node.attrs, "y", node.span, diagnostics);
+    const w = parseInteger(node.attrs, "w", node.span, diagnostics, 64) ?? 64;
+    if (x === null || y === null) {
+      return [];
+    }
+    return [
+      {
+        color: colorValue(node.attrs, "color", "#f0f0f0"),
+        font: literalValue(node.attrs, "font") ?? "5x7",
+        kind: "marquee",
+        span: node.span,
+        speed: parseInteger(node.attrs, "speed", node.span, diagnostics, 18) ?? 18,
+        template: node.template ?? [],
+        w,
+        x,
+        y
+      }
+    ];
+  }
+
+  if (node.tagName === "fx") {
+    const kinds: Record<string, number> = { starfield: 0, warp: 0, matrix: 1, fire: 2, fireplace: 2, life: 3, conway: 3, flow: 4, rain: 5, vu: 6, moon: 7, grass: 8, graph: 9, wxicon: 10 };
+    const kindName = literalValue(node.attrs, "kind") ?? "starfield";
+    const fx = kinds[kindName] ?? 0;
+    return [
+      {
+        arg: parseInteger(node.attrs, "arg", node.span, diagnostics, 0) ?? 0,
+        color: colorValue(node.attrs, "color", "#8fb8ff"),
+        fx,
+        h: parseInteger(node.attrs, "h", node.span, diagnostics, 32) ?? 32,
+        kind: "fx",
+        span: node.span,
+        w: parseInteger(node.attrs, "w", node.span, diagnostics, 64) ?? 64,
+        x: parseInteger(node.attrs, "x", node.span, diagnostics, 0) ?? 0,
+        y: parseInteger(node.attrs, "y", node.span, diagnostics, 0) ?? 0
       }
     ];
   }

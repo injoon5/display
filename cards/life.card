@@ -1,0 +1,3 @@
+<card id="life" name="Life" priority="50">
+  <fx kind="life" color="#8fd0ff" />
+</card>

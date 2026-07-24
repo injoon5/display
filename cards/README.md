@@ -7,9 +7,15 @@ This directory keeps the first eight Wall Matrix Panel cards in two formats:
 
 All layouts target a `64x32` matrix and follow the current compiler constraints:
 
-- `3x5` and `5x7` for dense labels and body text
-- `8x16` / `seg7` for clock cards
-- body text stays at `#e0e0e0` instead of pure white
+- `5x7` is the smallest font used, for labels and body text — it stays legible
+  where the `3x5` font turns ambiguous (`PM2.5`, `NEXT`, `ROOM`, `RSSI`)
+- `8x16` for the hero value on a card (temperature, PM2.5, clock). It is a clean
+  integer 2x scale of the `5x7` glyphs, so every stroke is a constant 2px
+- one label row, one hero row, one detail row — with a couple of pixels of
+  breathing room between them
+- accent colours are varied per card (blue / green / amber / purple) rather than
+  leaning on a single hue
+- hero/value text is `#f0f0f0`; secondary labels use the muted `#8f9f8d`
 - Stage 1 cards only use absolute `x` / `y` placement
 
 ## Current source roots

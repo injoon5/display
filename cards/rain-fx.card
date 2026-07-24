@@ -1,0 +1,3 @@
+<card id="rain-fx" name="Rain" priority="50">
+  <fx kind="rain" color="#8fb8ff" arg="55" />
+</card>

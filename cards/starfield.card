@@ -1,0 +1,3 @@
+<card id="starfield" name="Warp" priority="50">
+  <fx kind="starfield" color="#a9c7ff" />
+</card>

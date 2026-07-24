@@ -1,0 +1,10 @@
+<card id="iconsheet" name="Weather Icons" priority="10">
+  <fx kind="wxicon" x="0"  y="1"  w="16" h="14" arg="0" />
+  <fx kind="wxicon" x="16" y="1"  w="16" h="14" arg="1" />
+  <fx kind="wxicon" x="32" y="1"  w="16" h="14" arg="2" />
+  <fx kind="wxicon" x="48" y="1"  w="16" h="14" arg="3" />
+  <fx kind="wxicon" x="0"  y="17" w="16" h="14" arg="4" />
+  <fx kind="wxicon" x="16" y="17" w="16" h="14" arg="5" />
+  <fx kind="wxicon" x="32" y="17" w="16" h="14" arg="6" />
+  <fx kind="wxicon" x="48" y="17" w="16" h="14" arg="7" />
+</card>

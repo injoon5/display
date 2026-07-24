@@ -1,9 +1,0 @@
-{
-  "id": "clock",
-  "name": "Clock",
-  "priority": 64,
-  "dwellMs": 10000,
-  "elements": [
-    { "op": "text", "x": 11, "y": 8, "font": "8x16", "color": "#e0e0e0", "bind": "now.hhmm" }
-  ]
-}

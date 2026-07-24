@@ -1,0 +1,3 @@
+<card id="matrix" name="Matrix" priority="50">
+  <fx kind="matrix" color="#39ff88" />
+</card>

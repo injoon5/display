@@ -1,0 +1,10 @@
+<card id="todo" name="Todo" priority="50">
+  <text x="2" y="1" font="5x7" color="#f5c451">TODO</text>
+  <text x="28" y="1" font="5x7" color="#8f9f8d">{{ todo.done }}/{{ todo.total }}</text>
+  <frect x="2" y="9" w="6" h="6" color="#4ec98a" />
+  <marquee x="11" y="9" w="51" font="5x7" color="#7c8a86" speed="14">{{ todo.i1 }}</marquee>
+  <rect x="2" y="17" w="6" h="6" color="#5a6b66" />
+  <marquee x="11" y="17" w="51" font="5x7" color="#f0f0f0" speed="14">{{ todo.i2 }}</marquee>
+  <rect x="2" y="25" w="6" h="6" color="#5a6b66" />
+  <marquee x="11" y="25" w="51" font="5x7" color="#f0f0f0" speed="14">{{ todo.i3 }}</marquee>
+</card>

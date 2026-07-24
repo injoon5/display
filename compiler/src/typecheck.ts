@@ -232,6 +232,7 @@ function checkNode(node: MxmlNode, context: TypecheckContext, guards: Set<string
       checkScalarTemplate(node.template, context, guards);
       break;
     case "badge":
+    case "marquee":
       checkScalarTemplate(node.template ?? [], context, guards);
       break;
     case "show": {

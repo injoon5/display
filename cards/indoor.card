@@ -1,9 +1,9 @@
 <card id="indoor" name="Indoor" priority="68">
-  <text x="1" y="3" font="3x5" color="#8f9f8d">ROOM</text>
-  <text x="1" y="11" font="5x7" color="#e0e0e0">{{ room.temp_c | round }}</text>
-  <text x="24" y="11" font="3x5" color="#8f9f8d">C</text>
-  <text x="1" y="23" font="3x5" color="#8f9f8d">RH</text>
-  <text x="12" y="23" font="3x5" color="#e0e0e0">{{ room.humidity | round }}</text>
-  <text x="32" y="23" font="3x5" color="#8f9f8d">%</text>
+  <text x="2" y="0" font="5x7" color="#e0913a">ROOM</text>
+  <text x="2" y="9" font="8x16" color="#f0f0f0">{{ room.temp_c | round }}</text>
+  <text x="28" y="13" font="5x7" color="#8f9f8d">C</text>
+  <text x="2" y="25" font="5x7" color="#8f9f8d">RH</text>
+  <text x="17" y="25" font="5x7" color="#f0f0f0">{{ room.humidity | round }}</text>
+  <text x="31" y="25" font="5x7" color="#8f9f8d">%</text>
   <stale after="5m" style="dim" />
 </card>

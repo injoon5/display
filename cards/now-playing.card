@@ -1,0 +1,10 @@
+<card id="now-playing" name="Now Playing" priority="70">
+  <frect x="2" y="5" w="3" h="2" color="#52d6a7" />
+  <frect x="4" y="1" w="1" h="5" color="#52d6a7" />
+  <frect x="4" y="1" w="3" h="1" color="#52d6a7" />
+  <marquee x="10" y="1" w="53" font="5x7" color="#f0f0f0" speed="24">{{ np.title }}</marquee>
+  <marquee x="2" y="13" w="60" font="5x7" color="#a9b3b0" speed="18">{{ np.artist }}</marquee>
+  <frect x="2" y="25" w="4" h="4" color="#52d6a7" />
+  <marquee x="9" y="24" w="54" font="5x7" color="#7c8a86" speed="16">{{ np.ago }}</marquee>
+  <stale after="5m" style="dim" />
+</card>

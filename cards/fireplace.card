@@ -1,0 +1,3 @@
+<card id="fireplace" name="Fireplace" priority="50">
+  <fx kind="fire" />
+</card>

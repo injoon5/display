@@ -1,0 +1,6 @@
+<card id="krw" name="KRW/USD" priority="54">
+  <text x="2" y="0" font="8x16" color="#f0f0f0">{{ krw.rate }}</text>
+  <text x="2" y="15" font="3x5" color="#8f9f8d">KRW</text>
+  <text x="18" y="15" font="3x5" color="#4ec98a">+0.4%</text>
+  <fx kind="graph" x="0" y="20" w="64" h="12" color="#4ec98a" arg="1" />
+</card>

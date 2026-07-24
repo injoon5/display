@@ -95,6 +95,7 @@ typedef enum {
     MXR_OP_POPCLIP = 0x51,
     MXR_OP_PUSHDIM = 0x52,
     MXR_OP_POPDIM = 0x53,
+    MXR_OP_FX = 0x70,
     MXR_OP_BLINK = 0x60,
     MXR_OP_FADE = 0x61,
     MXR_OP_SLIDE = 0x62,
@@ -121,6 +122,8 @@ int mxr_render(mxr_ctx_t *ctx);
 int mxr_validate(const uint8_t *program, size_t len, mxr_diag_t *out);
 void mxr_measure_text(uint8_t font, const char *s, int *w, int *h);
 float mxr_estimate_amps(const uint16_t *fb, size_t n, float cal_idle, float cal_k);
+void mxr_fx_render(uint16_t *fb, const mxr_rect_t *clip, uint8_t kind,
+                   int x, int y, int w, int h, uint16_t color, uint8_t arg, uint32_t t_ms);
 uint32_t mxr_crc32(const void *data, size_t len);
 const uint16_t *mxr_gamma12_lut(void);
 uint16_t mxr_gamma12(uint8_t value);

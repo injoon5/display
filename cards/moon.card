@@ -1,0 +1,5 @@
+<card id="moon" name="Moon" priority="55">
+  <fx kind="moon" x="19" y="0" w="26" h="26" arg="160" />
+  <text x="1" y="1" font="5x7" color="#c9d4ff">{{ moon.illum }}%</text>
+  <marquee x="2" y="25" w="60" font="5x7" color="#8f9f8d" speed="16">{{ moon.name }}</marquee>
+</card>

@@ -191,7 +191,7 @@ class Parser {
 
     this.expect("gt");
 
-    if (name.value === "text" || name.value === "badge") {
+    if (name.value === "text" || name.value === "badge" || name.value === "marquee") {
       const templateParts: TemplatePart[] = [];
       while (!(this.current().kind === "ltSlash")) {
         if (this.current().kind === "lt") {
@@ -260,8 +260,10 @@ class Parser {
       "box",
       "col",
       "frect",
+      "fx",
       "icon",
       "line",
+      "marquee",
       "pixel",
       "rect",
       "row",

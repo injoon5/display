@@ -16,7 +16,8 @@ function estimateNode(node: RenderNode): number {
   }
 
   switch (node.kind) {
-    case "text": {
+    case "text":
+    case "marquee": {
       const text = node.template.map((part) => (part.kind === "literal" ? part.value : "0000")).join("");
       const size = measureText(node.font, text);
       const color = node.color.value ?? "#ffffff";

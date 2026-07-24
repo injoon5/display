@@ -1,5 +1,8 @@
 # Wall Matrix Panel — Full Build Plan
 
+> **Software implementation:** see [`SOFTWARE.md`](./SOFTWARE.md) and [`CONTRIBUTING.md`](./CONTRIBUTING.md).  
+> This repo contains the full software stack from the plan below (`libmxr`, MXML compiler, Convex, Seoul fetcher, SvelteKit dashboard, ESP-IDF firmware skeleton, first eight cards, CAD, CI). External Korean APIs use **dummy data** until keys are configured.
+
 A 64×32 RGB LED matrix display for a Seoul bedroom, with a production-grade backend, a
 dashboard-authored card templating language, native HomeKit integration, and appliance-grade
 reliability.

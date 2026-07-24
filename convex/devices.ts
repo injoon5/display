@@ -85,6 +85,14 @@ export const get = dashboardQuery({
   },
 });
 
+export const getInternal = internalQuery({
+  args: { id: v.id("devices") },
+  returns: v.union(deviceValidator, v.null()),
+  handler: async (ctx, args) => {
+    return await ctx.db.get("devices", args.id);
+  },
+});
+
 export const getByTokenHash = internalQuery({
   args: { tokenHash: v.string() },
   returns: v.union(deviceValidator, v.null()),

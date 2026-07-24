@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
-import { internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { dashboardMutation, dashboardQuery } from "./auth";
 
 export const slotMapEntryValidator = v.object({
@@ -218,6 +218,9 @@ export const save = dashboardMutation({
     enabled: v.optional(v.boolean()),
     priority: v.optional(v.number()),
     dwellMs: v.optional(v.number()),
+    slotMap: v.optional(v.array(slotMapEntryValidator)),
+    diagnostics: v.optional(v.array(diagnosticValidator)),
+    sourceRefs: v.optional(v.array(v.string())),
   },
   returns: cardValidator,
   handler: async (ctx, args) => {
@@ -225,6 +228,17 @@ export const save = dashboardMutation({
       ? await ctx.db.get("cards", args.cardId)
       : await ctx.db.query("cards").withIndex("by_slug", (q) => q.eq("slug", args.slug)).unique();
     const cardDocument = buildCardDocument(existing, args);
+
+    // Prefer artifacts from the shared browser/Node compiler when provided.
+    if (args.slotMap) {
+      cardDocument.slotMap = args.slotMap;
+    }
+    if (args.diagnostics) {
+      cardDocument.diagnostics = args.diagnostics;
+    }
+    if (args.sourceRefs) {
+      cardDocument.sourceRefs = args.sourceRefs;
+    }
 
     const cardId = existing?._id ?? (await ctx.db.insert("cards", cardDocument));
     if (existing) {
@@ -281,6 +295,31 @@ export const getMany = internalQuery({
   handler: async (ctx, args) => {
     const cards = await Promise.all(args.ids.map((id) => ctx.db.get("cards", id)));
     return cards.filter((card): card is Doc<"cards"> => card !== null);
+  },
+});
+
+export const patchCompiledArtifacts = internalMutation({
+  args: {
+    cardId: v.id("cards"),
+    slotMap: v.array(slotMapEntryValidator),
+    diagnostics: v.array(diagnosticValidator),
+    estimatedAmps: v.number(),
+    sourceRefs: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const card = await ctx.db.get("cards", args.cardId);
+    if (!card) {
+      throw new Error("Card not found");
+    }
+    await ctx.db.patch("cards", args.cardId, {
+      slotMap: args.slotMap,
+      diagnostics: args.diagnostics,
+      estimatedAmps: args.estimatedAmps,
+      sourceRefs: args.sourceRefs,
+      updatedAt: Date.now(),
+    });
+    return null;
   },
 });
 

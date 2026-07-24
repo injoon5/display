@@ -8,3 +8,11 @@ firmware/host_sim/build/
 convex/.convex/
 web/.svelte-kit/
 .env.local
+---
+
+# Never commit accidental tsc emit next to Convex sources
+convex/**/*.js
+!convex/_generated/**/*.js
+libmxr/test_native
+libmxr/*.ppm
+firmware/host_sim/build/

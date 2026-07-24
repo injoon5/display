@@ -114,101 +114,57 @@ const seedCards: SeedCardInput[] = [
     slug: "bus-402",
     name: "Bus 402",
     priority: 90,
-    dwellMs: 12_000,
-    source: JSON.stringify({
-      id: "bus-402",
-      elements: [
-        { op: "text", x: 1, y: 2, font: "3x5", color: "#1a5fb4", value: "402" },
-        { op: "text", x: 20, y: 2, font: "5x7", color: "#ffffff", bind: "bus.eta_min", type: "number" },
-        { op: "text", x: 36, y: 2, font: "5x7", color: "#ffffff", value: "분" },
-        { op: "text", x: 20, y: 12, font: "3x5", color: "#666666", bind: "bus.next_eta_min", type: "number" },
-        { op: "text", x: 1, y: 24, font: "3x5", color: "#aaaaaa", bind: "bus.headsign", type: "string" },
-      ],
-    }),
+    dwellMs: 12000,
+    source: "{\n  \"id\": \"bus-402\",\n  \"name\": \"Bus 402\",\n  \"priority\": 90,\n  \"dwellMs\": 12000,\n  \"elements\": [\n    { \"op\": \"badge\", \"x\": 1, \"y\": 1, \"font\": \"3x5\", \"bg\": \"#1a5fb4\", \"fg\": \"#e0e0e0\", \"value\": \"402\" },\n    { \"op\": \"text\", \"x\": 20, \"y\": 2, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"ETA\" },\n    { \"op\": \"text\", \"x\": 20, \"y\": 10, \"font\": \"5x7\", \"color\": \"#e0e0e0\", \"bind\": \"bus.eta_min\" },\n    { \"op\": \"text\", \"x\": 38, \"y\": 10, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"m\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 21, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"NEXT\" },\n    { \"op\": \"text\", \"x\": 20, \"y\": 21, \"font\": \"3x5\", \"color\": \"#e0e0e0\", \"bind\": \"bus.next_eta_min\" },\n    { \"op\": \"text\", \"x\": 32, \"y\": 21, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"m\" },\n    { \"op\": \"text\", \"x\": 48, \"y\": 14, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"LOAD\" },\n    { \"op\": \"bar\", \"x\": 48, \"y\": 21, \"w\": 12, \"h\": 5, \"color\": \"#49c16d\", \"bg\": \"#1c2320\", \"bind\": \"bus.crowding\", \"max\": 3 }\n  ]\n}",
   },
   {
     slug: "weather",
     name: "Weather",
-    source: JSON.stringify({
-      id: "weather",
-      elements: [
-        { op: "text", x: 1, y: 2, font: "5x7", color: "#ffffff", bind: "wx.tempC", type: "number" },
-        { op: "text", x: 22, y: 2, font: "5x7", color: "#ffffff", value: "C" },
-        { op: "text", x: 1, y: 14, font: "3x5", color: "#999999", bind: "wx.condition", type: "string" },
-      ],
-    }),
+    priority: 70,
+    dwellMs: 10000,
+    source: "{\n  \"id\": \"weather\",\n  \"name\": \"Weather\",\n  \"priority\": 76,\n  \"dwellMs\": 8000,\n  \"elements\": [\n    { \"op\": \"text\", \"x\": 1, \"y\": 3, \"font\": \"3x5\", \"color\": \"#6fb1ff\", \"value\": \"NOW\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 11, \"font\": \"5x7\", \"color\": \"#e0e0e0\", \"bind\": \"wx.tempC\" },\n    { \"op\": \"text\", \"x\": 24, \"y\": 11, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"C\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 23, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"bind\": \"wx.condition\" }\n  ]\n}",
   },
   {
     slug: "air",
     name: "Air Quality",
-    source: JSON.stringify({
-      id: "air",
-      elements: [
-        { op: "text", x: 1, y: 2, font: "3x5", color: "#999999", value: "PM2.5" },
-        { op: "text", x: 1, y: 12, font: "5x7", color: "#ffffff", bind: "air.pm25", type: "number" },
-        { op: "text", x: 24, y: 12, font: "3x5", color: "#999999", bind: "air.grade", type: "string" },
-      ],
-    }),
+    priority: 75,
+    dwellMs: 10000,
+    source: "{\n  \"id\": \"air\",\n  \"name\": \"Air Quality\",\n  \"priority\": 72,\n  \"dwellMs\": 8000,\n  \"elements\": [\n    { \"op\": \"text\", \"x\": 1, \"y\": 3, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"PM2.5\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 11, \"font\": \"5x7\", \"color\": \"#e0e0e0\", \"bind\": \"air.pm25\" },\n    { \"op\": \"text\", \"x\": 24, \"y\": 11, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"ug\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 23, \"font\": \"3x5\", \"color\": \"#52d6a7\", \"bind\": \"air.grade\" }\n  ]\n}",
   },
   {
     slug: "clock",
     name: "Clock",
-    source: JSON.stringify({
-      id: "clock",
-      elements: [
-        { op: "text", x: 4, y: 4, font: "5x7", color: "#ffffff", value: "07:21" },
-        { op: "text", x: 4, y: 18, font: "3x5", color: "#888888", bind: "calendar.dateLabel", type: "string" },
-      ],
-    }),
+    priority: 40,
+    dwellMs: 8000,
+    source: "{\n  \"id\": \"clock\",\n  \"name\": \"Clock\",\n  \"priority\": 64,\n  \"dwellMs\": 10000,\n  \"elements\": [\n    { \"op\": \"text\", \"x\": 11, \"y\": 8, \"font\": \"8x16\", \"color\": \"#e0e0e0\", \"bind\": \"now.hhmm\" }\n  ]\n}",
   },
   {
     slug: "clock-dim",
     name: "Clock Dim",
-    source: JSON.stringify({
-      id: "clock-dim",
-      elements: [
-        { op: "text", x: 8, y: 10, font: "5x7", color: "#666666", value: "07:21" },
-      ],
-    }),
+    priority: 30,
+    dwellMs: 15000,
+    source: "{\n  \"id\": \"clock-dim\",\n  \"name\": \"Clock Dim\",\n  \"priority\": 40,\n  \"dwellMs\": 12000,\n  \"elements\": [\n    { \"op\": \"text\", \"x\": 11, \"y\": 8, \"font\": \"8x16\", \"color\": \"#66706a\", \"bind\": \"now.hhmm\" }\n  ]\n}",
   },
   {
     slug: "indoor",
     name: "Indoor",
-    source: JSON.stringify({
-      id: "indoor",
-      elements: [
-        { op: "text", x: 1, y: 2, font: "5x7", color: "#ffffff", bind: "indoor.tempC", type: "number" },
-        { op: "text", x: 20, y: 2, font: "5x7", color: "#ffffff", value: "C" },
-        { op: "text", x: 1, y: 14, font: "3x5", color: "#999999", bind: "indoor.humidity", type: "number" },
-        { op: "text", x: 18, y: 14, font: "3x5", color: "#999999", value: "%" },
-      ],
-    }),
+    priority: 60,
+    dwellMs: 10000,
+    source: "{\n  \"id\": \"indoor\",\n  \"name\": \"Indoor\",\n  \"priority\": 68,\n  \"dwellMs\": 8000,\n  \"elements\": [\n    { \"op\": \"text\", \"x\": 1, \"y\": 3, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"ROOM\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 11, \"font\": \"5x7\", \"color\": \"#e0e0e0\", \"bind\": \"room.temp_c\" },\n    { \"op\": \"text\", \"x\": 24, \"y\": 11, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"C\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 23, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"RH\" },\n    { \"op\": \"text\", \"x\": 12, \"y\": 23, \"font\": \"3x5\", \"color\": \"#e0e0e0\", \"bind\": \"room.humidity\" },\n    { \"op\": \"text\", \"x\": 32, \"y\": 23, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"%\" }\n  ]\n}",
   },
   {
     slug: "calendar-next",
     name: "Calendar Next",
-    source: JSON.stringify({
-      id: "calendar-next",
-      elements: [
-        { op: "text", x: 1, y: 2, font: "3x5", color: "#999999", value: "NEXT" },
-        { op: "text", x: 1, y: 10, font: "3x5", color: "#ffffff", bind: "calendar.next.title", type: "string" },
-        { op: "text", x: 1, y: 22, font: "3x5", color: "#999999", bind: "calendar.next.startsAt", type: "string" },
-      ],
-    }),
+    priority: 65,
+    dwellMs: 10000,
+    source: "{\n  \"id\": \"calendar-next\",\n  \"name\": \"Calendar Next\",\n  \"priority\": 78,\n  \"dwellMs\": 10000,\n  \"elements\": [\n    { \"op\": \"text\", \"x\": 1, \"y\": 3, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"NEXT\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 11, \"font\": \"3x5\", \"color\": \"#e0e0e0\", \"bind\": \"calendar.next.title\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 23, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"IN\" },\n    { \"op\": \"text\", \"x\": 12, \"y\": 23, \"font\": \"3x5\", \"color\": \"#e0e0e0\", \"bind\": \"calendar.next.countdownMin\" },\n    { \"op\": \"text\", \"x\": 28, \"y\": 23, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"m\" }\n  ]\n}",
   },
   {
     slug: "self-status",
     name: "Self Status",
-    source: JSON.stringify({
-      id: "self-status",
-      elements: [
-        { op: "text", x: 1, y: 2, font: "3x5", color: "#999999", value: "RSSI" },
-        { op: "text", x: 24, y: 2, font: "3x5", color: "#ffffff", bind: "telemetry.rssi", type: "number" },
-        { op: "text", x: 1, y: 12, font: "3x5", color: "#999999", value: "PRG" },
-        { op: "text", x: 24, y: 12, font: "3x5", color: "#ffffff", bind: "device.programVersion", type: "number" },
-        { op: "text", x: 1, y: 24, font: "3x5", color: "#ffffff", bind: "poke.message", type: "string" },
-      ],
-    }),
+    priority: 20,
+    dwellMs: 8000,
+    source: "{\n  \"id\": \"self-status\",\n  \"name\": \"Self Status\",\n  \"priority\": 58,\n  \"dwellMs\": 8000,\n  \"elements\": [\n    { \"op\": \"text\", \"x\": 1, \"y\": 3, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"RSSI\" },\n    { \"op\": \"text\", \"x\": 18, \"y\": 3, \"font\": \"3x5\", \"color\": \"#e0e0e0\", \"bind\": \"telemetry.rssi\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 13, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"UP\" },\n    { \"op\": \"text\", \"x\": 18, \"y\": 13, \"font\": \"3x5\", \"color\": \"#e0e0e0\", \"bind\": \"telemetry.uptime_s\" },\n    { \"op\": \"text\", \"x\": 1, \"y\": 23, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"PRG\" },\n    { \"op\": \"text\", \"x\": 16, \"y\": 23, \"font\": \"3x5\", \"color\": \"#e0e0e0\", \"bind\": \"device.programVersion\" },\n    { \"op\": \"text\", \"x\": 31, \"y\": 23, \"font\": \"3x5\", \"color\": \"#8f9f8d\", \"value\": \"FW\" },\n    { \"op\": \"text\", \"x\": 41, \"y\": 23, \"font\": \"3x5\", \"color\": \"#e0e0e0\", \"bind\": \"device.fwVersion\" }\n  ]\n}",
   },
 ];
 

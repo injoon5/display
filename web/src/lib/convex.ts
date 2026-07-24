@@ -58,7 +58,7 @@ export type DashboardSource = {
   fetchedAt: number;
   intervalMs: number;
   kind: string;
-  origin: "convex" | "fly-nrt";
+  origin: "convex" | "fly-nrt" | "oracle-icn";
   sourceId: string;
 };
 
@@ -471,7 +471,7 @@ function buildSource(
   kind: string,
   config: Record<string, unknown>,
   intervalMs: number,
-  origin: "convex" | "fly-nrt",
+  origin: "convex" | "fly-nrt" | "oracle-icn",
   fetchedAt: number,
   data: Record<string, unknown>
 ): DashboardSource {
@@ -662,24 +662,28 @@ export async function saveCard(input: {
   priority: number;
   slug: string;
   source: string;
+  diagnostics?: DashboardDiagnostic[];
+  slotMap?: SlotMapEntry[];
+  sourceRefs?: string[];
 }): Promise<DashboardCard> {
   if (client) {
     return await client.mutation(api.cards.save, input as never) as DashboardCard;
   }
 
+  const slotMap = input.slotMap ?? extractSlotMap(input.source);
   const next: DashboardCard = {
     _creationTime: Date.now(),
     _id: input.cardId ?? `card-${input.slug}`,
-    diagnostics: [],
+    diagnostics: input.diagnostics ?? [],
     dwellMs: input.dwellMs,
     enabled: input.enabled,
     estimatedAmps: input.estimatedAmps,
     name: input.name,
     priority: input.priority,
     slug: input.slug,
-    slotMap: extractSlotMap(input.source),
+    slotMap,
     source: input.source,
-    sourceRefs: [...new Set(extractSlotMap(input.source).map((entry) => entry.sourceId))],
+    sourceRefs: input.sourceRefs ?? [...new Set(slotMap.map((entry) => entry.sourceId))],
     updatedAt: Date.now()
   };
   mockState.update((state) => ({
@@ -689,11 +693,16 @@ export async function saveCard(input: {
   return next;
 }
 
-export async function deployCard(cardIds: string[], deviceId: string): Promise<{ etag: string; size: number }> {
+export async function deployCard(
+  cardIds: string[],
+  deviceId: string,
+  bytecode?: Uint8Array,
+): Promise<{ etag: string; size: number }> {
   if (client) {
-    const result = await client.action(api.programs.compileAndDeploy, {
+    const result = await client.action(api.programsCompile.compileAndDeployMxr, {
       cardIds,
-      deviceId
+      deviceId,
+      ...(bytecode ? { bytecode } : {}),
     } as never) as { etag: string; size: number };
     return result;
   }
@@ -710,7 +719,7 @@ export async function deployCard(cardIds: string[], deviceId: string): Promise<{
         : device
     )
   }));
-  return { etag: `"mock-${Date.now()}"`, size: cardIds.length };
+  return { etag: `"mock-${Date.now()}"`, size: bytecode?.length ?? cardIds.length };
 }
 
 export async function saveScene(input: {
@@ -773,7 +782,7 @@ export async function writeSource(input: {
   data: Record<string, unknown>;
   intervalMs: number;
   kind: string;
-  origin: "convex" | "fly-nrt";
+  origin: "convex" | "fly-nrt" | "oracle-icn";
   sourceId: string;
 }): Promise<void> {
   if (client) {

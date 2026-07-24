@@ -71,15 +71,27 @@
 
   async function handleSave(): Promise<void> {
     actionMessage = null;
+    if (compiled?.diagnostics.some((d) => d.severity === "error")) {
+      actionMessage = "Fix compile errors before saving.";
+      return;
+    }
     const saved = await saveCard({
       cardId: card?._id,
+      diagnostics: (compiled?.diagnostics ?? []).map((d) => ({
+        col: d.span?.start.column ?? 1,
+        line: d.span?.start.line ?? 1,
+        message: d.message,
+        severity: d.severity
+      })),
       dwellMs,
       enabled,
       estimatedAmps: compiled?.estimatedAmps ?? card?.estimatedAmps ?? 0.8,
       name,
       priority,
       slug,
-      source
+      slotMap: compiled?.slotMap,
+      source,
+      sourceRefs: compiled?.sources
     });
     actionMessage = `Saved ${saved.slug}`;
   }
@@ -90,8 +102,12 @@
       actionMessage = "Need a card and a device before deploy.";
       return;
     }
-    const deployed = await deployCard([card._id], $primaryDevice._id);
-    actionMessage = `Deployed ${card.slug} (${deployed.etag})`;
+    if (!compiled || compiled.diagnostics.some((d) => d.severity === "error")) {
+      actionMessage = "Fix compile errors before deploy.";
+      return;
+    }
+    const deployed = await deployCard([card._id], $primaryDevice._id, compiled.bytecode);
+    actionMessage = `Deployed ${card.slug} MXR1 (${deployed.size} B, ${deployed.etag})`;
   }
 </script>
 

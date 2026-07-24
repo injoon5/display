@@ -1,4 +1,5 @@
 node_modules/
 convex/.convex/
+web/.svelte-kit/
 
 .env.local

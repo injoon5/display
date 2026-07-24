@@ -1,17 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import StatusBadge from "$lib/components/status-badge.svelte";
-  import StatTile from "$lib/components/stat-tile.svelte";
-  import * as Card from "$lib/components/ui/card/index.js";
   import * as Empty from "$lib/components/ui/empty/index.js";
-  import * as Table from "$lib/components/ui/table/index.js";
   import {
     buildSlotSnapshot,
     cards,
     dashboardStatus,
     getActiveScene,
     primaryDevice,
-    rules,
     scenes,
     sources,
     telemetry,
@@ -19,7 +15,6 @@
   import Health from "$lib/device/Health.svelte";
   import Mirror from "$lib/device/Mirror.svelte";
   import PowerMeter from "$lib/device/PowerMeter.svelte";
-  import { modeLabel } from "$lib/mode-label";
 
   let nowMs = $state(Date.now());
 
@@ -49,35 +44,37 @@
       : { byIndex: {}, byPath: {} },
   );
   let statusLabel = $derived(
-    modeLabel($dashboardStatus.mode) + ($dashboardStatus.lastError ? " · Limited" : ""),
+    $dashboardStatus.mode === "degraded"
+      ? "Limited"
+      : $dashboardStatus.mode === "mock"
+        ? "Demo"
+        : "Live",
+  );
+  let freshSources = $derived(
+    [...$sources].sort((left, right) => left.fetchedAt - right.fetchedAt).slice(0, 5),
   );
 </script>
 
-<div class="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_380px]">
-  <div class="flex flex-col gap-4">
-    <Card.Root class="shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_12px_40px_rgba(0,0,0,0.28)]">
-      <Card.Header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div class="flex flex-col gap-2">
-          <div class="flex flex-wrap items-center gap-2">
-            <StatusBadge tone={device?.online ? "success" : "destructive"}>
-              {device?.online ? "Online" : "Offline"}
-            </StatusBadge>
-            <StatusBadge tone="warning">{scene?.name ?? "No Scene"}</StatusBadge>
-          </div>
-          <Card.Title class="text-xl">{device?.name ?? "Wall Matrix Panel"}</Card.Title>
-          <Card.Description>
-            See what’s on the panel and how it’s doing.
-          </Card.Description>
-        </div>
-        <div class="grid w-full gap-2 sm:max-w-md sm:grid-cols-3">
-          <StatTile label="Cards" value={scene?.cardIds.length ?? 0} />
-          <StatTile label="Rules" value={$rules.filter((rule) => rule.enabled).length} />
-          <StatTile label="Sources" value={$sources.length} />
-        </div>
-      </Card.Header>
-    </Card.Root>
+<section class="flex flex-col gap-6" aria-labelledby="device-title">
+  <header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="min-w-0">
+      <div class="mb-2 flex flex-wrap items-center gap-2">
+        <StatusBadge tone={device?.online ? "success" : "destructive"}>
+          {device?.online ? "Online" : "Offline"}
+        </StatusBadge>
+        <StatusBadge tone="warning">{scene?.name ?? "No Scene"}</StatusBadge>
+      </div>
+      <h1 id="device-title" class="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+        {device?.name ?? "Wall Matrix Panel"}
+      </h1>
+      <p class="mt-1 max-w-xl text-sm text-muted-foreground text-pretty">
+        See what’s on the panel and how it’s doing.
+      </p>
+    </div>
+  </header>
 
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+  <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_19rem]">
+    <div class="device-stage surface overflow-hidden rounded-2xl p-4 md:p-5">
       <Mirror
         card={activeCard}
         cards={$cards}
@@ -88,92 +85,76 @@
         snapshot={snapshot}
         telemetry={$telemetry}
       />
-      <div class="flex flex-col gap-4">
-        <Health device={device} statusLabel={statusLabel} telemetry={$telemetry} />
-        <PowerMeter amps={$telemetry.estAmps} budget={4} label="Current draw" />
-      </div>
     </div>
-  </div>
 
-  <div class="flex flex-col gap-4">
-    <Card.Root>
-      <Card.Header class="flex-row items-start justify-between gap-3">
-        <div>
-          <Card.Title>Scene Queue</Card.Title>
-          <Card.Description>Cards in the active scene.</Card.Description>
+    <aside class="flex flex-col gap-4">
+      <Health device={device} nowMs={nowMs} statusLabel={statusLabel} telemetry={$telemetry} />
+      <PowerMeter amps={$telemetry.estAmps} budget={4} label="Current draw" />
+
+      <section class="glass rounded-2xl p-4" aria-labelledby="queue-title">
+        <div class="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 id="queue-title" class="text-sm font-semibold tracking-tight">Scene Queue</h2>
+            <p class="mt-0.5 text-xs text-muted-foreground">Cards in the active scene.</p>
+          </div>
+          <StatusBadge tone="success">{scene?.name ?? "Idle"}</StatusBadge>
         </div>
-        <StatusBadge tone="success">{scene?.name ?? "Idle"}</StatusBadge>
-      </Card.Header>
-      <Card.Content>
-        {#if scene}
-          <Table.Root>
-            <Table.Header>
-              <Table.Row>
-                <Table.Head class="w-10">#</Table.Head>
-                <Table.Head>Name</Table.Head>
-                <Table.Head>Slug</Table.Head>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {#each scene.cardIds as cardId, index (cardId)}
-                {@const card = $cards.find((entry) => entry._id === cardId)}
-                <Table.Row>
-                  <Table.Cell class="tabular-nums text-muted-foreground">{index + 1}</Table.Cell>
-                  <Table.Cell class="max-w-[9rem] truncate font-medium">
-                    <a
-                      class="hover:underline"
-                      href={card ? `/cards/${card.slug}` : "/cards"}
-                    >
-                      {card?.name ?? cardId}
-                    </a>
-                  </Table.Cell>
-                  <Table.Cell class="max-w-[7rem] truncate font-mono text-[11px] text-muted-foreground">
-                    {card?.slug ?? "unknown"}
-                  </Table.Cell>
-                </Table.Row>
-              {/each}
-            </Table.Body>
-          </Table.Root>
+
+        {#if scene && scene.cardIds.length > 0}
+          <ol class="flex flex-col gap-1">
+            {#each scene.cardIds as cardId, index (cardId)}
+              {@const card = $cards.find((entry) => entry._id === cardId)}
+              <li>
+                <a
+                  class="press flex min-h-10 items-center justify-between gap-3 rounded-xl px-2.5 py-2 hover-device:hover:bg-white/5 focus-visible:ring-3 focus-visible:ring-ring/50"
+                  href={card ? `/cards/${card.slug}` : "/cards"}
+                >
+                  <span class="min-w-0">
+                    <span class="block truncate text-sm font-medium">{card?.name ?? cardId}</span>
+                    <span class="block truncate font-mono text-[11px] text-muted-foreground">
+                      {card?.slug ?? "unknown"}
+                    </span>
+                  </span>
+                  <span class="tabular-nums text-xs text-muted-foreground">{index + 1}</span>
+                </a>
+              </li>
+            {/each}
+          </ol>
         {:else}
-          <Empty.Root class="border-none py-6">
+          <Empty.Root class="border-none py-4">
             <Empty.Header>
               <Empty.Title>No active scene</Empty.Title>
               <Empty.Description>Choose a scene to fill this queue.</Empty.Description>
             </Empty.Header>
           </Empty.Root>
         {/if}
-      </Card.Content>
-    </Card.Root>
+      </section>
 
-    <Card.Root>
-      <Card.Header>
-        <Card.Title>Sources</Card.Title>
-        <Card.Description>How recently each source updated.</Card.Description>
-      </Card.Header>
-      <Card.Content>
-        <Table.Root>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head>Source</Table.Head>
-              <Table.Head>Type</Table.Head>
-              <Table.Head class="text-right">Age</Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {#each [...$sources].sort((left, right) => left.fetchedAt - right.fetchedAt).slice(0, 6) as source (source._id)}
-              <Table.Row>
-                <Table.Cell class="max-w-[8rem] truncate font-medium">{source.sourceId}</Table.Cell>
-                <Table.Cell class="max-w-[6rem] truncate font-mono text-[11px] text-muted-foreground">
+      <section class="glass rounded-2xl p-4" aria-labelledby="sources-title">
+        <div class="mb-3">
+          <h2 id="sources-title" class="text-sm font-semibold tracking-tight">Sources</h2>
+          <p class="mt-0.5 text-xs text-muted-foreground">How recently each source updated.</p>
+        </div>
+        <ul class="flex flex-col gap-1">
+          {#each freshSources as source (source._id)}
+            <li
+              class="flex min-h-10 items-center justify-between gap-3 rounded-xl px-2.5 py-2"
+            >
+              <span class="min-w-0">
+                <span class="block truncate text-sm font-medium">{source.sourceId}</span>
+                <span class="block truncate font-mono text-[11px] text-muted-foreground">
                   {source.kind}
-                </Table.Cell>
-                <Table.Cell class="text-right tabular-nums text-muted-foreground">
-                  {Math.max(0, Math.round((nowMs - source.fetchedAt) / 1000))}s
-                </Table.Cell>
-              </Table.Row>
-            {/each}
-          </Table.Body>
-        </Table.Root>
-      </Card.Content>
-    </Card.Root>
+                </span>
+              </span>
+              <span class="tabular-nums text-xs text-muted-foreground">
+                {Math.max(0, Math.round((nowMs - source.fetchedAt) / 1000))}s
+              </span>
+            </li>
+          {:else}
+            <li class="px-2.5 py-3 text-sm text-muted-foreground">No sources yet.</li>
+          {/each}
+        </ul>
+      </section>
+    </aside>
   </div>
-</div>
+</section>

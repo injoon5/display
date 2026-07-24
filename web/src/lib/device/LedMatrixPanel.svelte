@@ -26,22 +26,15 @@
     onhotspot,
   }: Props = $props();
 
-  let lastTapAt = 0;
-
-  function handlePointer(event: MouseEvent): void {
+  function handleClick(event: MouseEvent): void {
     if (!(event.currentTarget instanceof HTMLElement)) return;
     const pixel = matrixPixelFromEvent(event, event.currentTarget, pitch);
     const hotspot = pixel ? locateHotspot(hotspots, pixel.x, pixel.y) : null;
-    const now = performance.now();
-    const isDouble = now - lastTapAt < 380;
-    lastTapAt = now;
-
-    if (isDouble) {
-      ondoubletap?.();
-      return;
-    }
-
     if (hotspot) onhotspot?.(hotspot);
+  }
+
+  function handleDoubleClick(): void {
+    ondoubletap?.();
   }
 
   function handleKeydown(event: KeyboardEvent): void {
@@ -59,7 +52,8 @@
         <button
           aria-label="{title}. Double-click to advance. Click a hotspot to pin."
           class="led-surface"
-          onclick={handlePointer}
+          onclick={handleClick}
+          ondblclick={handleDoubleClick}
           onkeydown={handleKeydown}
           type="button"
         >

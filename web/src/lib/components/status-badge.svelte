@@ -46,6 +46,6 @@
   });
 </script>
 
-<Badge variant={variant} class={cn("font-mono tabular", toneClass, className)} {...rest}>
+<Badge variant={variant} class={cn("tabular-nums", toneClass, className)} {...rest}>
   {@render children?.()}
 </Badge>

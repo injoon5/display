@@ -4,12 +4,17 @@
   "private": true,
   "description": "Wall Matrix Panel monorepo",
   "workspaces": [
-    "packages/*"
+    "compiler",
+    "packages/*",
+    "web"
   ],
   "scripts": {
     "convex:codegen": "npx convex codegen",
     "convex:dev:once": "CONVEX_AGENT_MODE=anonymous npx convex dev --once",
-    "typecheck": "tsc -p convex/tsconfig.json --noEmit"
+    "typecheck": "tsc -p convex/tsconfig.json --noEmit",
+    "web:check": "npm run check -w web",
+    "web:build": "npm run build -w web",
+    "web:dev": "npm run dev -w web"
   },
   "repository": {
     "type": "git",

@@ -1,7 +1,10 @@
 import { z } from "zod";
 export declare const kmaNowSchema: z.ZodObject<{
     condition: z.ZodString;
-    feels_c: z.ZodNumber;
+    feelsC: z.ZodOptional<z.ZodNumber>;
+    feels_c: z.ZodOptional<z.ZodNumber>;
     icon: z.ZodString;
-    temp_c: z.ZodNumber;
+    rainProb: z.ZodOptional<z.ZodNumber>;
+    tempC: z.ZodNumber;
+    temp_c: z.ZodOptional<z.ZodNumber>;
 }, z.core.$strip>;

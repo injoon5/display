@@ -1,6 +1,6 @@
 import type { AttributeValue, CardNode, MxmlNode, TemplatePart } from "./ast.js";
 import type { Expr } from "./expr.js";
-import { FONT_METRICS, estimateDynamicTextLength, measureText } from "./fonts.js";
+import { FONT_METRICS, measureText } from "./fonts.js";
 import { inferExpressionType, typeName, type TypecheckContext } from "./typecheck.js";
 import type { Diagnostic, Span } from "./types.js";
 
@@ -152,6 +152,90 @@ function numberValue(attrs: Record<string, AttributeValue>, name: string, fallba
   return expr ? { expr } : { value: fallback };
 }
 
+function estimateTypeLength(typeNameValue: string): number {
+  switch (typeNameValue) {
+    case "bool":
+      return 5;
+    case "color":
+      return 7;
+    case "float":
+      return 8;
+    case "int":
+      return 6;
+    case "null":
+      return 0;
+    case "string":
+      return 10;
+    default:
+      return 10;
+  }
+}
+
+function literalNumber(expr: Expr | undefined): number | null {
+  return expr?.kind === "literal" && typeof expr.value === "number" ? expr.value : null;
+}
+
+function estimateExpressionLength(expr: Expr, typeContext: TypecheckContext): number {
+  switch (expr.kind) {
+    case "literal":
+      if (expr.value === null) {
+        return 0;
+      }
+      if (typeof expr.value === "string") {
+        return expr.value.length;
+      }
+      if (typeof expr.value === "number") {
+        return String(expr.value).length;
+      }
+      return expr.value ? 4 : 5;
+    case "path":
+    case "unary":
+    case "binary":
+      return estimateTypeLength(typeName(inferExpressionType(expr, typeContext)));
+    case "ternary":
+      return Math.max(
+        estimateExpressionLength(expr.consequent, typeContext),
+        estimateExpressionLength(expr.alternate, typeContext)
+      );
+    case "filter": {
+      switch (expr.name) {
+        case "pad":
+          return literalNumber(expr.args[0]) ?? 2;
+        case "trunc":
+          return literalNumber(expr.args[0]) ?? 8;
+        case "hhmm":
+          return 5;
+        case "hhmmss":
+          return 8;
+        case "date":
+          return 10;
+        case "duration":
+          return 6;
+        case "relative":
+          return 5;
+        case "icon_for":
+          return 12;
+        case "default":
+          return Math.max(
+            estimateExpressionLength(expr.input, typeContext),
+            expr.args[0] ? estimateExpressionLength(expr.args[0], typeContext) : 0
+          );
+        case "upper":
+        case "lower":
+        case "comma":
+        case "fixed":
+          return estimateExpressionLength(expr.input, typeContext);
+        default:
+          return estimateTypeLength(typeName(inferExpressionType(expr, typeContext)));
+      }
+    }
+    default: {
+      const exhaustive: never = expr;
+      return exhaustive;
+    }
+  }
+}
+
 function estimatedTemplateText(parts: TemplatePart[], font: string, typeContext: TypecheckContext): { h: number; w: number } {
   let width = 0;
   const height = FONT_METRICS[font as keyof typeof FONT_METRICS]?.glyphHeight ?? 7;
@@ -160,8 +244,7 @@ function estimatedTemplateText(parts: TemplatePart[], font: string, typeContext:
       width += measureText(font, part.value).width;
       continue;
     }
-    const type = inferExpressionType(part.expr, typeContext);
-    width += estimateDynamicTextLength(typeName(type)) * (FONT_METRICS[font as keyof typeof FONT_METRICS]?.advance ?? 6);
+    width += estimateExpressionLength(part.expr, typeContext) * (FONT_METRICS[font as keyof typeof FONT_METRICS]?.advance ?? 6);
   }
   return { h: height, w: width };
 }

@@ -1,0 +1,12 @@
+<card id="calendar-next" name="Calendar Next" priority="78">
+  <source id="calendar" kind="google.calendar" calendarId="primary" every="5m" />
+  <text x="1" y="3" font="3x5" color="#8f9f8d">NEXT</text>
+  <text x="1" y="11" font="3x5" color="#e0e0e0">{{ calendar.next.title | trunc(15) }}</text>
+  <when test="{{ calendar.next.countdownMin != null }}">
+    <text x="1" y="23" font="3x5" color="#8f9f8d">IN {{ calendar.next.countdownMin }}m</text>
+  </when>
+  <when test="{{ calendar.next.countdownMin == null }}">
+    <text x="1" y="23" font="3x5" color="#8f9f8d">{{ calendar.next.startsAt | default('TBD') }}</text>
+  </when>
+  <stale after="15m" style="dim" />
+</card>

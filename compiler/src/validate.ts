@@ -1,3 +1,5 @@
+import type { TemplatePart } from "./ast.js";
+import type { Expr } from "./expr.js";
 import { measureText } from "./fonts.js";
 import { CANVAS_HEIGHT, CANVAS_WIDTH, MAX_SLOT_COUNT, type Diagnostic } from "./types.js";
 import type { DrawNode, LayoutResult, RenderNode, TextDrawable } from "./layout.js";
@@ -11,8 +13,80 @@ function overflowDiagnostics(message: string, span: DrawNode["span"]): Diagnosti
   };
 }
 
+function literalNumber(expr: Expr | undefined): number | null {
+  return expr?.kind === "literal" && typeof expr.value === "number" ? expr.value : null;
+}
+
+function estimateExpressionLength(expr: Expr): number {
+  switch (expr.kind) {
+    case "literal":
+      if (expr.value === null) {
+        return 0;
+      }
+      if (typeof expr.value === "string") {
+        return expr.value.length;
+      }
+      if (typeof expr.value === "number") {
+        return String(expr.value).length;
+      }
+      return expr.value ? 4 : 5;
+    case "path":
+    case "unary":
+    case "binary":
+      return 6;
+    case "ternary":
+      return Math.max(estimateExpressionLength(expr.consequent), estimateExpressionLength(expr.alternate));
+    case "filter":
+      switch (expr.name) {
+        case "pad":
+          return literalNumber(expr.args[0]) ?? 2;
+        case "trunc":
+          return literalNumber(expr.args[0]) ?? 8;
+        case "hhmm":
+          return 5;
+        case "hhmmss":
+          return 8;
+        case "date":
+          return 10;
+        case "duration":
+          return 6;
+        case "relative":
+          return 5;
+        case "icon_for":
+          return 12;
+        case "default":
+          return Math.max(
+            estimateExpressionLength(expr.input),
+            expr.args[0] ? estimateExpressionLength(expr.args[0]) : 0
+          );
+        case "upper":
+        case "lower":
+        case "comma":
+        case "fixed":
+          return estimateExpressionLength(expr.input);
+        default:
+          return 10;
+      }
+    default: {
+      const exhaustive: never = expr;
+      return exhaustive;
+    }
+  }
+}
+
+function templateSample(parts: TemplatePart[]): string {
+  return parts
+    .map((part) => {
+      if (part.kind === "literal") {
+        return part.value;
+      }
+      return "0".repeat(Math.max(0, estimateExpressionLength(part.expr)));
+    })
+    .join("");
+}
+
 function estimateTextBounds(node: TextDrawable): { h: number; w: number } {
-  const text = node.template.map((part) => (part.kind === "literal" ? part.value : "000000")).join("");
+  const text = templateSample(node.template);
   const measured = measureText(node.font, text);
   return { h: measured.height, w: measured.width };
 }

@@ -1,0 +1,13 @@
+{
+  "id": "calendar-next",
+  "name": "Calendar Next",
+  "priority": 78,
+  "dwellMs": 10000,
+  "elements": [
+    { "op": "text", "x": 1, "y": 3, "font": "3x5", "color": "#8f9f8d", "value": "NEXT" },
+    { "op": "text", "x": 1, "y": 11, "font": "3x5", "color": "#e0e0e0", "bind": "calendar.next.title" },
+    { "op": "text", "x": 1, "y": 23, "font": "3x5", "color": "#8f9f8d", "value": "IN" },
+    { "op": "text", "x": 12, "y": 23, "font": "3x5", "color": "#e0e0e0", "bind": "calendar.next.countdownMin" },
+    { "op": "text", "x": 28, "y": 23, "font": "3x5", "color": "#8f9f8d", "value": "m" }
+  ]
+}

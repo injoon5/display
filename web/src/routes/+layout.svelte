@@ -7,6 +7,7 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import { Toaster } from "$lib/components/ui/sonner/index.js";
   import { dashboardStatus, primaryDevice } from "$lib/convex";
+  import { modeLabel } from "$lib/mode-label";
   import { ModeWatcher } from "mode-watcher";
   import BoxIcon from "@lucide/svelte/icons/box";
   import CpuIcon from "@lucide/svelte/icons/cpu";
@@ -26,7 +27,7 @@
     { href: "/rules", label: "Rules", icon: WorkflowIcon },
     { href: "/sources", label: "Sources", icon: RadioIcon },
     { href: "/firmware", label: "Firmware", icon: CpuIcon },
-    { href: "/provision", label: "Provision", icon: ShieldIcon },
+    { href: "/provision", label: "Set Up", icon: ShieldIcon },
   ];
 
   let status = $derived($dashboardStatus);
@@ -63,21 +64,21 @@
         </div>
         <div class="min-w-0 group-data-[collapsible=icon]:hidden">
           <p class="truncate text-sm font-semibold tracking-tight">Wall Matrix</p>
-          <p class="truncate text-xs text-muted-foreground">Panel control</p>
+          <p class="truncate text-xs text-muted-foreground">Control</p>
         </div>
       </div>
       <div class="flex flex-wrap gap-1.5 px-1 group-data-[collapsible=icon]:hidden">
-        <StatusBadge tone="secondary">panel</StatusBadge>
-        <StatusBadge tone={modeTone(status.mode)}>{status.mode}</StatusBadge>
+        <StatusBadge tone="secondary">Panel</StatusBadge>
+        <StatusBadge tone={modeTone(status.mode)}>{modeLabel(status.mode)}</StatusBadge>
       </div>
     </Sidebar.Header>
 
     <Sidebar.Content>
       <Sidebar.Group>
-        <Sidebar.GroupLabel>Navigate</Sidebar.GroupLabel>
+        <Sidebar.GroupLabel>Menu</Sidebar.GroupLabel>
         <Sidebar.GroupContent>
           <Sidebar.Menu>
-            {#each nav as item}
+            {#each nav as item (item.href)}
               {@const Icon = item.icon}
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
@@ -99,9 +100,9 @@
     </Sidebar.Content>
 
     <Sidebar.Footer class="gap-2 px-3 pb-3 group-data-[collapsible=icon]:hidden">
-      <StatTile label="Panel" value={device?.name ?? "mock panel"} />
+      <StatTile label="Panel" value={device?.name ?? "No panel"} />
       <div class="grid grid-cols-2 gap-2">
-        <StatTile label="FW" value={device?.fwVersion ?? "n/a"} />
+        <StatTile label="Firmware" value={device?.fwVersion ?? "—"} />
         <StatTile label="Program" value={`v${device?.programVersion ?? 0}`} />
       </div>
     </Sidebar.Footer>
@@ -115,10 +116,10 @@
       <Sidebar.Trigger class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]" />
       <div class="min-w-0 flex-1">
         <h1 class="truncate text-sm font-semibold tracking-tight text-balance">
-          Industrial LED matrix control
+          Wall Matrix
         </h1>
         <p class="truncate text-xs text-muted-foreground">
-          Cards, scenes, rules, sources, firmware, provisioning
+          Cards, scenes, rules, and sources
         </p>
       </div>
       <Button
@@ -126,7 +127,7 @@
         size="sm"
         class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
       >
-        Open cards
+        Open Cards
       </Button>
     </header>
 

@@ -19,6 +19,7 @@
   import Health from "$lib/device/Health.svelte";
   import Mirror from "$lib/device/Mirror.svelte";
   import PowerMeter from "$lib/device/PowerMeter.svelte";
+  import { modeLabel } from "$lib/mode-label";
 
   let nowMs = $state(Date.now());
 
@@ -48,7 +49,7 @@
       : { byIndex: {}, byPath: {} },
   );
   let statusLabel = $derived(
-    $dashboardStatus.mode + ($dashboardStatus.lastError ? " / fallback" : ""),
+    modeLabel($dashboardStatus.mode) + ($dashboardStatus.lastError ? " · Limited" : ""),
   );
 </script>
 
@@ -59,19 +60,19 @@
         <div class="flex flex-col gap-2">
           <div class="flex flex-wrap items-center gap-2">
             <StatusBadge tone={device?.online ? "success" : "destructive"}>
-              {device?.online ? "online" : "offline"}
+              {device?.online ? "Online" : "Offline"}
             </StatusBadge>
-            <StatusBadge tone="warning">{scene?.name ?? "no-scene"}</StatusBadge>
+            <StatusBadge tone="warning">{scene?.name ?? "No Scene"}</StatusBadge>
           </div>
           <Card.Title class="text-xl">{device?.name ?? "Wall Matrix Panel"}</Card.Title>
           <Card.Description>
-            Active scene queue, live mirror, and device runtime telemetry.
+            See what’s on the panel and how it’s doing.
           </Card.Description>
         </div>
         <div class="grid w-full gap-2 sm:max-w-md sm:grid-cols-3">
-          <StatTile label="Scene cards" value={scene?.cardIds.length ?? 0} />
-          <StatTile label="Rules armed" value={$rules.filter((rule) => rule.enabled).length} />
-          <StatTile label="Sources hot" value={$sources.length} />
+          <StatTile label="Cards" value={scene?.cardIds.length ?? 0} />
+          <StatTile label="Rules" value={$rules.filter((rule) => rule.enabled).length} />
+          <StatTile label="Sources" value={$sources.length} />
         </div>
       </Card.Header>
     </Card.Root>
@@ -89,7 +90,7 @@
       />
       <div class="flex flex-col gap-4">
         <Health device={device} statusLabel={statusLabel} telemetry={$telemetry} />
-        <PowerMeter amps={$telemetry.estAmps} budget={4} label="telemetry draw" />
+        <PowerMeter amps={$telemetry.estAmps} budget={4} label="Current draw" />
       </div>
     </div>
   </div>
@@ -98,10 +99,10 @@
     <Card.Root>
       <Card.Header class="flex-row items-start justify-between gap-3">
         <div>
-          <Card.Title>Scene queue</Card.Title>
-          <Card.Description>Cards in the currently active scene.</Card.Description>
+          <Card.Title>Scene Queue</Card.Title>
+          <Card.Description>Cards in the active scene.</Card.Description>
         </div>
-        <StatusBadge tone="success">{scene?.name ?? "idle"}</StatusBadge>
+        <StatusBadge tone="success">{scene?.name ?? "Idle"}</StatusBadge>
       </Card.Header>
       <Card.Content>
         {#if scene}
@@ -137,7 +138,7 @@
           <Empty.Root class="border-none py-6">
             <Empty.Header>
               <Empty.Title>No active scene</Empty.Title>
-              <Empty.Description>Select a scene to populate the queue.</Empty.Description>
+              <Empty.Description>Choose a scene to fill this queue.</Empty.Description>
             </Empty.Header>
           </Empty.Root>
         {/if}
@@ -146,15 +147,15 @@
 
     <Card.Root>
       <Card.Header>
-        <Card.Title>Source freshness</Card.Title>
-        <Card.Description>Oldest data tends to show up here first.</Card.Description>
+        <Card.Title>Sources</Card.Title>
+        <Card.Description>How recently each source updated.</Card.Description>
       </Card.Header>
       <Card.Content>
         <Table.Root>
           <Table.Header>
             <Table.Row>
               <Table.Head>Source</Table.Head>
-              <Table.Head>Kind</Table.Head>
+              <Table.Head>Type</Table.Head>
               <Table.Head class="text-right">Age</Table.Head>
             </Table.Row>
           </Table.Header>

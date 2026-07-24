@@ -6,6 +6,7 @@
   import * as Empty from "$lib/components/ui/empty/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
   import { cards, dashboardStatus, resetMockState, seedLiveDemo } from "$lib/convex";
+  import { modeLabel } from "$lib/mode-label";
 
   let actionMessage = $state<string | null>(null);
 
@@ -13,29 +14,41 @@
     actionMessage = null;
     try {
       await seedLiveDemo();
-      actionMessage = "Seeded dashboard data.";
-    } catch (error) {
-      actionMessage = error instanceof Error ? error.message : "Seed failed";
+      actionMessage = "Sample data loaded.";
+    } catch {
+      actionMessage = "Couldn’t load sample data.";
     }
   }
 
   function handleReset(): void {
     resetMockState();
-    actionMessage = "Reset local mock store.";
+    actionMessage = "Data reset.";
   }
 
   let status = $derived($dashboardStatus);
+
+  function modeTone(mode: string): "success" | "warning" | "secondary" {
+    switch (mode) {
+      case "live":
+        return "success";
+      case "degraded":
+        return "warning";
+      case "mock":
+        return "secondary";
+      default:
+        return "warning";
+    }
+  }
 </script>
 
 <header class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
   <div class="flex flex-col gap-2">
     <div class="flex flex-wrap items-center gap-2">
-      <StatusBadge tone="success">cards</StatusBadge>
-      <StatusBadge tone={status.mode === "live" ? "success" : "warning"}>{status.mode}</StatusBadge>
+      <StatusBadge tone={modeTone(status.mode)}>{modeLabel(status.mode)}</StatusBadge>
     </div>
-    <h1 class="text-xl font-semibold tracking-tight">Card catalogue</h1>
+    <h1 class="text-xl font-semibold tracking-tight">Cards</h1>
     <p class="text-sm text-muted-foreground">
-      Seed set: bus-402, weather, air, clock, clock-dim, indoor, calendar-next, self-status.
+      Layouts that can appear on your panel.
     </p>
   </div>
   <div class="flex flex-wrap gap-2">
@@ -44,14 +57,14 @@
       onclick={handleSeed}
       variant="secondary"
     >
-      Seed demo
+      Load Sample Data
     </Button>
     <Button
       class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
       onclick={handleReset}
       variant="outline"
     >
-      Reset mock
+      Reset
     </Button>
   </div>
 </header>
@@ -66,7 +79,7 @@
   <Empty.Root class="mt-4">
     <Empty.Header>
       <Empty.Title>No cards yet</Empty.Title>
-      <Empty.Description>Seed the demo catalogue to populate card definitions.</Empty.Description>
+      <Empty.Description>Load sample data to see your first cards.</Empty.Description>
     </Empty.Header>
   </Empty.Root>
 {:else}
@@ -99,7 +112,7 @@
             </Table.Cell>
             <Table.Cell>
               <StatusBadge tone={card.enabled ? "success" : "destructive"}>
-                {card.enabled ? "enabled" : "disabled"}
+                {card.enabled ? "Enabled" : "Disabled"}
               </StatusBadge>
             </Table.Cell>
             <Table.Cell class="text-right tabular-nums">{card.slotMap.length}</Table.Cell>

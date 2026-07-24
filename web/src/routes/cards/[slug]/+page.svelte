@@ -78,7 +78,7 @@
   async function handleSave(): Promise<void> {
     actionMessage = null;
     if (compiled?.diagnostics.some((d) => d.severity === "error")) {
-      actionMessage = "Fix compile errors before saving.";
+      actionMessage = "Fix any errors before saving.";
       return;
     }
     const saved = await saveCard({
@@ -99,21 +99,21 @@
       source,
       sourceRefs: compiled?.sources
     });
-    actionMessage = `Saved ${saved.slug}`;
+    actionMessage = `Saved ${saved.slug}.`;
   }
 
   async function handleDeploy(): Promise<void> {
     actionMessage = null;
     if (!card || !$primaryDevice) {
-      actionMessage = "Need a card and a device before deploy.";
+      actionMessage = "Choose a card and connect a panel first.";
       return;
     }
     if (!compiled || compiled.diagnostics.some((d) => d.severity === "error")) {
-      actionMessage = "Fix compile errors before deploy.";
+      actionMessage = "Fix any errors before publishing.";
       return;
     }
     const deployed = await deployCard([card._id], $primaryDevice._id, compiled.bytecode);
-    actionMessage = `Deployed ${card.slug} MXR1 (${deployed.size} B, ${deployed.etag})`;
+    actionMessage = `Published ${card.slug} (${deployed.size} B).`;
   }
 </script>
 
@@ -121,7 +121,7 @@
   <Empty.Root>
     <Empty.Header>
       <Empty.Title>Card not found</Empty.Title>
-      <Empty.Description>Choose a card from the catalogue to open the live editor.</Empty.Description>
+      <Empty.Description>Choose a card from Cards to open the editor.</Empty.Description>
     </Empty.Header>
     <Empty.Content>
       <Button
@@ -129,7 +129,7 @@
         href="/cards"
         variant="outline"
       >
-        Back to cards
+        Back to Cards
       </Button>
     </Empty.Content>
   </Empty.Root>
@@ -138,30 +138,30 @@
     <Card.Header class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
       <div class="flex flex-col gap-2">
         <div class="flex flex-wrap items-center gap-2">
-          <StatusBadge tone="success">editor</StatusBadge>
+          <StatusBadge tone="success">Editing</StatusBadge>
           <StatusBadge tone="warning">{card.slug}</StatusBadge>
         </div>
         <Card.Title class="text-xl">{card.name}</Card.Title>
         <Card.Description>
-          Svelte 5 live preview loop: state → compile → render → framebuffer.
+          Edit the card and preview it live.
         </Card.Description>
       </div>
 
       <div class="grid w-full gap-3 sm:grid-cols-2 xl:max-w-3xl xl:grid-cols-4">
         <div class="flex flex-col gap-1.5">
-          <Label for="card-name">name</Label>
+          <Label for="card-name">Name</Label>
           <Input id="card-name" bind:value={name} />
         </div>
         <div class="flex flex-col gap-1.5">
-          <Label for="card-slug">slug</Label>
+          <Label for="card-slug">Slug</Label>
           <Input id="card-slug" class="font-mono" bind:value={slug} />
         </div>
         <div class="flex flex-col gap-1.5">
-          <Label for="card-priority">priority</Label>
+          <Label for="card-priority">Priority</Label>
           <Input id="card-priority" class="font-mono tabular-nums" type="number" bind:value={priority} />
         </div>
         <div class="flex flex-col gap-1.5">
-          <Label for="card-dwell">dwell ms</Label>
+          <Label for="card-dwell">Dwell</Label>
           <Input id="card-dwell" class="font-mono tabular-nums" type="number" bind:value={dwellMs} />
         </div>
       </div>
@@ -171,20 +171,20 @@
       <div class="flex flex-wrap items-center gap-3">
         <Label class="inline-flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-foreground/10">
           <input bind:checked={enabled} class="accent-primary" type="checkbox" />
-          enabled
+          Enabled
         </Label>
         <Button
           class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
           onclick={handleSave}
         >
-          Save card
+          Save Card
         </Button>
         <Button
           class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
           onclick={handleDeploy}
           variant="secondary"
         >
-          Deploy to device
+          Publish
         </Button>
       </div>
       {#if actionMessage}
@@ -197,7 +197,7 @@
 
   <div class="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.4fr)_520px]">
     <div class="flex flex-col gap-4">
-      <CardEditor bind:value={source} filename={`${slug}.card`} label="Editor" />
+      <CardEditor bind:value={source} filename={`${slug}.card`} label="Card editor" />
       <Diagnostics compiled={compiled} />
     </div>
 

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
+import { dashboardQuery } from "./auth";
 
 export const telemetryValidator = v.object({
   _id: v.id("telemetry"),
@@ -73,6 +74,24 @@ export const record = internalMutation({
       throw new Error("Telemetry record failed");
     }
     return saved;
+  },
+});
+
+export const latest = dashboardQuery({
+  args: {},
+  returns: v.union(telemetryValidator, v.null()),
+  handler: async (ctx) => {
+    const devices = await ctx.db.query("devices").collect();
+    const device = devices.sort((left, right) => right.lastSeen - left.lastSeen)[0];
+    if (!device) {
+      return null;
+    }
+
+    return await ctx.db
+      .query("telemetry")
+      .withIndex("by_device_time", (q) => q.eq("deviceId", device._id))
+      .order("desc")
+      .first();
   },
 });
 

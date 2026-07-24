@@ -73,9 +73,7 @@ static constexpr int MX_PIN_LD2410_UART_RX = 8;
 // Spare analog breakout pins for the optional LD2450.
 static constexpr int MX_PIN_LD2450_UART_TX = 12;  // A0
 static constexpr int MX_PIN_LD2450_UART_RX = 3;   // A1
-// HX711 on A2 / A3.
-static constexpr int MX_PIN_HX711_DOUT = 9;   // A2
-static constexpr int MX_PIN_HX711_SCK = 10;   // A3
+// A2/A3 (GPIO 9/10) left free — no load cell.
 
 static constexpr int MX_UART_LD2410 = 1;
 static constexpr int MX_UART_LD2450 = 2;

@@ -1,5 +1,7 @@
 # Matrix Portal S3 firmware skeleton
 
+Ops / what's left: [`docs/operations.md`](../docs/operations.md) · [`docs/roadmap.md`](../docs/roadmap.md) · device HTTP: [`docs/device-protocol.md`](../docs/device-protocol.md).
+
 ESP-IDF firmware scaffold for the wall matrix panel plan:
 
 - Matrix Portal S3 / ESP32-S3
@@ -7,7 +9,7 @@ ESP-IDF firmware scaffold for the wall matrix panel plan:
 - task affinity and priorities from plan §8.1
 - offline cache and stale overlay from plan §8.5
 - A/B OTA skeleton from plan §8.6
-- HomeSpan accessory skeleton from plan §9
+- **Pure ESP-IDF — no Arduino.** LAN control via Shortcuts/`/api/*`; optional IDF-native HAP later (the old HomeSpan stub stays off)
 
 ## Layout
 
@@ -45,20 +47,16 @@ idf.py -p /dev/ttyACM0 flash monitor
 
 `components/libmxr/CMakeLists.txt` points directly at `/workspace/libmxr`, so the firmware and the host simulator both link the same renderer sources.
 
-### HomeSpan
+### HomeKit / HomeSpan
 
-HomeSpan is guarded with:
+**Do not enable `CONFIG_MX_HOMESPAN`.** It is a leftover stub that would pull Arduino-as-component
+via HomeSpan — rejected for this project.
 
-```cpp
-#ifdef CONFIG_MX_HOMESPAN
-```
+Control plane today: iOS Shortcuts / dashboard → Convex `POST /api/pin|scene|poke`.
 
-That means the tree still compiles when HomeSpan is not installed. To enable it, add Arduino-as-component plus HomeSpan to your ESP-IDF checkout, then turn on:
-
-```bash
-idf.py menuconfig
-# Matrix Panel firmware -> Enable HomeSpan integration
-```
+If you want native HomeKit later, add an **ESP-IDF-native HAP** stack on core 1 (Apple HomeKit
+ADK port or equivalent). See [`docs/plan.md` §9](../docs/plan.md#9-homekit--lan-control) and
+[`docs/roadmap.md`](../docs/roadmap.md) §E.
 
 ### OTA / partitions
 
@@ -92,10 +90,9 @@ Staleness is measured from the device uptime clock at the moment a live `/device
 | I²C SDA / SCL | 16 / 17 | STEMMA QT + onboard LIS3DH |
 | LIS3DH INT1 | 15 | Double-tap edge stub |
 | LD2410C UART TX / RX | 18 / 8 | Labeled TXO / RXI header |
-| LD2450 UART TX / RX | 12 / 3 | A0 / A1 |
-| HX711 DOUT / SCK | 9 / 10 | A2 / A3 |
+| LD2450 UART TX / RX | 12 / 3 | A0 / A1 (optional) |
 
-Do not reuse HUB75 pins (`2,14,21,35–42,45,47,48`).
+A2/A3 (GPIO 9/10) are free. Do not reuse HUB75 pins (`2,14,21,35–42,45,47,48`).
 
 ### Net sync status
 

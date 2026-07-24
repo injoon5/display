@@ -19,7 +19,6 @@ export type RuntimeTelemetry = {
   tempC: number;
   humidity: number;
   presenceRoom: boolean;
-  presenceBed: boolean;
   estAmps: number;
   governorActive: boolean;
   uptime_s?: number;
@@ -301,7 +300,6 @@ export function buildRuntimeScope(input: {
     heapFree: telemetry?.heapFree ?? 0,
     humidity: telemetry?.humidity ?? 0,
     lux: telemetry?.lux ?? 0,
-    presenceBed: telemetry?.presenceBed ?? false,
     presenceRoom: telemetry?.presenceRoom ?? false,
     rssi: telemetry?.rssi ?? 0,
     tempC: telemetry?.tempC ?? 0,

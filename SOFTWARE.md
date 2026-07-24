@@ -1,6 +1,6 @@
-# Wall Matrix Panel — Software
+# Software overview
 
-Production-shaped monorepo implementing the plan in `README.md`.
+Production-shaped monorepo for the Wall Matrix Panel. Deep docs live in [`docs/`](./docs/README.md).
 
 ## Locked stack
 
@@ -12,8 +12,8 @@ Production-shaped monorepo implementing the plan in `README.md`.
 | Backend | Convex (schema, crons, device HTTP) |
 | Korean APIs | Oracle ICN fetcher (**dummy data** until keys are configured) |
 | Dashboard | SvelteKit + CodeMirror + live preview (TS fallback; WASM optional) |
-| HomeKit | HomeSpan (firmware skeleton; disabled by default) |
-| Transport | HTTPS long-poll — **no MQTT** (Convex httpActions hold ~10s per request) |
+| HomeKit / LAN | Shortcuts + `/api/*` now; optional **ESP-IDF-native HAP** later (**no Arduino / HomeSpan**) |
+| Transport | HTTPS long-poll — **no MQTT** |
 
 ## Layout
 
@@ -28,20 +28,15 @@ firmware/     ESP-IDF Matrix Portal S3 skeleton (+ offline host_sim)
 cards/        catalogue Stage 1 `.card` sources (22 cards)
 cad/          OpenSCAD parts
 scripts/      local stack orchestrator
+docs/         getting started, architecture, ops, roadmap, full plan
 ```
 
-## Fully local stack (recommended)
-
-One process tree brings up Convex, seeds demo data, deploys a compiled card,
-starts the Seoul fetcher, the dashboard, and a device emulator that long-polls
-the real device HTTP API and paints frames with native `libmxr`:
+## Fully local stack
 
 ```bash
 npm ci
 npm run stack
 ```
-
-Then open:
 
 | Service | URL |
 |---|---|
@@ -50,68 +45,31 @@ Then open:
 | Convex API | http://127.0.0.1:3210 |
 | Convex HTTP (device) | http://127.0.0.1:3211 |
 
-Demo secrets:
+Demo secrets: device `dev-token-matrix-panel-demo` · dashboard `dashboard-secret`.
 
-- Device token: `dev-token-matrix-panel-demo`
-- Dashboard secret: `dashboard-secret`
-
-Useful flags:
-
-```bash
-npm run stack -- --no-web          # backend + emulator only
-npm run stack -- --no-fetcher
-npm run stack -- --bootstrap-only  # seed + deploy, then exit
-npm run bootstrap                  # seed/deploy against an already-running convex dev
-npm run emulate                    # device emulator alone
-```
-
-Env templates: `.env.example`, `web/.env.example`, `fetcher/.env.example`, `emulator/.env.example`.
-
-## Manual pieces
-
-```bash
-CONVEX_AGENT_MODE=anonymous npx convex dev
-npm run bootstrap
-npm run web:dev
-cd fetcher && npm run dev
-npm run emulate
-make -C libmxr native && make -C libmxr run-native
-npm run test
-npm run typecheck
-```
-
-`firmware/host_sim` is an **offline** unit render (hardcoded MXR → PPM). Live
-device protocol emulation is `emulator/` / `npm run stack`.
+More: [`docs/getting-started.md`](./docs/getting-started.md) · [`docs/operations.md`](./docs/operations.md).
 
 ## Device HTTP
 
-- `GET /device/wait` — short-poll etag channel (~10s hold; reconnect on timeout)
-- `GET /device/sync` — program manifest + bytecode URL (+ brightnessCeiling)
-- `GET /device/data` — slot frame (JSON default; CBOR via `Accept`)
+- `GET /device/wait` — short-poll etag channel
+- `GET /device/sync` — program manifest + bytecode URL
+- `GET /device/data` — slot frame (JSON / CBOR)
 - `POST /device/heartbeat` — telemetry
 - `POST /api/pin|scene|poke` — control mirror
-- `GET /api/health` — service health
+- `GET /api/health` — health
+
+Details: [`docs/device-protocol.md`](./docs/device-protocol.md).
 
 ## Status
 
-Software path from the plan is implemented end-to-end with **dummy API payloads**,
-and the full path is emulatable locally without hardware.
+Software path is implemented end-to-end with **dummy API payloads**, and the full path is emulatable locally without hardware.
 
-Known intentional stubs (need hardware / API keys / signing keys):
+Known intentional stubs (hardware / API keys / signing keys):
 
-- Real TOPIS / KMA / AirKorea / Spotify / Calendar / GitHub / FX integrations
+- Live TOPIS / KMA / AirKorea / Spotify / Calendar / GitHub / FX integrations
 - HUB75 Protomatter driver (matrix refresh is a no-op without panel hardware)
-- HomeSpan enabled build (`CONFIG_MX_HOMESPAN`)
+- Optional IDF-native HomeKit (Arduino/HomeSpan explicitly rejected)
 - Production OTA ed25519 (demo accepts unsigned / sha256-demo signatures)
 
-Hardening:
-
-- Single deploy path: `programsActions.compileAndDeploy` always server-compiles MXR1
-- Multi-card playlists: each card gets its own bytecode; `devices.rotatePlaylist` rotates by `dwellMs`
-- Ambient roots (`np` / `gh` / `krw` / `todo` / `moon` / `year` / `dday`) synthesized for catalogue cards
-- Device `programStorageId` is the program source of truth
-- libmxr string tables match the compiler (length-prefixed); golden tests cover all cards
-- Firmware accepts JSON or CBOR slot frames
-- Dashboard client split under `web/src/lib/dashboard/`
-- `compiler/dist` is not committed
-- Local stack: `npm run stack` (Convex + seed/deploy + fetcher + web + emulator)
+What's left after hardware: [`docs/roadmap.md`](./docs/roadmap.md).
+Full design plan: [`docs/plan.md`](./docs/plan.md).

@@ -1,5 +1,7 @@
 # CAD sources
 
+Enclosure notes and print order: [`docs/operations.md`](../docs/operations.md) §8 · [`docs/roadmap.md`](../docs/roadmap.md) §C · full optical stack in [`docs/plan.md`](../docs/plan.md) §5.
+
 Minimal parametric OpenSCAD sources for the Wall Matrix Panel printed parts live here.
 
 ## Quick start
@@ -26,4 +28,3 @@ openscad -o out/pixel_grid_tile.stl cad/pixel_grid_tile.scad
   - cleat bevel: `30 deg`
   - panel tilt: `8 deg`
   - mmWave radome wall: `1.0 mm`
-  - load-cell foot: cup above, sensor post below the base

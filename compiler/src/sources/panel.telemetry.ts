@@ -7,7 +7,6 @@ export const panelTelemetrySchema = z.object({
   heapFree: z.number().int().optional(),
   humidity: z.number().optional(),
   lux: z.number().int().optional(),
-  presenceBed: z.boolean().optional(),
   presenceRoom: z.boolean().optional(),
   rssi: z.number().int(),
   tempC: z.number().optional(),

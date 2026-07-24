@@ -135,7 +135,6 @@ async function heartbeat(): Promise<void> {
     tempC: 36.5,
     humidity: 41,
     presenceRoom: true,
-    presenceBed: false,
     estAmps: amps,
     governorActive: false,
     lastError: lastError ?? undefined,

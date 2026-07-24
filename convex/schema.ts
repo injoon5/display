@@ -107,7 +107,6 @@ export default defineSchema({
     tempC: v.number(),
     humidity: v.number(),
     presenceRoom: v.boolean(),
-    presenceBed: v.boolean(),
     estAmps: v.number(),
     governorActive: v.boolean(),
     lastError: v.optional(v.string()),

@@ -1,5 +1,7 @@
 # Seoul Oracle ICN Fetcher
 
+Full ops guide: [`docs/operations.md`](../docs/operations.md) · architecture: [`docs/architecture.md`](../docs/architecture.md).
+
 Stateless Node fetcher for the Wall Matrix Panel. It polls Seoul-shaped dummy sources on a fixed
 schedule and writes the results into Convex with `ConvexHttpClient`.
 

@@ -422,7 +422,6 @@ export async function simulateTelemetry(input: SimulateTelemetryInput): Promise<
       brightness: input.brightness ?? state.telemetry.brightness,
       estAmps: input.estAmps ?? state.telemetry.estAmps,
       lux: input.lux ?? state.telemetry.lux,
-      presenceBed: input.presenceBed ?? state.telemetry.presenceBed,
       presenceRoom: input.presenceRoom ?? state.telemetry.presenceRoom,
     };
     return {

@@ -38,23 +38,31 @@ uint64_t s_last_tap_ms = 0;
 uint32_t s_tap_count = 0;
 
 float stub_lux(uint64_t now_ms) {
-    const float wave = (sinf(static_cast<float>(now_ms % 60'000) / 60'000.0f * 6.28318f) + 1.0f) * 0.5f;
-    return 5.0f + wave * 180.0f;
+    // Synthetic ambient light: slow day-ish sine over ~5 minutes. Not a real sensor.
+    const float wave = (sinf(static_cast<float>(now_ms % 300'000) / 300'000.0f * 6.28318f) + 1.0f) * 0.5f;
+    return 8.0f + wave * 160.0f;
 }
 
 float stub_temperature(uint64_t now_ms) {
-    return 23.5f + 1.2f * sinf(static_cast<float>(now_ms % 120'000) / 120'000.0f * 6.28318f);
+    // Synthetic room temp around 24 C with tiny drift + noise. Not a real SHT/BME reading.
+    const float drift = 0.2f * sinf(static_cast<float>(now_ms % 600'000) / 600'000.0f * 6.28318f);
+    const float noise = 0.05f * sinf(static_cast<float>(now_ms % 17'000) / 17'000.0f * 6.28318f);
+    return 24.0f + drift + noise;
 }
 
 float stub_humidity(uint64_t now_ms) {
-    return 48.0f + 6.0f * cosf(static_cast<float>(now_ms % 90'000) / 90'000.0f * 6.28318f);
+    // Synthetic humidity near 50%. Not a real sensor.
+    return 50.0f + 1.5f * cosf(static_cast<float>(now_ms % 480'000) / 480'000.0f * 6.28318f);
 }
 
-bool stub_ld2410_presence() {
-    return false;
+bool stub_ld2410_presence(uint64_t now_ms) {
+    // Synthetic room presence: toggles slowly (~90s asserted / 90s clear). Not real radar.
+    const float phase = sinf(static_cast<float>(now_ms % 180'000) / 180'000.0f * 6.28318f);
+    return phase > 0.0f;
 }
 
 float stub_hx711_weight_kg() {
+    // Synthetic bed scale: no load. Not a real HX711 reading.
     return 0.0f;
 }
 
@@ -176,7 +184,8 @@ void sensors_init() {
     s_hardware_ready = true;
     ESP_LOGI(
         kTag,
-        "Sensors ready (I2C SDA=%d SCL=%d, LD2410 TX=%d RX=%d, HX711 DOUT=%d SCK=%d)",
+        "Sensors ready (synthetic stubs active until real drivers are wired; "
+        "I2C SDA=%d SCL=%d, LD2410 TX=%d RX=%d, HX711 DOUT=%d SCK=%d)",
         MX_PIN_I2C_SDA,
         MX_PIN_I2C_SCL,
         MX_PIN_LD2410_UART_TX,
@@ -228,7 +237,7 @@ void sensors_task(void *arg) {
             current.humidity_pct = stub_humidity(now_ms);
         }
 
-        const bool room_candidate = stub_ld2410_presence();
+        const bool room_candidate = stub_ld2410_presence(now_ms);
         if (room_candidate) {
             ++s_room_assert_count;
             if (s_room_assert_count >= 3) {

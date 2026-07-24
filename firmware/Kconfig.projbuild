@@ -7,4 +7,13 @@ config MX_HOMESPAN
         Enable HomeSpan/Arduino accessory code. Leave disabled unless the
         Arduino-as-component and HomeSpan dependencies are available.
 
+config MX_OTA_ALLOW_UNSIGNED
+    int "Allow demo/unsigned OTA signatures (1=yes, 0=no)"
+    default 1
+    range 0 1
+    help
+        Accept demo OTA signatures: exactly 64 hex characters (deterministic
+        sha256 stand-in from release.sh) or the literal ED25519_SIGNATURE_TODO.
+        Set to 0 for production builds that require a baked factory public key.
+
 endmenu

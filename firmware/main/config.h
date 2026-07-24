@@ -3,6 +3,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#if __has_include("sdkconfig.h")
+#include "sdkconfig.h"
+#endif
+
 #include "driver/gpio.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
@@ -91,3 +95,19 @@ static constexpr size_t MX_HTTP_URL_BYTES = 512;
 static constexpr size_t MX_HTTP_ETAG_BYTES = 96;
 
 static constexpr uint32_t MX_DOUBLE_TAP_WINDOW_MS = 600;
+
+// OTA demo/dev unsigned acceptance. Prefer Kconfig CONFIG_MX_OTA_ALLOW_UNSIGNED
+// (default 1) or override at compile time with -DMX_OTA_ALLOW_UNSIGNED=0/1.
+#ifndef MX_OTA_ALLOW_UNSIGNED
+#  ifdef CONFIG_MX_OTA_ALLOW_UNSIGNED
+#    define MX_OTA_ALLOW_UNSIGNED CONFIG_MX_OTA_ALLOW_UNSIGNED
+#  else
+#    define MX_OTA_ALLOW_UNSIGNED 1
+#  endif
+#endif
+
+// Optional hex-encoded 32-byte ed25519 public key. When non-empty, signatures must
+// be exactly 64 hex chars (demo sha256 stand-in or a real ed25519 signature).
+#ifndef MX_OTA_ED25519_PUBKEY_HEX
+#  define MX_OTA_ED25519_PUBKEY_HEX ""
+#endif

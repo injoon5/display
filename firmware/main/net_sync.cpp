@@ -115,7 +115,7 @@ bool perform_request(
         snprintf(auth_header, sizeof(auth_header), "Bearer %s", s_bearer_token[0] ? s_bearer_token : "UNPROVISIONED");
         esp_http_client_set_header(client, "Authorization", auth_header);
     }
-    esp_http_client_set_header(client, "Accept", "application/json");
+    esp_http_client_set_header(client, "Accept", "application/cbor, application/json");
     if (if_none_match && if_none_match[0] != '\0') {
         esp_http_client_set_header(client, "If-None-Match", if_none_match);
     }
@@ -352,6 +352,372 @@ bool parse_slot_frame_json(const std::vector<uint8_t> &body, SlotFrame *frame) {
     return true;
 }
 
+// Minimal CBOR decoder for the backend slot-frame shape produced by convex/lib/cbor.ts:
+// map { "v": uint, "t": uint, "s": map(string -> string|int|float|bool|null), "a": map(string -> number) }
+struct CborCursor {
+    const uint8_t *data = nullptr;
+    size_t size = 0;
+    size_t pos = 0;
+};
+
+bool cbor_read_bytes(CborCursor *c, size_t n, const uint8_t **out) {
+    if (!c || c->pos + n > c->size) {
+        return false;
+    }
+    if (out) {
+        *out = c->data + c->pos;
+    }
+    c->pos += n;
+    return true;
+}
+
+bool cbor_read_header(CborCursor *c, uint8_t *major, uint64_t *argument) {
+    if (!c || !major || !argument || c->pos >= c->size) {
+        return false;
+    }
+
+    const uint8_t initial = c->data[c->pos++];
+    *major = initial >> 5;
+    const uint8_t additional = initial & 0x1fu;
+
+    // Major type 7 (simple/float): additional 25/26/27 leave a float payload for the caller.
+    // additional 24 consumes one simple-value byte; 0-23 are immediates.
+    if (*major == 7) {
+        if (additional < 24) {
+            *argument = additional;
+            return true;
+        }
+        if (additional == 24) {
+            const uint8_t *bytes = nullptr;
+            if (!cbor_read_bytes(c, 1, &bytes)) {
+                return false;
+            }
+            *argument = bytes[0];
+            return true;
+        }
+        if (additional == 25 || additional == 26 || additional == 27) {
+            *argument = additional;
+            return true;
+        }
+        return false;
+    }
+
+    if (additional < 24) {
+        *argument = additional;
+        return true;
+    }
+    if (additional == 24) {
+        const uint8_t *bytes = nullptr;
+        if (!cbor_read_bytes(c, 1, &bytes)) {
+            return false;
+        }
+        *argument = bytes[0];
+        return true;
+    }
+    if (additional == 25) {
+        const uint8_t *bytes = nullptr;
+        if (!cbor_read_bytes(c, 2, &bytes)) {
+            return false;
+        }
+        *argument = (static_cast<uint64_t>(bytes[0]) << 8) | bytes[1];
+        return true;
+    }
+    if (additional == 26) {
+        const uint8_t *bytes = nullptr;
+        if (!cbor_read_bytes(c, 4, &bytes)) {
+            return false;
+        }
+        *argument = (static_cast<uint64_t>(bytes[0]) << 24) | (static_cast<uint64_t>(bytes[1]) << 16) |
+                    (static_cast<uint64_t>(bytes[2]) << 8) | bytes[3];
+        return true;
+    }
+    if (additional == 27) {
+        const uint8_t *bytes = nullptr;
+        if (!cbor_read_bytes(c, 8, &bytes)) {
+            return false;
+        }
+        *argument = (static_cast<uint64_t>(bytes[0]) << 56) | (static_cast<uint64_t>(bytes[1]) << 48) |
+                    (static_cast<uint64_t>(bytes[2]) << 40) | (static_cast<uint64_t>(bytes[3]) << 32) |
+                    (static_cast<uint64_t>(bytes[4]) << 24) | (static_cast<uint64_t>(bytes[5]) << 16) |
+                    (static_cast<uint64_t>(bytes[6]) << 8) | bytes[7];
+        return true;
+    }
+    // Indefinite lengths / reserved additional info are not used by the backend encoder.
+    return false;
+}
+
+bool cbor_skip_value(CborCursor *c);
+
+bool cbor_skip_n_values(CborCursor *c, uint64_t count) {
+    for (uint64_t i = 0; i < count; ++i) {
+        if (!cbor_skip_value(c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool cbor_skip_value(CborCursor *c) {
+    uint8_t major = 0;
+    uint64_t argument = 0;
+    if (!cbor_read_header(c, &major, &argument)) {
+        return false;
+    }
+
+    switch (major) {
+        case 0:  // unsigned
+        case 1:  // negative
+            return true;
+        case 2:  // byte string
+        case 3:  // text string
+            return cbor_read_bytes(c, static_cast<size_t>(argument), nullptr);
+        case 4:  // array
+            return cbor_skip_n_values(c, argument);
+        case 5:  // map
+            return cbor_skip_n_values(c, argument * 2);
+        case 7:
+            if (argument == 25) {
+                return cbor_read_bytes(c, 2, nullptr);
+            }
+            if (argument == 26) {
+                return cbor_read_bytes(c, 4, nullptr);
+            }
+            if (argument == 27) {
+                return cbor_read_bytes(c, 8, nullptr);
+            }
+            // false / true / null / undefined and other simple values have no payload.
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool cbor_read_text(CborCursor *c, std::string *out) {
+    if (!out) {
+        return false;
+    }
+    uint8_t major = 0;
+    uint64_t argument = 0;
+    if (!cbor_read_header(c, &major, &argument) || major != 3) {
+        return false;
+    }
+    const uint8_t *bytes = nullptr;
+    if (!cbor_read_bytes(c, static_cast<size_t>(argument), &bytes)) {
+        return false;
+    }
+    out->assign(reinterpret_cast<const char *>(bytes), static_cast<size_t>(argument));
+    return true;
+}
+
+bool cbor_read_float64_payload(CborCursor *c, double *out) {
+    const uint8_t *bytes = nullptr;
+    if (!cbor_read_bytes(c, 8, &bytes) || !out) {
+        return false;
+    }
+    uint64_t bits = (static_cast<uint64_t>(bytes[0]) << 56) | (static_cast<uint64_t>(bytes[1]) << 48) |
+                    (static_cast<uint64_t>(bytes[2]) << 40) | (static_cast<uint64_t>(bytes[3]) << 32) |
+                    (static_cast<uint64_t>(bytes[4]) << 24) | (static_cast<uint64_t>(bytes[5]) << 16) |
+                    (static_cast<uint64_t>(bytes[6]) << 8) | bytes[7];
+    static_assert(sizeof(double) == sizeof(uint64_t), "unexpected double size");
+    memcpy(out, &bits, sizeof(double));
+    return true;
+}
+
+bool cbor_read_number(CborCursor *c, double *out, bool *is_integer) {
+    if (!c || !out || !is_integer || c->pos >= c->size) {
+        return false;
+    }
+
+    const uint8_t initial = c->data[c->pos];
+    const uint8_t major = initial >> 5;
+    const uint8_t additional = initial & 0x1fu;
+
+    if (major == 0 || major == 1) {
+        uint8_t read_major = 0;
+        uint64_t argument = 0;
+        if (!cbor_read_header(c, &read_major, &argument)) {
+            return false;
+        }
+        if (read_major == 0) {
+            *out = static_cast<double>(argument);
+        } else {
+            *out = -1.0 - static_cast<double>(argument);
+        }
+        *is_integer = true;
+        return true;
+    }
+
+    if (major == 7 && additional == 27) {
+        uint8_t read_major = 0;
+        uint64_t argument = 0;
+        if (!cbor_read_header(c, &read_major, &argument) || argument != 27) {
+            return false;
+        }
+        if (!cbor_read_float64_payload(c, out)) {
+            return false;
+        }
+        *is_integer = false;
+        return true;
+    }
+
+    return false;
+}
+
+bool cbor_apply_slot_value(CborCursor *c, SlotValue *slot) {
+    if (!c || !slot || c->pos >= c->size) {
+        return false;
+    }
+
+    const uint8_t initial = c->data[c->pos];
+    const uint8_t major = initial >> 5;
+    const uint8_t additional = initial & 0x1fu;
+
+    if (major == 7 && additional == 22) {
+        // null
+        ++c->pos;
+        slot->kind = SlotValueType::Null;
+        return true;
+    }
+    if (major == 7 && (additional == 20 || additional == 21)) {
+        ++c->pos;
+        slot->kind = SlotValueType::Bool;
+        slot->bool_value = additional == 21;
+        return true;
+    }
+    if (major == 3) {
+        std::string text;
+        if (!cbor_read_text(c, &text)) {
+            return false;
+        }
+        slot->kind = SlotValueType::String;
+        strlcpy(slot->string_value.data(), text.c_str(), slot->string_value.size());
+        return true;
+    }
+
+    double number = 0.0;
+    bool is_integer = false;
+    if (!cbor_read_number(c, &number, &is_integer)) {
+        return false;
+    }
+    if (is_integer || fabs(number - round(number)) < 0.0001) {
+        slot->kind = SlotValueType::Int;
+        slot->int_value = static_cast<int32_t>(number);
+    } else {
+        slot->kind = SlotValueType::Float;
+        slot->float_value = static_cast<float>(number);
+    }
+    return true;
+}
+
+bool parse_slot_frame_cbor(const std::vector<uint8_t> &body, SlotFrame *frame) {
+    if (!frame || body.empty()) {
+        return false;
+    }
+
+    *frame = {};
+    CborCursor cursor{body.data(), body.size(), 0};
+
+    uint8_t major = 0;
+    uint64_t map_len = 0;
+    if (!cbor_read_header(&cursor, &major, &map_len) || major != 5) {
+        return false;
+    }
+
+    bool saw_version = false;
+    bool saw_server_ts = false;
+    bool saw_slots = false;
+
+    for (uint64_t i = 0; i < map_len; ++i) {
+        std::string key;
+        if (!cbor_read_text(&cursor, &key)) {
+            return false;
+        }
+
+        if (key == "v") {
+            double number = 0.0;
+            bool is_integer = false;
+            if (!cbor_read_number(&cursor, &number, &is_integer)) {
+                return false;
+            }
+            frame->data_version = static_cast<uint32_t>(number);
+            saw_version = true;
+        } else if (key == "t") {
+            double number = 0.0;
+            bool is_integer = false;
+            if (!cbor_read_number(&cursor, &number, &is_integer)) {
+                return false;
+            }
+            frame->server_ms = static_cast<uint64_t>(number * 1000.0);
+            saw_server_ts = true;
+        } else if (key == "s") {
+            uint8_t slots_major = 0;
+            uint64_t slots_len = 0;
+            if (!cbor_read_header(&cursor, &slots_major, &slots_len) || slots_major != 5) {
+                return false;
+            }
+            for (uint64_t s = 0; s < slots_len; ++s) {
+                std::string index_key;
+                if (!cbor_read_text(&cursor, &index_key)) {
+                    return false;
+                }
+                const int index = atoi(index_key.c_str());
+                if (index < 0 || index >= static_cast<int>(MX_SLOT_CAPACITY)) {
+                    if (!cbor_skip_value(&cursor)) {
+                        return false;
+                    }
+                    continue;
+                }
+                if (!cbor_apply_slot_value(&cursor, &frame->slots[index])) {
+                    return false;
+                }
+                frame->count = std::max<uint16_t>(frame->count, static_cast<uint16_t>(index + 1));
+            }
+            saw_slots = true;
+        } else if (key == "a") {
+            uint8_t ages_major = 0;
+            uint64_t ages_len = 0;
+            if (!cbor_read_header(&cursor, &ages_major, &ages_len) || ages_major != 5) {
+                return false;
+            }
+            for (uint64_t a = 0; a < ages_len; ++a) {
+                std::string index_key;
+                if (!cbor_read_text(&cursor, &index_key)) {
+                    return false;
+                }
+                double number = 0.0;
+                bool is_integer = false;
+                if (!cbor_read_number(&cursor, &number, &is_integer)) {
+                    return false;
+                }
+                const int index = atoi(index_key.c_str());
+                if (index < 0 || index >= static_cast<int>(MX_SLOT_CAPACITY)) {
+                    continue;
+                }
+                frame->slots[index].updated_ms = static_cast<uint32_t>(number * 1000.0);
+                frame->count = std::max<uint16_t>(frame->count, static_cast<uint16_t>(index + 1));
+            }
+        } else if (!cbor_skip_value(&cursor)) {
+            return false;
+        }
+    }
+
+    return saw_version && saw_server_ts && saw_slots;
+}
+
+bool content_type_has_json(const std::string &content_type) {
+    return content_type.find("json") != std::string::npos;
+}
+
+bool body_starts_with_json_object(const std::vector<uint8_t> &body) {
+    for (uint8_t byte : body) {
+        if (byte == ' ' || byte == '\t' || byte == '\n' || byte == '\r') {
+            continue;
+        }
+        return byte == '{';
+    }
+    return false;
+}
+
 bool sync_data() {
     char url[MX_HTTP_URL_BYTES];
     snprintf(url, sizeof(url), "%s/device/data", MX_API_BASE_URL);
@@ -371,8 +737,15 @@ bool sync_data() {
     }
 
     SlotFrame frame{};
-    if (!parse_slot_frame_json(response.body, &frame)) {
-        ESP_LOGW(kTag, "/device/data returned non-JSON or invalid slot frame");
+    const bool prefer_json =
+        content_type_has_json(response.content_type) || body_starts_with_json_object(response.body);
+    const bool parsed = prefer_json ? parse_slot_frame_json(response.body, &frame)
+                                    : parse_slot_frame_cbor(response.body, &frame);
+    if (!parsed) {
+        ESP_LOGW(
+            kTag,
+            "/device/data returned invalid slot frame (%s)",
+            prefer_json ? "json" : "cbor");
         return false;
     }
     if (!response.etag.empty()) {

@@ -145,7 +145,13 @@
 
     <div class="flex flex-1 flex-col gap-5 p-4 md:p-6">
       <ConnectionBanner />
-      {@render children?.()}
+      {#key page.url.pathname}
+        <div
+          class="flex flex-1 flex-col gap-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500"
+        >
+          {@render children?.()}
+        </div>
+      {/key}
     </div>
   </Sidebar.Inset>
 </Sidebar.Provider>

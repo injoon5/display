@@ -93,7 +93,7 @@
   <p class="text-sm text-muted-foreground">Build and schedule card playlists.</p>
 </header>
 
-<div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
+<div class="grid items-start gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
   <section class="overflow-hidden rounded-xl border bg-card/40">
     <div class="border-b px-4 py-3">
       <h2 class="text-sm font-semibold">All scenes</h2>
@@ -206,8 +206,8 @@
         <Separator />
 
         <div class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div class="overflow-hidden rounded-xl border">
-            <div class="border-b px-3 py-2">
+          <div class="overflow-hidden rounded-lg border bg-background/40">
+            <div class="border-b bg-muted/20 px-3 py-2">
               <h3 class="text-sm font-semibold">Queue</h3>
             </div>
             {#if draftCards.length === 0}
@@ -270,8 +270,8 @@
             {/if}
           </div>
 
-          <div class="overflow-hidden rounded-xl border">
-            <div class="border-b px-3 py-2">
+          <div class="overflow-hidden rounded-lg border bg-background/40">
+            <div class="border-b bg-muted/20 px-3 py-2">
               <h3 class="text-sm font-semibold">Available Cards</h3>
             </div>
             <Table.Root>

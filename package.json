@@ -5,13 +5,23 @@
   "description": "Wall Matrix Panel monorepo",
   "workspaces": [
     "compiler",
+    "fetcher",
     "packages/*",
     "web"
   ],
   "scripts": {
+    "build": "npm run build -w compiler && npm run build -w fetcher && npm run build -w web",
+    "compiler:build": "npm run build -w compiler",
     "convex:codegen": "npx convex codegen",
     "convex:dev:once": "CONVEX_AGENT_MODE=anonymous npx convex dev --once",
-    "typecheck": "tsc -p convex/tsconfig.json --noEmit",
+    "fetcher:build": "npm run build -w fetcher",
+    "lint": "npm run lint:compiler && npm run lint:fetcher && npm run lint:web",
+    "lint:compiler": "echo 'compiler: lint not configured yet'",
+    "lint:fetcher": "echo 'fetcher: lint not configured yet'",
+    "lint:web": "echo 'web: lint not configured yet'",
+    "test": "npm run test -w compiler",
+    "typecheck": "npm run typecheck -w compiler && npm run typecheck -w fetcher && npm run typecheck:convex && npm run web:check",
+    "typecheck:convex": "tsc -p convex/tsconfig.json --noEmit",
     "web:check": "npm run check -w web",
     "web:build": "npm run build -w web",
     "web:dev": "npm run dev -w web"

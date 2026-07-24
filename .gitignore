@@ -1,5 +1,10 @@
 node_modules/
+dist/
+.svelte-kit/
+firmware/build/
+firmware/host_sim/build/
+*.ppm
+.convex/
 convex/.convex/
 web/.svelte-kit/
-
 .env.local

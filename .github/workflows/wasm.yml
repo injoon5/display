@@ -1,0 +1,22 @@
+name: libmxr wasm
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build wasm bundle when emcc is available
+        run: |
+          if command -v emcc >/dev/null 2>&1; then
+            make -C libmxr wasm
+            test -f libmxr/build/mxr.js
+            test -f libmxr/build/mxr.wasm
+          else
+            echo "emcc not found on runner; skipping libmxr wasm build"
+          fi

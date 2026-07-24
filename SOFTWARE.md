@@ -12,7 +12,7 @@ Production-shaped monorepo for the Wall Matrix Panel. Deep docs live in [`docs/`
 | Backend | Convex (schema, crons, device HTTP) |
 | Korean APIs | Oracle ICN fetcher (**dummy data** until keys are configured) |
 | Dashboard | SvelteKit + CodeMirror + live preview (TS fallback; WASM optional) |
-| HomeKit | HomeSpan (firmware skeleton; disabled by default) |
+| HomeKit / LAN | Shortcuts + `/api/*` now; optional **ESP-IDF-native HAP** later (**no Arduino / HomeSpan**) |
 | Transport | HTTPS long-poll — **no MQTT** |
 
 ## Layout
@@ -66,9 +66,9 @@ Software path is implemented end-to-end with **dummy API payloads**, and the ful
 
 Known intentional stubs (hardware / API keys / signing keys):
 
-- Real TOPIS / KMA / AirKorea / Spotify / Calendar / GitHub / FX integrations
+- Live TOPIS / KMA / AirKorea / Spotify / Calendar / GitHub / FX integrations
 - HUB75 Protomatter driver (matrix refresh is a no-op without panel hardware)
-- HomeSpan enabled build (`CONFIG_MX_HOMESPAN`)
+- Optional IDF-native HomeKit (Arduino/HomeSpan explicitly rejected)
 - Production OTA ed25519 (demo accepts unsigned / sha256-demo signatures)
 
 What's left after hardware: [`docs/roadmap.md`](./docs/roadmap.md).

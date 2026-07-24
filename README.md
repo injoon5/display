@@ -24,7 +24,8 @@ No hardware. No cloud account. Dummy Korean APIs. The whole content plane is emu
 | **Degrade quietly** | Offline shows last-good art + a dim corner pixel. Never an error string on the wall. |
 | **Invalid = unrepresentable** | Broken cards fail at compile time. The panel never sees them. |
 
-Locked stack: **Matrix Portal S3 · Convex · Oracle ICN fetcher · SvelteKit · HomeSpan · no MQTT**.
+Locked stack: **Matrix Portal S3 · Convex · Oracle ICN fetcher · SvelteKit · ESP-IDF only (no Arduino) · no MQTT**.
+LAN control = Shortcuts/`/api/*`; optional IDF-native HAP later.
 
 ---
 
@@ -83,7 +84,7 @@ Demo secrets (local only): device `dev-token-matrix-panel-demo` · dashboard `da
 **Software path: shipped and emulatable.**  
 **Hardware path: buy the BOM, flash the skeleton, replace stubs.**
 
-Left after hardware (and API/signing keys): HUB75 driver, real sensors, HomeSpan enabled build, production ed25519 OTA, live TOPIS/KMA/AirKorea (and friends), print-fit the enclosure. Full breakdown → **[docs/roadmap.md](./docs/roadmap.md)**.
+Left after hardware (and API/signing keys): HUB75 driver, real sensors, Shortcuts/LAN control (optional IDF-native HAP — **no Arduino**), production ed25519 OTA, live TOPIS/KMA/AirKorea (and friends), print-fit the enclosure. Full breakdown → **[docs/roadmap.md](./docs/roadmap.md)**.
 
 ---
 

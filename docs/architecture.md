@@ -25,7 +25,7 @@ A 64×32 RGB LED wall panel for a Seoul bedroom — production-shaped software, 
 │  │ Cloudflare  │◄───────────────────────────────── │  Matrix Portal   │   │
 │  │ R2          │───────────────────────────────────►│       S3         │   │
 │  └─────────────┘                                   │  • bytecode VM   │   │
-└────────────────────────────────────────────────────│  • HomeSpan HAP  │───┘
+└────────────────────────────────────────────────────│  • optional IDF HAP │───┘
                                                      │  • sensors       │
 ┌────────────────────────────────────────────────────└──────────────────┘
 │                CONTROL PLANE (LAN only)                                    │
@@ -46,7 +46,7 @@ Locally, the Matrix Portal is replaced by `emulator/` which speaks the same `/de
 | Backend | Convex | Schema, crons, HTTP long-poll, file storage, reactive dashboard |
 | KR APIs | Oracle Always Free ICN fetcher | Seoul latency + disposable box |
 | Dashboard | SvelteKit | Live WASM/TS preview, CodeMirror editor |
-| HomeKit | HomeSpan (skeleton) | LAN control plane, no cloud for on/off |
+| HomeKit / LAN | Shortcuts + `/api/*` (optional IDF-native HAP later — **no Arduino**) | LAN control plane, no cloud for on/off |
 | Transport | HTTPS long-poll | **No MQTT** — retained msgs, LWT, QoS replaced by Convex |
 
 Deep design rationale (why no MQTT, power governor, mmWave vs load cell, etc.) lives in the [full plan](./plan.md).

@@ -156,7 +156,7 @@ Release / OTA packaging:
 
 Notes that will save you hours:
 
-- HomeSpan is behind `CONFIG_MX_HOMESPAN` (off by default)
+- **No Arduino.** Do not enable `CONFIG_MX_HOMESPAN` / HomeSpan. Control = Shortcuts/`/api/*`; optional IDF-native HAP later.
 - `CONFIG_MX_OTA_ALLOW_UNSIGNED=1` for demo; turn off for prod + bake pubkey
 - NVS must survive OTA (HomeKit pairing, Wi-Fi, token) — `partitions.csv` already preserves it
 - HUB75 refresh is currently a **documented stub** until Protomatter/ESP-IDF driver is wired
@@ -211,7 +211,7 @@ Cost target from the plan: **$0/mo** on free tiers. See [plan §18](./plan.md#18
 | Preview ≠ device | Rebuild `libmxr` WASM; font tables diverged |
 | Fetcher silent | `.env` `CONVEX_URL`; check Convex logs for `sources.write` |
 | Firmware won't pair HomeKit after OTA | `partitions.csv` / NVS erase |
-| Panel tears under HAP traffic | HomeSpan pinned to core 1 (plan §8.1) |
+| Panel tears under HAP traffic | HAP/mDNS pinned to core 1 (plan §8.1) |
 
 ## 12. Demo secrets (local only)
 

@@ -62,13 +62,17 @@ Tune mmWave per [plan §8.9](./plan.md#89-mmwave-tuning). Prefer load cell for b
 
 Fetcher stays on Oracle ICN; Convex keeps global APIs. Circuit breakers already exist — exercise them.
 
-### E. HomeKit (control plane)
+### E. HomeKit / LAN control (no Arduino)
 
-1. Add Arduino-as-component + HomeSpan to ESP-IDF; enable `CONFIG_MX_HOMESPAN`.
-2. Expose on/off, brightness, television/input-source scenes, occupancy/temp/humidity sensors.
-3. Pair from iPhone; **verify NVS survives OTA twice**.
-4. Pin HomeSpan + networking to **core 1**; matrix stays on core 0.
-5. Optional later: Direction B HAP bridge — [plan §9](./plan.md#9-homekit-integration).
+**Hard rule: do not add Arduino-as-component or HomeSpan.** Firmware stays pure ESP-IDF.
+
+1. **Ship control plane without native HAP first** — iPhone Shortcuts / dashboard → `POST /api/pin|scene|poke` (already in Convex). On/off + scene select work over HTTPS on the LAN/VPN.
+2. **Optional later: native HomeKit on ESP-IDF only** — Apple HomeKit ADK / an IDF-native HAP stack on core 1. Same service set (lightbulb, occupancy, temp/humidity, scene TV inputs). Never pull Arduino.
+3. Pair / automate; **verify NVS survives OTA twice** if HAP pairing state lives there.
+4. Pin HAP + networking to **core 1**; matrix stays on core 0.
+5. Optional: Direction B (show other accessories on-panel) via a backend controller — [plan §9](./plan.md#9-homekit--lan-control).
+
+The `CONFIG_MX_HOMESPAN` / `homespan_panel.cpp` path is a **dead stub** left behind from an earlier plan — leave it off; replace with IDF-native code or delete when you implement HAP.
 
 ### F. Production hardening
 
@@ -98,7 +102,7 @@ Full reliability list: [plan §17](./plan.md#17-reliability-checklist).
 | 3 / 3b Pipeline + Stage 1 | Convex + fetcher + MXML | **Done** (dummy APIs) |
 | 4 Dashboard + simulate | SvelteKit live preview | **Done** (iterate UX forever) |
 | 5 Enclosure | Print + mount | CAD done; **print/fit left** |
-| 6 HomeKit | HomeSpan | **Skeleton / disabled** |
+| 6 HomeKit / LAN control | Shortcuts + `/api/*` now; IDF-native HAP later | **No Arduino / HomeSpan** |
 | 7 Hardening | OTA, BLE, governor, CI snaps | **Partial** — hooks in place |
 | 7b Stage 2 packing | row/col | **Compiler ready**; optional adoption |
 | 8 Forever | Add cards without firmware | **Working path** via dashboard + deploy |
@@ -108,7 +112,7 @@ Full reliability list: [plan §17](./plan.md#17-reliability-checklist).
 You're done when:
 
 1. Panel boots to last-good art in &lt;400ms with Wi-Fi down
-2. "Hey Siri, turn off the matrix" works with the router unplugged
+2. Siri / Shortcuts / dashboard can turn the panel off with the content plane unreachable (LAN `/api/*` today; optional IDF-native HAP later — **no Arduino**)
 3. Bus card goes red at 3 minutes using **live** TOPIS data
 4. OTA can never brick you from the couch (rollback + signed images)
 5. You add a card on Friday night without touching C or a soldering iron

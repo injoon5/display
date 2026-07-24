@@ -9,7 +9,7 @@ ESP-IDF firmware scaffold for the wall matrix panel plan:
 - task affinity and priorities from plan §8.1
 - offline cache and stale overlay from plan §8.5
 - A/B OTA skeleton from plan §8.6
-- HomeSpan accessory skeleton from plan §9
+- **Pure ESP-IDF — no Arduino.** LAN control via Shortcuts/`/api/*`; optional IDF-native HAP later (the old HomeSpan stub stays off)
 
 ## Layout
 
@@ -47,20 +47,16 @@ idf.py -p /dev/ttyACM0 flash monitor
 
 `components/libmxr/CMakeLists.txt` points directly at `/workspace/libmxr`, so the firmware and the host simulator both link the same renderer sources.
 
-### HomeSpan
+### HomeKit / HomeSpan
 
-HomeSpan is guarded with:
+**Do not enable `CONFIG_MX_HOMESPAN`.** It is a leftover stub that would pull Arduino-as-component
+via HomeSpan — rejected for this project.
 
-```cpp
-#ifdef CONFIG_MX_HOMESPAN
-```
+Control plane today: iOS Shortcuts / dashboard → Convex `POST /api/pin|scene|poke`.
 
-That means the tree still compiles when HomeSpan is not installed. To enable it, add Arduino-as-component plus HomeSpan to your ESP-IDF checkout, then turn on:
-
-```bash
-idf.py menuconfig
-# Matrix Panel firmware -> Enable HomeSpan integration
-```
+If you want native HomeKit later, add an **ESP-IDF-native HAP** stack on core 1 (Apple HomeKit
+ADK port or equivalent). See [`docs/plan.md` §9](../docs/plan.md#9-homekit--lan-control) and
+[`docs/roadmap.md`](../docs/roadmap.md) §E.
 
 ### OTA / partitions
 

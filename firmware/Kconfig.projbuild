@@ -1,11 +1,12 @@
 menu "Matrix Panel firmware"
 
 config MX_HOMESPAN
-    bool "Enable HomeSpan integration"
+    bool "Enable legacy HomeSpan stub (UNSUPPORTED — requires Arduino)"
     default n
     help
-        Enable HomeSpan/Arduino accessory code. Leave disabled unless the
-        Arduino-as-component and HomeSpan dependencies are available.
+        Dead path. HomeSpan needs Arduino-as-component, which this project rejects.
+        Leave disabled. Prefer Shortcuts/dashboard → /api/* today, or an ESP-IDF-native
+        HAP stack later. Do not enable this option.
 
 config MX_OTA_ALLOW_UNSIGNED
     int "Allow demo/unsigned OTA signatures (1=yes, 0=no)"

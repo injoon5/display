@@ -215,7 +215,7 @@ void homespan_panel_publish(const SensorSnapshot &snapshot) {
 
 void homespan_task(void *arg) {
     (void)arg;
-    ESP_LOGI(kTag, "CONFIG_MX_HOMESPAN is disabled; HomeSpan task is a stub");
+    ESP_LOGI(kTag, "CONFIG_MX_HOMESPAN is off (Arduino/HomeSpan rejected); control via /api/* or IDF-native HAP later");
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }

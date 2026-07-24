@@ -53,7 +53,7 @@ These are documented incomplete hardware/prod edges — replace with real driver
 
 - `firmware/main/matrix_refresh.cpp` — HUB75 no-op without panel
 - `firmware/main/sensors.cpp` — synthetic stubs
-- `firmware/main/homespan_panel.cpp` — disabled unless `CONFIG_MX_HOMESPAN`
+- `firmware/main/homespan_panel.cpp` — **dead stub**; do not enable `CONFIG_MX_HOMESPAN` (Arduino rejected). Control via `/api/*` or future IDF-native HAP.
 - OTA unsigned / sha256 stand-in — demo only
 - Fetcher + Convex dummy payloads — until API keys exist
 - TS icon assets stub warning in web fallback renderer

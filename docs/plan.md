@@ -5,11 +5,12 @@
 > This repo contains the full software stack from the plan below (`libmxr`, MXML compiler, Convex, Seoul fetcher, SvelteKit dashboard, ESP-IDF firmware skeleton, card catalogue, CAD, CI). External Korean APIs use **dummy data** until keys are configured. Hardware drivers (HUB75 / sensors / HomeKit) and production OTA signing remain skeleton/demo until keys and hardware are available.
 
 A 64×32 RGB LED matrix display for a Seoul bedroom, with a production-grade backend, a
-dashboard-authored card templating language, native HomeKit integration, and appliance-grade
-reliability.
+dashboard-authored card templating language, LAN control (Shortcuts/`/api/*`, optional
+IDF-native HomeKit — **no Arduino**), and appliance-grade reliability.
 
 **Locked decisions:** Matrix Portal S3 · Convex · Oracle Cloud ICN · no MQTT · SvelteKit ·
-native HomeKit via HomeSpan · mmWave + load-cell presence · furniture-mounted.
+ESP-IDF only (**no Arduino / HomeSpan**) · mmWave + load-cell presence · furniture-mounted.
+LAN control via Shortcuts/`/api/*`; optional IDF-native HAP later.
 
 ---
 
@@ -23,7 +24,7 @@ native HomeKit via HomeSpan · mmWave + load-cell presence · furniture-mounted.
 6. [Mounting](#6-mounting)
 7. [Power](#7-power)
 8. [Firmware](#8-firmware)
-9. [HomeKit integration](#9-homekit-integration)
+9. [HomeKit / LAN control](#9-homekit--lan-control)
 10. [MXML — the card templating engine](#10-mxml--the-card-templating-engine)
 11. [Bytecode specification](#11-bytecode-specification)
 12. [Backend — Convex](#12-backend--convex)
@@ -53,8 +54,9 @@ firmware *and* to WASM for the dashboard preview. The browser preview is byte-id
 panel, not "similar". This eliminates an entire category of bug permanently.
 
 **P3 — Control plane is local; content plane is cloud.**
-On/off, brightness, scene selection and sensor readings work with the internet unplugged, over
-HomeKit on the LAN. Cards, data and deploys come from the cloud. They fail independently.
+On/off, brightness, scene selection and sensor readings work with the content plane unreachable:
+Shortcuts / dashboard → LAN `/api/*` today, optional IDF-native HomeKit later. Cards, data and
+deploys come from the cloud. They fail independently.
 
 **P4 — Degrade quietly.**
 Network loss shows last-known content with a single dimmed corner pixel. Never an error string,
@@ -94,12 +96,12 @@ in the editor with a red squiggle. The panel never sees a broken card.
 │  └─────────────┘                                   │       S3         │   │
 └────────────────────────────────────────────────────│                  │───┘
                                                      │  • bytecode VM   │
-┌────────────────────────────────────────────────────│  • HomeSpan HAP  │
+┌────────────────────────────────────────────────────│  • optional IDF HAP │
 │                CONTROL PLANE (LAN only)            │  • sensors       │
 │                                                     └──────────────────┘
-│  iPhone / HomePod ──── HAP over Wi-Fi ─────────────────────┘
+│  iPhone ──── Shortcuts / dashboard / optional HAP ───────────────────────┘
 │  (on/off, brightness, scenes, occupancy, temp, lux)
-│  Works with the internet completely down.
+│  Works with the content plane unreachable (LAN path).
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -467,8 +469,9 @@ in the editor if a card would trigger the governor. That's rule P5 applied to el
 
 ## 8. Firmware
 
-**Stack:** ESP-IDF v5.x + Arduino-as-component (needed for HomeSpan). C99 for the renderer,
-C++ for the glue.
+**Stack:** ESP-IDF v5.x only. **No Arduino. No Arduino-as-component. No HomeSpan.**
+C99 for the renderer, C++ for the glue. LAN control is Shortcuts/dashboard → Convex
+`/api/*` today; optional native HomeKit later via an IDF-native HAP stack only.
 
 ### 8.1 Task layout — core affinity is not optional
 
@@ -476,12 +479,12 @@ C++ for the glue.
 |---|---|---|---|
 | **0** | `matrix_refresh` | 24 (highest) | HUB75 bit-angle modulation. Pinned. Never yields to anything. |
 | 0 | `renderer` | 10 | Walks the display list into the back buffer, swaps on vsync |
-| **1** | `homespan` | 8 | HAP crypto + mDNS. **Must not touch core 0.** |
+| **1** | `hap` *(optional)* | 8 | Native HomeKit (IDF HAP) crypto + mDNS. **Must not touch core 0.** |
 | 1 | `net_sync` | 6 | HTTPS long-poll, program/data fetch, heartbeat |
 | 1 | `sensors` | 5 | I²C poll, UART parse, HX711 read |
 | 1 | `ota` | 4 | Only alive during an update |
 
-Getting HomeSpan onto core 0 produces visible tearing whenever the Home app polls. This is the
+Putting HAP/mDNS work on core 0 produces visible tearing whenever the Home app polls. This is the
 single most common way to ruin the display quality.
 
 ### 8.2 Memory map
@@ -666,96 +669,60 @@ down, and it feels broken.
 
 ---
 
-## 9. HomeKit integration
+## 9. HomeKit / LAN control
 
-**Direction A: the panel is a native HomeKit accessory** via **HomeSpan** on the ESP32. It pairs
-directly with the Home app — no Homebridge in the path, no plugin, no Pi dependency. If your
-Homebridge host dies, the panel is unaffected.
+> **Locked: no Arduino.** Do not add Arduino-as-component or HomeSpan to this firmware.
+> Pure ESP-IDF only.
+
+### 9.0 Direction A′ — ship control without native HAP (default)
+
+The content plane already exposes LAN/VPN control:
+
+| Route | Effect |
+|---|---|
+| `POST /api/pin` | Pin a card for N ms |
+| `POST /api/scene` | Force active scene |
+| `POST /api/poke` | Takeover / interrupt |
+
+Wire these to **iOS Shortcuts**, the SvelteKit dashboard, and (optionally) a Home app
+"shortcut" button. On/off, brightness ceiling, and scene select do **not** require a HAP
+stack on the ESP32. This path works today against Convex + the emulator.
+
+When the internet is down you still want local control — either keep a LAN-reachable Convex
+HTTP edge, or add the optional native HAP below.
+
+### 9.1 Direction A — native HomeKit on ESP-IDF (optional, later)
+
+The panel becomes a **native HomeKit accessory** using an **ESP-IDF-native HAP stack**
+(Apple HomeKit ADK port or equivalent pure C/C++ library). It pairs directly with the Home
+app — no Homebridge, no plugin, no Pi, **no Arduino**.
 
 Cost: ~50 KB RAM (trivial with 2 MB PSRAM) and core-1 pinning. No MFi chip means uncertified,
 which is irrelevant for personal use.
 
-### 9.1 Services exposed
+Services to expose (same product intent as the old HomeSpan sketch):
 
 | Service | Characteristics | Why it earns its place |
 |---|---|---|
-| **Lightbulb** | `On`, `Brightness` | Siri, the Home app slider, and automatic participation in "Good Night" scenes |
-| **Occupancy Sensor** — Room | `OccupancyDetected` | From LD2410C. **The highest-value line here** — your bedroom presence becomes available to every automation in the house |
-| **Occupancy Sensor** — Bed | `OccupancyDetected` | From the load cell. Trustworthy enough to build real automations on |
-| **Temperature Sensor** | `CurrentTemperature` | SHT41. Free room sensor in the Home app |
+| **Lightbulb** | `On`, `Brightness` | Siri, Home app slider, "Good Night" scenes |
+| **Occupancy Sensor** — Room | `OccupancyDetected` | LD2410C → whole-home presence |
+| **Occupancy Sensor** — Bed | `OccupancyDetected` | Load cell — automation-grade |
+| **Temperature Sensor** | `CurrentTemperature` | SHT41 |
 | **Humidity Sensor** | `CurrentRelativeHumidity` | SHT41 |
-| **Light Sensor** | `CurrentAmbientLightLevel` | VEML7700 — lets other automations react to room brightness |
-| **Television** | `Active`, `ActiveIdentifier`, `ConfiguredName` | Abuse of the service, but each scene becomes an "input source" with a proper picker in the Home app *and* Control Center |
-| **Stateless Switch** ×6 | `ProgrammableSwitchEvent` | "Hey Siri, show me the bus." Fires, pins a card for 60 s, self-clears |
+| **Light Sensor** | `CurrentAmbientLightLevel` | VEML7700 |
+| **Television** | `Active`, `ActiveIdentifier`, `ConfiguredName` | Scenes as input sources in Control Center |
+| **Stateless Switch** ×6 | `ProgrammableSwitchEvent` | "Hey Siri, show me the bus" → pin card 60 s |
 
-The mmWave → `OccupancySensor` mapping is the sleeper feature. You bought the sensor for the
-panel; exposing it turns it into whole-room presence for your entire smart home.
+Run the HAP poll/event loop from a task pinned to **core 1**.
 
-### 9.2 HomeSpan sketch
-
-```cpp
-#include "HomeSpan.h"
-
-struct PanelLight : Service::LightBulb {
-    SpanCharacteristic *power  = new Characteristic::On(true);
-    SpanCharacteristic *bright = new Characteristic::Brightness(60);
-
-    PanelLight() : Service::LightBulb() { bright->setRange(0, 100, 1); }
-
-    boolean update() override {
-        panel_set_power(power->getNewVal<bool>());
-        // HomeKit sets the CEILING; the lux sensor scales beneath it
-        panel_set_brightness_ceiling(bright->getNewVal<int>());
-        return true;
-    }
-};
-
-struct SceneTV : Service::Television {
-    SpanCharacteristic *active = new Characteristic::Active(1);
-    SpanCharacteristic *input  = new Characteristic::ActiveIdentifier(1);
-
-    boolean update() override {
-        if (input->updated()) scene_select(input->getNewVal<int>());
-        if (active->updated()) panel_set_power(active->getNewVal<bool>());
-        return true;
-    }
-};
-
-void setup() {
-    homeSpan.setControlPin(0);
-    homeSpan.setStatusPin(LED_BUILTIN);
-    homeSpan.setPairingCode(HOMEKIT_SETUP_CODE);
-    homeSpan.begin(Category::Bridges, "Matrix Panel");
-
-    new SpanAccessory();
-      new Service::AccessoryInformation();
-        new Characteristic::Identify();
-        new Characteristic::Name("Matrix Panel");
-        new Characteristic::Manufacturer("Homebrew");
-        new Characteristic::FirmwareRevision(FW_VERSION);
-      new PanelLight();
-      new SceneTV();
-
-    new SpanAccessory();
-      new Service::AccessoryInformation();
-        new Characteristic::Identify();
-        new Characteristic::Name("Bedroom Presence");
-      new Service::OccupancySensor();
-
-    new SpanAccessory();  // ... Bed Presence, Temperature, Humidity, Light
-}
-```
-
-Run `homeSpan.poll()` from a task pinned to **core 1**.
-
-### 9.3 Pairing UX
+### 9.2 Pairing UX
 
 On first boot, scroll the 8-digit setup code across the panel for manual entry in the Home app.
 
 A HomeKit QR needs ~37 × 37 modules plus a quiet zone — it will not fit in 32 rows. Print the QR
 on a sticker for the back of the rear shell.
 
-### 9.4 What this deletes from your build
+### 9.3 What HAP deletes from your build
 
 **HomeKit automations replace part of your rules engine.** Once presence, brightness and scene
 selection are HAP characteristics, the Home app handles:
@@ -768,24 +735,24 @@ selection are HAP characteristics, the Home app handles:
 
 **Keep server-side:** scheduling and data-driven rules (`bus.eta < 4 → pin card`), which HomeKit
 cannot express. **Drop from your dashboard:** manual override UI, presence reaction logic, and
-time-of-day on/off. The Home app's version is better than yours would have been.
+time-of-day on/off — once HAP is live. Until then, Shortcuts + `/api/*` cover the same jobs.
 
-### 9.5 Optional — Direction B, later
+### 9.4 Optional — Direction B, later
 
 Showing *other* accessories' state on the panel. A HAP accessory can't query its peers, so this
-goes through your Homebridge Config UI X REST API (`GET /api/accessories`) as a data source, or
-via `hap-controller` on npm pairing your backend as a second controller.
+goes through a backend controller (`hap-controller` on npm, or a Homebridge Config UI X REST
+API) as a data source.
 
 Cards it unlocks: lights left on elsewhere, door lock state, aircon setpoint vs actual, washer
-finished, filter life, other rooms' temperatures. **Defer to phase 2** — it's additive and
-touches nothing in the core design.
+finished, filter life, other rooms' temperatures. **Defer** — additive; touches nothing in the
+core design.
 
-### 9.6 Gotchas
+### 9.5 Gotchas
 
 - **Lock any plain-HTTP local endpoint** you expose alongside HAP with a shared secret. An
   unauthenticated `POST /brightness` on your LAN is a bad habit.
-- **Don't reach for Matter.** ESP-IDF supports it and it'd add Google/Alexa, but it's heavier and
-  fussier. You only want HomeKit; HomeSpan is the simpler, more mature path.
+- **Don't reach for Matter** unless you actually need Google/Alexa. Extra weight for no HomeKit gain.
+- **Never add Arduino-as-component** to "get HomeSpan working." That dependency is rejected.
 - **mDNS and Wi-Fi power save conflict.** Set `esp_wifi_set_ps(WIFI_PS_NONE)` — you're mains
   powered, and HAP responsiveness matters more than the 30 mA.
 
@@ -1931,7 +1898,7 @@ Ordered by how much each one buys you.
 - [ ] **Power governor** (§7.3), calibrated with a real USB meter.
 - [ ] **Watchdog + exponential backoff with jitter.** Hard reboot after 10 min of failure.
 - [ ] **Compile-time validation.** Broken cards cannot be deployed.
-- [ ] **Core affinity pinned.** Matrix on 0, HomeSpan and networking on 1.
+- [ ] **Core affinity pinned.** Matrix on 0, HAP/networking on 1.
 - [ ] **Auto-brightness with hysteresis**, HomeKit value as ceiling not override.
 - [ ] **Circuit breakers on every data source.** 5 failures → open 5 min.
 - [ ] **Offline detection cron** → push notification to your phone. Learn it's down before you
@@ -2031,9 +1998,11 @@ the simulate panel before `row`/`col` — it pays back faster than any grammar f
 thickness and depth before committing to a bezel. Then bezel, rear shell, cleat, sensor windows.
 **Exit:** it's on the shelf and looks bought.
 
-### Phase 6 — HomeKit *(week 6)*
-HomeSpan, all services, pairing, core-1 pinning. Verify NVS survives OTA. **Exit:** "Hey Siri,
-turn off the matrix panel" works with the router unplugged.
+### Phase 6 — LAN control + optional HomeKit *(week 6)*
+Ship Shortcuts / dashboard → `/api/*` first (**no Arduino**). Optionally add an ESP-IDF-native
+HAP accessory later — lightbulb, occupancy, sensors, scene inputs — pinned to core 1. Verify
+NVS survives OTA if pairing state lives there. **Exit:** you can kill the panel from your phone
+with the content plane unreachable (LAN path), and Siri works once HAP is enabled.
 
 ### Phase 7 — Hardening *(week 7)*
 OTA + rollback, BLE provisioning, power governor, auto-brightness, presence, stale handling,
@@ -2104,7 +2073,7 @@ morning window.
 
 | Problem | Fix |
 |---|---|
-| Panel tears when the Home app polls | HomeSpan is on core 0. Pin it to 1. |
+| Panel tears when the Home app polls | HAP/mDNS task is on core 0. Pin it to 1. |
 | Colours shift under load | Brownout. Better PSU + power governor. |
 | Firmware update un-pairs HomeKit | Partition table erases NVS. Fix `partitions.csv`. |
 | mmWave detects the neighbours | Gate max distance; set far-gate sensitivity to 0. |
@@ -2118,4 +2087,4 @@ morning window.
 
 ---
 
-*Plan v1.2 — Matrix Portal S3 · Convex · Oracle Cloud ICN · SvelteKit · HomeSpan · no MQTT*
+*Plan v1.3 — Matrix Portal S3 · Convex · Oracle Cloud ICN · SvelteKit · ESP-IDF only (no Arduino) · no MQTT*

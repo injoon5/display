@@ -5,17 +5,21 @@ LDFLAGS ?= -lm
 LIBMXR_SRCS := vm.c raster.c text.c fonts.c anim.c gamma.c
 NATIVE_BIN := test_native
 VALIDATE_BIN := validate_file
+RENDER_BIN := render_ppm
 WASM_DIR := build
 
-.PHONY: native run-native validate wasm clean
+.PHONY: native run-native validate render wasm clean
 
-native: $(NATIVE_BIN) $(VALIDATE_BIN)
+native: $(NATIVE_BIN) $(VALIDATE_BIN) $(RENDER_BIN)
 
 $(NATIVE_BIN): $(LIBMXR_SRCS) test_native.c mxr.h
 	$(CC) $(CFLAGS) -I. -o $@ $(LIBMXR_SRCS) test_native.c $(LDFLAGS)
 
 $(VALIDATE_BIN): $(LIBMXR_SRCS) validate_file.c mxr.h
 	$(CC) $(CFLAGS) -I. -o $@ $(LIBMXR_SRCS) validate_file.c $(LDFLAGS)
+
+$(RENDER_BIN): $(LIBMXR_SRCS) render_ppm.c mxr.h
+	$(CC) $(CFLAGS) -I. -o $@ $(LIBMXR_SRCS) render_ppm.c $(LDFLAGS)
 
 run-native: native
 	./$(NATIVE_BIN)
@@ -37,5 +41,9 @@ wasm:
 		echo "emcc not found; install Emscripten to build build/mxr.js"; \
 	fi
 
+render: $(RENDER_BIN)
+	@test -n "$(FILE)" || (echo "usage: make -C libmxr render FILE=path.mxr OUT=frame.ppm" && exit 2)
+	./$(RENDER_BIN) "$(FILE)" "$(or $(OUT),frame.ppm)" $(if $(SLOTS),--slots "$(SLOTS)") $(if $(TMS),--t-ms $(TMS))
+
 clean:
-	rm -rf $(NATIVE_BIN) $(VALIDATE_BIN) $(WASM_DIR) test_native.ppm
+	rm -rf $(NATIVE_BIN) $(VALIDATE_BIN) $(RENDER_BIN) $(WASM_DIR) test_native.ppm frame.ppm

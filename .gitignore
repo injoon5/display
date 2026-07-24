@@ -4,12 +4,17 @@ dist/
 firmware/build/
 firmware/host_sim/build/
 *.ppm
+*.bmp
 .convex/
 convex/.convex/
 web/.svelte-kit/
+web/.env.local
+fetcher/.env
+emulator/.env
 .env.local
 libmxr/test_native
 libmxr/validate_file
+libmxr/render_ppm
 libmxr/*.ppm
 tmp/
 

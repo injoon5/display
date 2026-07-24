@@ -120,5 +120,7 @@ int main(void) {
 
     write_ppm("host_sim.ppm", fb);
     printf("[host_sim] rendered host_sim.ppm, estimated current %.3f A\n", mxr_estimate_amps(fb, MXR_FB_PIXELS, 0.10f, 0.0000040f));
+    puts("[host_sim] note: this is an offline unit render.");
+    puts("[host_sim] for a live /device/* loop against local Convex, run: npm run stack");
     return 0;
 }

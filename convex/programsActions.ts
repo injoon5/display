@@ -134,13 +134,26 @@ export const compileAndDeploy = demoAction({
 
     const bytecode = primaryCompiled.bytecode;
     const bytecodeHash = await sha256Hex(bytecode);
-    const ab = bytecode.buffer.slice(
-      bytecode.byteOffset,
-      bytecode.byteOffset + bytecode.byteLength,
-    ) as ArrayBuffer;
-    const storageId = await ctx.storage.store(new Blob([ab], { type: "application/octet-stream" }), {
-      sha256: bytecodeHash,
+
+    // Prefer generateUploadUrl + POST. Direct `ctx.storage.store(Blob)` hits
+    // "BadHeader / Digest" on local anonymous Convex backends.
+    const uploadUrl = await ctx.storage.generateUploadUrl();
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+      },
+      body: Buffer.from(bytecode),
     });
+    if (!uploadResponse.ok) {
+      const detail = await uploadResponse.text();
+      throw new Error(`Program upload failed (${uploadResponse.status}): ${detail}`);
+    }
+    const uploaded = (await uploadResponse.json()) as { storageId?: Id<"_storage"> };
+    if (!uploaded.storageId) {
+      throw new Error("Program upload missing storageId");
+    }
+    const storageId = uploaded.storageId;
 
     await ctx.runMutation(internal.devices.applyProgramDeployment, {
       deviceId: args.deviceId,

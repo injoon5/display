@@ -14,6 +14,7 @@ export const deviceValidator = v.object({
   tokenHash: v.string(),
   programVersion: v.number(),
   programEtag: v.string(),
+  programStorageId: v.optional(v.id("_storage")),
   dataVersion: v.number(),
   dataEtag: v.string(),
   activeSceneId: v.optional(v.id("scenes")),
@@ -267,17 +268,27 @@ export const applyProgramDeployment = internalMutation({
           compiledStorageId: args.storageId,
           deployedAt: Date.now(),
         });
-      } else if (card.compiledStorageId) {
-        await ctx.db.patch("cards", card._id, {
-          compiledStorageId: undefined,
-        });
       }
     }
 
-    const device = await bumpDeviceProgramEtag(ctx, args.deviceId, args.bytecodeHash);
+    const device = await ctx.db.get("devices", args.deviceId);
+    if (!device) {
+      throw new Error("Device not found");
+    }
+
+    await ctx.db.patch("devices", args.deviceId, {
+      programVersion: device.programVersion + 1,
+      programEtag: toEtag(args.bytecodeHash),
+      programStorageId: args.storageId,
+    });
+
+    const updated = await ctx.db.get("devices", args.deviceId);
+    if (!updated) {
+      throw new Error("Device not found after program update");
+    }
     return {
-      deviceId: device._id,
-      programVersion: device.programVersion,
+      deviceId: updated._id,
+      programVersion: updated.programVersion,
     };
   },
 });

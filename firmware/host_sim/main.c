@@ -21,7 +21,9 @@ static void wr32(uint8_t *p, uint32_t value) {
 static size_t build_program(uint8_t *program, size_t capacity) {
     uint8_t code[64];
     size_t code_len = 0;
-    const size_t string_len = sizeof(kMessage);
+    const char *text = kMessage;
+    const size_t text_len = strlen(text);
+    const size_t string_len = 2u + 2u + text_len;
     size_t total_len;
 
     memset(program, 0, capacity);
@@ -31,7 +33,9 @@ static size_t build_program(uint8_t *program, size_t capacity) {
     program[8] = 0;
     program[9] = 0;
     wr16(program + 10, MXR_HEADER_SIZE);
-    memcpy(program + MXR_HEADER_SIZE, kMessage, string_len);
+    wr16(program + MXR_HEADER_SIZE, 1);
+    wr16(program + MXR_HEADER_SIZE + 2, (uint16_t)text_len);
+    memcpy(program + MXR_HEADER_SIZE + 4, text, text_len);
     wr16(program + 12, (uint16_t)(MXR_HEADER_SIZE + string_len));
 
     code[code_len++] = MXR_OP_CLEAR;

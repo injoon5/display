@@ -18,7 +18,7 @@ import type * as lib_cbor from "../lib/cbor.js";
 import type * as lib_etag from "../lib/etag.js";
 import type * as lib_seed from "../lib/seed.js";
 import type * as programs from "../programs.js";
-import type * as programsCompile from "../programsCompile.js";
+import type * as programsActions from "../programsActions.js";
 import type * as rules from "../rules.js";
 import type * as scenes from "../scenes.js";
 import type * as sources from "../sources.js";
@@ -41,7 +41,7 @@ declare const fullApi: ApiFromModules<{
   "lib/etag": typeof lib_etag;
   "lib/seed": typeof lib_seed;
   programs: typeof programs;
-  programsCompile: typeof programsCompile;
+  programsActions: typeof programsActions;
   rules: typeof rules;
   scenes: typeof scenes;
   sources: typeof sources;

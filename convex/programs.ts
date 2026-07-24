@@ -1,12 +1,8 @@
-import type { GenericActionCtx } from "convex/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { DataModel } from "./_generated/dataModel";
-import { api, internal } from "./_generated/api";
 import { internalQuery } from "./_generated/server";
-import { dashboardAction } from "./auth";
-import { cardValidator, diagnosticValidator } from "./cards";
-import { sha256Hex, stripEtag, toEtag } from "./lib/etag";
+import { cardValidator } from "./cards";
+import { stripEtag } from "./lib/etag";
 import { ruleValidator } from "./rules";
 import { sceneValidator } from "./scenes";
 
@@ -15,16 +11,6 @@ type SlotEntry = {
   path: string;
   type: string;
   sourceId: string;
-};
-
-type CardDoc = Doc<"cards">;
-type DeviceDoc = Doc<"devices">;
-type RuleDoc = Doc<"rules">;
-type SceneDoc = Doc<"scenes">;
-type CompileAndDeployResult = {
-  etag: string;
-  size: number;
-  warnings: CardDoc["diagnostics"];
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -65,114 +51,6 @@ function buildGlobalSlotMap(cards: Array<{ slotMap: SlotEntry[] }>): SlotEntry[]
   return globalSlots;
 }
 
-function buildProgramBytes(input: {
-  deviceId: string;
-  cards: Array<{
-    id: string;
-    slug: string;
-    source: string;
-    priority: number;
-    dwellMs: number;
-    slotMap: SlotEntry[];
-  }>;
-  scenes: Array<{ name: string; cardIds: string[]; enabled: boolean }>;
-  rules: Array<{ name: string; condition: string; kind: string; priority: number; enabled: boolean }>;
-}): Uint8Array {
-  const slotMap = buildGlobalSlotMap(input.cards);
-  const program = {
-    format: "wall-matrix-panel.stage0",
-    deviceId: input.deviceId,
-    generatedAt: Date.now(),
-    cards: input.cards,
-    slotMap,
-    scenes: input.scenes,
-    rules: input.rules,
-  };
-  return new TextEncoder().encode(JSON.stringify(program));
-}
-
-function getLatestCompiledStorageId(
-  cards: Array<{
-    compiledStorageId?: Id<"_storage">;
-  }>,
-): Id<"_storage"> | null {
-  return cards.find((card) => card.compiledStorageId)?.compiledStorageId ?? null;
-}
-
-const compileAndDeployHandler = async (ctx: GenericActionCtx<DataModel>, args: {
-  cardIds: Id<"cards">[];
-  deviceId: Id<"devices">;
-}): Promise<CompileAndDeployResult> => {
-  const cards: CardDoc[] = await ctx.runQuery(internal.cards.getMany, { ids: args.cardIds });
-  if (cards.length === 0) {
-    throw new Error("At least one card is required");
-  }
-
-  const device: DeviceDoc | null = await ctx.runQuery(api.devices.get, { id: args.deviceId });
-  if (!device) {
-    throw new Error("Device not found");
-  }
-
-  const scenes: SceneDoc[] = await ctx.runQuery(api.scenes.list, {});
-  const rules: RuleDoc[] = await ctx.runQuery(api.rules.list, {});
-  const warnings: CardDoc["diagnostics"] = cards.flatMap((card: CardDoc) => card.diagnostics);
-  const bytecode = buildProgramBytes({
-    deviceId: device._id,
-    cards: cards.map((card: CardDoc) => ({
-      id: card._id,
-      slug: card.slug,
-      source: card.source,
-      priority: card.priority,
-      dwellMs: card.dwellMs,
-      slotMap: card.slotMap,
-    })),
-    scenes: scenes.map((scene: SceneDoc) => ({
-      name: scene.name,
-      cardIds: scene.cardIds,
-      enabled: scene.enabled,
-    })),
-    rules: rules.map((rule: RuleDoc) => ({
-      name: rule.name,
-      condition: rule.condition,
-      kind: rule.action.kind,
-      priority: rule.priority,
-      enabled: rule.enabled,
-    })),
-  });
-
-  const bytecodeHash = await sha256Hex(bytecode);
-  const bytecodeBlob = new Blob([Uint8Array.from(bytecode)], { type: "application/json" });
-  const storageId = await ctx.storage.store(bytecodeBlob, {
-    sha256: bytecodeHash,
-  });
-
-  await ctx.runMutation(internal.devices.applyProgramDeployment, {
-    deviceId: args.deviceId,
-    cardIds: args.cardIds,
-    storageId,
-    bytecodeHash,
-  });
-
-  return {
-    etag: toEtag(bytecodeHash),
-    size: bytecode.length,
-    warnings,
-  };
-};
-
-export const compileAndDeploy = dashboardAction({
-  args: {
-    cardIds: v.array(v.id("cards")),
-    deviceId: v.id("devices"),
-  },
-  returns: v.object({
-    etag: v.string(),
-    size: v.number(),
-    warnings: v.array(diagnosticValidator),
-  }),
-  handler: compileAndDeployHandler,
-});
-
 export const manifest = internalQuery({
   args: {
     deviceId: v.id("devices"),
@@ -192,8 +70,7 @@ export const manifest = internalQuery({
       throw new Error("Device not found");
     }
 
-    const cards = await ctx.db.query("cards").collect();
-    const storageId = getLatestCompiledStorageId(cards);
+    const storageId = device.programStorageId;
     if (!storageId) {
       throw new Error("No compiled program available");
     }
@@ -236,11 +113,7 @@ export const dataFrame = internalQuery({
       throw new Error("Device not found");
     }
 
-    const allCards = await ctx.db.query("cards").collect();
-    const deployedStorageId = getLatestCompiledStorageId(allCards);
-    const cards = allCards.filter(
-      (card) => card.enabled && card.compiledStorageId && card.compiledStorageId === deployedStorageId,
-    );
+    const cards = (await ctx.db.query("cards").collect()).filter((card) => card.enabled);
     const slotMap = buildGlobalSlotMap(cards);
     const sources = await ctx.db.query("sources").collect();
     const latestTelemetry = await ctx.db
@@ -290,9 +163,11 @@ export const dataFrame = internalQuery({
       a: ages,
       meta: {
         activeSceneId: device.activeSceneId ?? null,
-        pinnedCardId: device.pinnedUntil && device.pinnedUntil > args.nowMs ? device.pinnedCardId ?? null : null,
+        pinnedCardId:
+          device.pinnedUntil && device.pinnedUntil > args.nowMs ? (device.pinnedCardId ?? null) : null,
         pinnedUntil: device.pinnedUntil ?? null,
         cardCount: cards.length,
+        programStorageId: device.programStorageId ?? null,
       },
     };
   },
@@ -302,11 +177,19 @@ export const deployedCards = internalQuery({
   args: {},
   returns: v.array(cardValidator),
   handler: async (ctx) => {
-    const cards = await ctx.db.query("cards").collect();
-    const storageId = getLatestCompiledStorageId(cards);
-    if (!storageId) {
+    const devices = await ctx.db.query("devices").collect();
+    const storageIds = new Set(
+      devices
+        .map((device) => device.programStorageId)
+        .filter((id): id is Id<"_storage"> => id !== undefined),
+    );
+    if (storageIds.size === 0) {
       return [];
     }
-    return cards.filter((card) => card.compiledStorageId === storageId);
+    const cards = await ctx.db.query("cards").collect();
+    return cards.filter(
+      (card): card is Doc<"cards"> =>
+        card.compiledStorageId !== undefined && storageIds.has(card.compiledStorageId),
+    );
   },
 });

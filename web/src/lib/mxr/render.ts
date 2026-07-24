@@ -723,24 +723,61 @@ function compare(left: number | null, right: number, cmp: number): boolean {
 }
 
 export function render(input: RenderInput): RenderFrame {
-  try {
-    return renderBytecode(input);
-  } catch (error) {
-    if (!input.source) {
+  const looksLikeStage0 =
+    typeof input.source === "string" && input.source.trimStart().startsWith("{");
+  const hasMxrBytecode =
+    input.bytecode !== undefined &&
+    input.bytecode.byteLength >= 4 &&
+    String.fromCharCode(
+      input.bytecode[0] ?? 0,
+      input.bytecode[1] ?? 0,
+      input.bytecode[2] ?? 0,
+      input.bytecode[3] ?? 0,
+    ) === "MXR1";
+
+  if (hasMxrBytecode) {
+    try {
+      return renderBytecode(input);
+    } catch (error) {
       return {
         framebuffer: createFramebuffer(),
         height: HEIGHT,
         hotspots: [],
         mode: "bytecode",
-        warnings: [error instanceof Error ? error.message : "Unknown renderer error"],
-        width: WIDTH
+        warnings: [
+          error instanceof Error ? error.message : "MXR bytecode render failed",
+          "Stage0 fallback suppressed when MXR1 bytecode is present",
+        ],
+        width: WIDTH,
       };
     }
-    const fallback = renderStage0(input);
-    fallback.warnings.unshift(error instanceof Error ? error.message : "Bytecode renderer failed");
-    return fallback;
+  }
+
+  if (looksLikeStage0 && input.source) {
+    return renderStage0(input);
+  }
+
+  try {
+    return renderBytecode(input);
+  } catch (error) {
+    return {
+      framebuffer: createFramebuffer(),
+      height: HEIGHT,
+      hotspots: [],
+      mode: "bytecode",
+      warnings: [error instanceof Error ? error.message : "Unknown renderer error"],
+      width: WIDTH,
+    };
   }
 }
+
+/*
+ * Preview strategy until emcc WASM ships (npm run mxr:wasm -w web):
+ * the TypeScript bytecode interpreter mirrors libmxr opcodes + the
+ * length-prefixed string table. Golden tests compile cards with the
+ * shared compiler and validate through native libmxr.
+ */
+
 
 export function blitFramebuffer(canvas: HTMLCanvasElement, framebuffer: Uint16Array, scale = 8): void {
   if (!targetCanvas) {

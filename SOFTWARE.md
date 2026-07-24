@@ -53,4 +53,14 @@ Dashboard secret: `dashboard-secret`
 
 ## Status
 
-Software path from plan is implemented end-to-end with **dummy API payloads**. Firmware builds require ESP-IDF on a host with the toolchain; `firmware/host_sim` links `libmxr` natively for smoke tests.
+Software path from the plan is implemented end-to-end with **dummy API payloads**.
+
+Hardening (post thermo-nuclear review):
+- Single deploy path: `programsActions.compileAndDeploy` always server-compiles MXR1
+- Device `programStorageId` is the program source of truth
+- libmxr string tables match the compiler (length-prefixed); golden tests cover all cards
+- Firmware requests JSON slot frames (`Accept: application/json`); non-JSON is an error
+- Dashboard client split under `web/src/lib/dashboard/`
+- `compiler/dist` is not committed
+
+Firmware builds require ESP-IDF on a real host; `firmware/host_sim` + `libmxr` native/golden tests run without hardware.

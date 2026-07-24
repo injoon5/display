@@ -12,7 +12,7 @@ export const sourceValidator = v.object({
   kind: v.string(),
   config: v.any(),
   intervalMs: v.number(),
-  origin: v.union(v.literal("convex"), v.literal("fly-nrt"), v.literal("oracle-icn")),
+  origin: v.union(v.literal("convex"), v.literal("oracle-icn")),
   data: v.any(),
   fetchedAt: v.number(),
   error: v.optional(v.string()),
@@ -20,7 +20,7 @@ export const sourceValidator = v.object({
   circuitOpenUntil: v.optional(v.number()),
 });
 
-const originValidator = v.union(v.literal("convex"), v.literal("fly-nrt"), v.literal("oracle-icn"));
+const originValidator = v.union(v.literal("convex"), v.literal("oracle-icn"));
 
 function buildDummyPayload(sourceId: string): Record<string, unknown> | null {
   switch (sourceId) {

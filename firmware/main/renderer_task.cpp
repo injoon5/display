@@ -82,7 +82,10 @@ void rebuild_runtime_slots_locked() {
 bool build_fallback_program_locked() {
     uint8_t code[64];
     mxr_diag_t diag{};
-    const size_t string_len = sizeof(kBootMessage);
+    const char *boot = kBootMessage;
+    const size_t text_len = strlen(boot);
+    // length-prefixed string table: u16 count + u16 len + bytes
+    const size_t string_len = 2u + 2u + text_len;
     size_t code_len = 0;
     const size_t total_len = MXR_HEADER_SIZE + string_len + 21;
 
@@ -97,7 +100,9 @@ bool build_fallback_program_locked() {
     s_program[8] = 0;
     s_program[9] = 0;
     wr16(s_program + 10, MXR_HEADER_SIZE);
-    memcpy(s_program + MXR_HEADER_SIZE, kBootMessage, string_len);
+    wr16(s_program + MXR_HEADER_SIZE, 1);                         // count
+    wr16(s_program + MXR_HEADER_SIZE + 2, static_cast<uint16_t>(text_len));
+    memcpy(s_program + MXR_HEADER_SIZE + 4, boot, text_len);
     wr16(s_program + 12, static_cast<uint16_t>(MXR_HEADER_SIZE + string_len));
 
     code[code_len++] = MXR_OP_CLEAR;

@@ -116,6 +116,7 @@ bool perform_request(
         snprintf(auth_header, sizeof(auth_header), "Bearer %s", s_bearer_token[0] ? s_bearer_token : "UNPROVISIONED");
         esp_http_client_set_header(client, "Authorization", auth_header);
     }
+    esp_http_client_set_header(client, "Accept", "application/json");
     if (if_none_match && if_none_match[0] != '\0') {
         esp_http_client_set_header(client, "If-None-Match", if_none_match);
     }
@@ -319,17 +320,12 @@ bool sync_data() {
     }
 
     SlotFrame frame{};
-    const bool parsed_json = response.content_type.find("json") != std::string::npos &&
-        parse_slot_frame_json(response.body, &frame);
+    if (!parse_slot_frame_json(response.body, &frame)) {
+        ESP_LOGW(kTag, "/device/data returned non-JSON or invalid slot frame");
+        return false;
+    }
     if (!response.etag.empty()) {
         strlcpy(s_data_etag, response.etag.c_str(), sizeof(s_data_etag));
-    }
-
-    if (!parsed_json) {
-        ESP_LOGW(kTag, "Slot frame parser is JSON-only for now; preserving previous slots and accepting raw payload");
-        renderer_set_synced(true);
-        s_synced_once = true;
-        return true;
     }
 
     s_data_version = frame.data_version;

@@ -15,6 +15,22 @@ static void wr32(uint8_t *p, uint32_t v) {
     p[3] = (uint8_t)((v >> 24) & 0xFFu);
 }
 
+/* Length-prefixed string table matching compiler emitStringTable. */
+static size_t write_string_table(uint8_t *dst, const char *const *strings, size_t count) {
+    size_t offset = 0;
+    size_t i;
+    wr16(dst + offset, (uint16_t)count);
+    offset += 2;
+    for (i = 0; i < count; ++i) {
+        size_t len = strlen(strings[i]);
+        wr16(dst + offset, (uint16_t)len);
+        offset += 2;
+        memcpy(dst + offset, strings[i], len);
+        offset += len;
+    }
+    return offset;
+}
+
 static void write_ppm(const char *path, const uint16_t *fb) {
     FILE *fp = fopen(path, "wb");
     int y;
@@ -38,13 +54,13 @@ static void write_ppm(const char *path, const uint16_t *fb) {
 }
 
 int main(void) {
-    uint8_t program[160];
+    uint8_t program[192];
     uint16_t fb[MXR_FB_PIXELS];
     mxr_ctx_t ctx;
     mxr_diag_t diag;
-    const char message[] = "HELLO MXR";
+    const char *strings[] = { "HELLO MXR", "OK" };
     uint8_t code[64];
-    size_t string_len = sizeof(message);
+    size_t string_len;
     size_t code_len = 0;
     size_t total_len;
 
@@ -57,7 +73,7 @@ int main(void) {
     program[8] = 0;
     program[9] = 0;
     wr16(program + 10, MXR_HEADER_SIZE);
-    memcpy(program + MXR_HEADER_SIZE, message, string_len);
+    string_len = write_string_table(program + MXR_HEADER_SIZE, strings, 2);
     wr16(program + 12, (uint16_t)(MXR_HEADER_SIZE + string_len));
 
     code[code_len++] = MXR_OP_CLEAR;
@@ -86,7 +102,7 @@ int main(void) {
     code[code_len++] = 1;
     wr16(code + code_len, 0xFFFFu);
     code_len += 2;
-    code[code_len++] = 0;
+    code[code_len++] = 0; /* string table index 0 */
 
     code[code_len++] = MXR_OP_TEXT;
     code[code_len++] = 8;
@@ -94,7 +110,7 @@ int main(void) {
     code[code_len++] = 0;
     wr16(code + code_len, 0x07FFu);
     code_len += 2;
-    code[code_len++] = 0;
+    code[code_len++] = 1; /* string table index 1 */
 
     code[code_len++] = MXR_OP_HALT;
 

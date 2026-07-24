@@ -143,42 +143,92 @@ static int parse_view(const uint8_t *program, size_t len, int require_len, mxr_p
     return MXR_OK;
 }
 
+/* String table format (must match compiler/src/emit.ts emitStringTable):
+ *   u16 count
+ *   repeated: u16 byte_len, then `byte_len` UTF-8 bytes (no NUL)
+ */
 static size_t string_count(const mxr_program_view_t *view) {
-    size_t count = 0;
-    const uint8_t *p = view->strings;
-    int have_bytes = 0;
-    while (p < view->strings_end) {
-        have_bytes = 1;
-        if (*p == 0) {
-            ++count;
-            have_bytes = 0;
+    size_t table_len;
+    uint16_t count;
+    const uint8_t *p;
+    uint16_t i;
+
+    table_len = (size_t)(view->strings_end - view->strings);
+    if (table_len < 2u) {
+        return 0;
+    }
+    count = rd16(view->strings);
+    p = view->strings + 2;
+    for (i = 0; i < count; ++i) {
+        uint16_t len;
+        if ((size_t)(view->strings_end - p) < 2u) {
+            return 0;
         }
-        ++p;
+        len = rd16(p);
+        p += 2;
+        if ((size_t)(view->strings_end - p) < (size_t)len) {
+            return 0;
+        }
+        p += len;
     }
-    if (have_bytes) {
-        ++count;
-    }
-    return count;
+    return (size_t)count;
 }
 
-static const char *string_at(const mxr_program_view_t *view, uint8_t index) {
-    const char *s = (const char *)view->strings;
-    const char *end = (const char *)view->strings_end;
-    uint8_t current = 0;
-    while (s < end) {
-        const char *start = s;
-        while (s < end && *s != '\0') {
-            ++s;
-        }
-        if (current == index) {
-            return start;
-        }
-        ++current;
-        if (s < end) {
-            ++s;
-        }
+static int string_table_valid(const mxr_program_view_t *view) {
+    size_t table_len = (size_t)(view->strings_end - view->strings);
+    if (table_len == 0u) {
+        return 1;
     }
-    return "";
+    if (table_len < 2u) {
+        return 0;
+    }
+    return string_count(view) == (size_t)rd16(view->strings);
+}
+
+/* Copies length-prefixed entry into a static NUL-terminated buffer. */
+static const char *string_at(const mxr_program_view_t *view, uint8_t index) {
+    static char buf[256];
+    size_t table_len;
+    uint16_t count;
+    const uint8_t *p;
+    uint16_t i;
+
+    buf[0] = '\0';
+    table_len = (size_t)(view->strings_end - view->strings);
+    if (table_len < 2u) {
+        return buf;
+    }
+    count = rd16(view->strings);
+    if (index >= count) {
+        return buf;
+    }
+    p = view->strings + 2;
+    for (i = 0; i < count; ++i) {
+        uint16_t len;
+        if ((size_t)(view->strings_end - p) < 2u) {
+            return buf;
+        }
+        len = rd16(p);
+        p += 2;
+        if ((size_t)(view->strings_end - p) < (size_t)len) {
+            return buf;
+        }
+        if (i == index) {
+            size_t copy = len < (sizeof(buf) - 1u) ? (size_t)len : (sizeof(buf) - 1u);
+            memcpy(buf, p, copy);
+            buf[copy] = '\0';
+            return buf;
+        }
+        p += len;
+    }
+    return buf;
+}
+
+static const mxr_slot_t *slot_at(const mxr_ctx_t *ctx, const mxr_program_view_t *view, uint8_t index) {
+    if (!ctx || !ctx->slots || index >= view->slot_count) {
+        return NULL;
+    }
+    return &ctx->slots[index];
 }
 
 static int current_dim(const uint8_t *dims, int depth) {
@@ -558,6 +608,10 @@ int mxr_validate(const uint8_t *program, size_t len, mxr_diag_t *out) {
     if (rc != MXR_OK) {
         return rc;
     }
+    if (!string_table_valid(&view)) {
+        set_diag(out, MXR_ERR_HEADER, view.string_off, 0, "invalid length-prefixed string table");
+        return MXR_ERR_HEADER;
+    }
     return validate_code(&view, out);
 }
 
@@ -673,7 +727,7 @@ int mxr_render(mxr_ctx_t *ctx) {
                 uint8_t src = (op == MXR_OP_TEXT) ? pc[5] : pc[7];
                 if (src & 0x80u) {
                     uint8_t slot_idx = src & 0x7Fu;
-                    s = slot_to_text(slot_idx < view.slot_count ? &ctx->slots[slot_idx] : NULL, buf, sizeof(buf));
+                    s = slot_to_text(slot_at(ctx, &view, slot_idx), buf, sizeof(buf));
                 } else {
                     s = string_at(&view, src & 0x7Fu);
                 }
@@ -703,14 +757,14 @@ int mxr_render(mxr_ctx_t *ctx) {
                 uint8_t font = pc[2];
                 uint16_t color = mxr_dim_color(rd16(pc + 3), (uint8_t)current_dim(dim_stack, dim_depth));
                 uint8_t slot_idx = pc[5];
-                slot_to_digits(slot_idx < view.slot_count ? &ctx->slots[slot_idx] : NULL, pc[6], buf, sizeof(buf));
+                slot_to_digits(slot_at(ctx, &view, slot_idx), pc[6], buf, sizeof(buf));
                 mxr_text_draw_digits(ctx->fb, &clip_stack[clip_depth - 1], tx + pc[0], ty + pc[1], font, color, buf);
                 pc += 7;
                 break;
             }
             case MXR_OP_MEASURE: {
                 char buf[48];
-                const char *s = slot_to_text(pc[0] < view.slot_count ? &ctx->slots[pc[0]] : NULL, buf, sizeof(buf));
+                const char *s = slot_to_text(slot_at(ctx, &view, pc[0]), buf, sizeof(buf));
                 int w = 0;
                 mxr_text_measure(pc[1], s, &w, NULL);
                 scratch_store(ctx, pc[2], (int32_t)w);
@@ -746,7 +800,7 @@ int mxr_render(mxr_ctx_t *ctx) {
             case MXR_OP_JMPZ: {
                 uint8_t slot_idx = pc[0];
                 uint16_t target = rd16(pc + 1);
-                if (!slot_truthy(slot_idx < view.slot_count ? &ctx->slots[slot_idx] : NULL)) {
+                if (!slot_truthy(slot_at(ctx, &view, slot_idx))) {
                     pc = view.code + target;
                 } else {
                     pc += 3;
@@ -760,7 +814,7 @@ int mxr_render(mxr_ctx_t *ctx) {
                 uint16_t target = rd16(pc + 6);
                 int value = 0;
                 int jump = 0;
-                if (slot_to_i32(slot_idx < view.slot_count ? &ctx->slots[slot_idx] : NULL, &value)) {
+                if (slot_to_i32(slot_at(ctx, &view, slot_idx), &value)) {
                     switch (cmp) {
                         case 0: jump = value == imm; break;
                         case 1: jump = value != imm; break;
@@ -782,7 +836,7 @@ int mxr_render(mxr_ctx_t *ctx) {
                 uint8_t slot_idx = pc[0];
                 uint16_t stale_ms = rd16(pc + 1);
                 uint16_t target = rd16(pc + 3);
-                const mxr_slot_t *slot = slot_idx < view.slot_count ? &ctx->slots[slot_idx] : NULL;
+                const mxr_slot_t *slot = slot_at(ctx, &view, slot_idx);
                 if (slot && ctx->t_ms > slot->updated_ms && (ctx->t_ms - slot->updated_ms) > stale_ms) {
                     pc = view.code + target;
                 } else {

@@ -237,7 +237,7 @@ export async function deployCardLive(
   bytecode?: Uint8Array,
 ): Promise<DeployCardResult> {
   const result = (await requireClient().action(
-    api.programs.compileAndDeploy,
+    api.programsActions.compileAndDeploy,
     {
       cardIds,
       deviceId,

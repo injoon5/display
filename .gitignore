@@ -8,11 +8,14 @@ firmware/host_sim/build/
 convex/.convex/
 web/.svelte-kit/
 .env.local
----
+libmxr/test_native
+libmxr/validate_file
+libmxr/*.ppm
+tmp/
 
 # Never commit accidental tsc emit next to Convex sources
 convex/**/*.js
 !convex/_generated/**/*.js
-libmxr/test_native
-libmxr/*.ppm
-firmware/host_sim/build/
+
+# Compiler build output — rebuild via npm run build -w compiler
+compiler/dist/

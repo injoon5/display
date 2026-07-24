@@ -115,9 +115,11 @@ http.route({
       deviceId: device._id,
       nowMs: Date.now(),
     });
-    const accept = req.headers.get("accept") ?? "";
+    const accept = req.headers.get("accept") ?? "application/json";
 
-    if (accept.includes("application/json")) {
+    // Device firmware requests JSON. CBOR remains available via Accept header
+    // for future bandwidth-sensitive clients.
+    if (!accept.includes("application/cbor")) {
       return Response.json(frame, {
         headers: {
           ETag: device.dataEtag,

@@ -4,37 +4,47 @@ import type { DataModel, Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { action, mutation, query } from "./_generated/server";
 
-const DEMO_DASHBOARD_SECRET = "dashboard-secret";
+/**
+ * Demo-mode dashboard access. These wrappers intentionally do NOT authenticate.
+ * They exist so the bedroom prototype can run without Convex Auth wired yet.
+ * HTTP control routes still require `hasDashboardSecret`.
+ * Rename/replace with real authed wrappers before exposing beyond LAN/demo.
+ */
+export const DEMO_DASHBOARD_SECRET = "dashboard-secret";
 
-export const dashboardQuery = customQuery(
+export const demoQuery = customQuery(
   query,
   customCtx(async () => ({
     dashboard: {
       kind: "demo" as const,
-      secret: DEMO_DASHBOARD_SECRET,
     },
   })),
 );
 
-export const dashboardMutation = customMutation(
+export const demoMutation = customMutation(
   mutation,
   customCtx(async () => ({
     dashboard: {
       kind: "demo" as const,
-      secret: DEMO_DASHBOARD_SECRET,
     },
   })),
 );
 
-export const dashboardAction = customAction(
+export const demoAction = customAction(
   action,
   customCtx(async () => ({
     dashboard: {
       kind: "demo" as const,
-      secret: DEMO_DASHBOARD_SECRET,
     },
   })),
 );
+
+/** @deprecated Use demoQuery — name kept during migration. */
+export const dashboardQuery = demoQuery;
+/** @deprecated Use demoMutation */
+export const dashboardMutation = demoMutation;
+/** @deprecated Use demoAction */
+export const dashboardAction = demoAction;
 
 export async function hashToken(token: string): Promise<string> {
   const normalized = new TextEncoder().encode(token.trim());

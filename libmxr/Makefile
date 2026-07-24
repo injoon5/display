@@ -4,17 +4,25 @@ LDFLAGS ?= -lm
 
 LIBMXR_SRCS := vm.c raster.c text.c fonts.c anim.c gamma.c
 NATIVE_BIN := test_native
+VALIDATE_BIN := validate_file
 WASM_DIR := build
 
-.PHONY: native run-native wasm clean
+.PHONY: native run-native validate wasm clean
 
-native: $(NATIVE_BIN)
+native: $(NATIVE_BIN) $(VALIDATE_BIN)
 
 $(NATIVE_BIN): $(LIBMXR_SRCS) test_native.c mxr.h
 	$(CC) $(CFLAGS) -I. -o $@ $(LIBMXR_SRCS) test_native.c $(LDFLAGS)
 
+$(VALIDATE_BIN): $(LIBMXR_SRCS) validate_file.c mxr.h
+	$(CC) $(CFLAGS) -I. -o $@ $(LIBMXR_SRCS) validate_file.c $(LDFLAGS)
+
 run-native: native
 	./$(NATIVE_BIN)
+
+validate: $(VALIDATE_BIN)
+	@test -n "$(FILE)" || (echo "usage: make -C libmxr validate FILE=path.mxr" && exit 2)
+	./$(VALIDATE_BIN) "$(FILE)"
 
 wasm:
 	@if command -v emcc >/dev/null 2>&1; then \
@@ -30,4 +38,4 @@ wasm:
 	fi
 
 clean:
-	rm -rf $(NATIVE_BIN) $(WASM_DIR) test_native.ppm
+	rm -rf $(NATIVE_BIN) $(VALIDATE_BIN) $(WASM_DIR) test_native.ppm

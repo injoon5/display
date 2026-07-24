@@ -38,6 +38,7 @@ export type DashboardDevice = {
   pinnedCardId?: string;
   pinnedUntil?: number;
   programEtag: string;
+  programStorageId?: string;
   programVersion: number;
   tokenHash: string;
 };

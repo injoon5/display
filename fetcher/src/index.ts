@@ -18,7 +18,7 @@ type SourceWriteArgs = {
   intervalMs: number;
   kind: string;
   config: Record<string, unknown>;
-  origin: "convex" | "fly-nrt" | "oracle-icn";
+  origin: "convex" | "oracle-icn";
   data: unknown;
   fetchedAt?: number;
 };

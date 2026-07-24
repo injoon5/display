@@ -1,0 +1,61 @@
+name: Cards
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  compile-cards:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build compiler package
+        run: npm run build -w compiler
+
+      - name: Compile Stage 0 and Stage 1 cards
+        run: |
+          node --input-type=module <<'EOF'
+          import { readdir, readFile } from "node:fs/promises";
+          import path from "node:path";
+          import { compile } from "./compiler/dist/src/index.js";
+
+          const cardsDir = path.join(process.cwd(), "cards");
+          const files = (await readdir(cardsDir))
+            .filter((name) => name.endsWith(".json") || name.endsWith(".card"))
+            .sort();
+
+          let failed = false;
+
+          for (const file of files) {
+            const raw = await readFile(path.join(cardsDir, file), "utf8");
+            const input = file.endsWith(".json") ? JSON.parse(raw) : raw;
+            const result = compile(input);
+            const errors = result.diagnostics.filter((entry) => entry.severity === "error");
+
+            if (errors.length === 0) {
+              console.log(`ok ${file}`);
+              continue;
+            }
+
+            failed = true;
+            console.error(`error ${file}`);
+            for (const entry of errors) {
+              console.error(`  - ${entry.code}: ${entry.message}`);
+            }
+          }
+
+          if (failed) {
+            process.exit(1);
+          }
+          EOF

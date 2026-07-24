@@ -1,0 +1,4 @@
+<card id="clock-dim" name="Clock Dim" priority="40">
+  <text x="2" y="6" font="seg7" color="#66706a">{{ now.hour | pad(2) }}:{{ now.minute | pad(2) }}</text>
+  <stale after="2m" style="dim" />
+</card>

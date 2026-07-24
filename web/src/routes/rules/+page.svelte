@@ -1,0 +1,250 @@
+<script lang="ts">
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import * as Alert from "$lib/components/ui/alert/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as Card from "$lib/components/ui/card/index.js";
+  import * as Empty from "$lib/components/ui/empty/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
+  import * as Table from "$lib/components/ui/table/index.js";
+  import { cards, rules, saveRule, scenes } from "$lib/convex";
+
+  let selectedRuleId = $state<string | null>(null);
+  let draftName = $state("");
+  let draftCondition = $state("");
+  let draftPriority = $state(50);
+  let draftEnabled = $state(true);
+  let actionKind = $state("pin");
+  let actionCardId = $state("");
+  let actionSceneId = $state("");
+  let actionDurationMs = $state(60_000);
+  let lastLoaded = $state<string | null>(null);
+  let message = $state<string | null>(null);
+  let busy = $state(false);
+
+  $effect(() => {
+    if (!selectedRuleId && $rules[0]) {
+      selectedRuleId = $rules[0]._id;
+    }
+    const selected = $rules.find((rule) => rule._id === selectedRuleId) ?? null;
+    if (!selected || selected._id === lastLoaded) {
+      return;
+    }
+    draftName = selected.name;
+    draftCondition = selected.condition;
+    draftPriority = selected.priority;
+    draftEnabled = selected.enabled;
+    actionKind = selected.action.kind;
+    actionCardId = selected.action.cardId ?? "";
+    actionSceneId = selected.action.sceneId ?? "";
+    actionDurationMs = selected.action.durationMs ?? 60_000;
+    lastLoaded = selected._id;
+  });
+
+  let selectedRule = $derived($rules.find((rule) => rule._id === selectedRuleId) ?? null);
+
+  function actionLabel(kind: string): string {
+    switch (kind) {
+      case "pin":
+        return "Pin";
+      case "interrupt":
+        return "Interrupt";
+      case "scene":
+        return "Scene";
+      case "sleep":
+        return "Sleep";
+      default:
+        return kind;
+    }
+  }
+
+  async function handleSave(): Promise<void> {
+    if (!selectedRule || busy) {
+      return;
+    }
+    busy = true;
+    message = null;
+    try {
+      await saveRule({
+        action: {
+          cardId: actionCardId || undefined,
+          durationMs: actionDurationMs,
+          kind: actionKind,
+          sceneId: actionSceneId || undefined
+        },
+        condition: draftCondition,
+        enabled: draftEnabled,
+        name: draftName,
+        priority: draftPriority,
+        ruleId: selectedRule._id
+      });
+      message = `Saved ${draftName}.`;
+    } catch (error) {
+      message = error instanceof Error ? error.message : "Couldn’t save rule.";
+    } finally {
+      busy = false;
+    }
+  }
+</script>
+
+<header class="mb-4 flex flex-col gap-1">
+  <h1 class="text-xl font-semibold tracking-tight">Rules</h1>
+  <p class="text-sm text-muted-foreground">Automate the panel with conditions and actions.</p>
+</header>
+
+<div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
+  <section class="overflow-hidden rounded-xl border bg-card/40">
+    <div class="border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">All rules</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Select a rule to edit.</p>
+    </div>
+    {#if $rules.length === 0}
+      <Empty.Root class="border-none py-6">
+        <Empty.Header>
+          <Empty.Title>No rules</Empty.Title>
+          <Empty.Description>Load sample data to create your first rules.</Empty.Description>
+        </Empty.Header>
+      </Empty.Root>
+    {:else}
+      <Table.Root>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>Name</Table.Head>
+            <Table.Head>Action</Table.Head>
+            <Table.Head class="text-right">Priority</Table.Head>
+            <Table.Head>Enabled</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {#each $rules as rule (rule._id)}
+            <Table.Row
+              class="cursor-pointer"
+              data-state={selectedRuleId === rule._id ? "selected" : undefined}
+              aria-selected={selectedRuleId === rule._id}
+              onclick={() => (selectedRuleId = rule._id)}
+              onkeydown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  selectedRuleId = rule._id;
+                }
+              }}
+              tabindex={0}
+            >
+              <Table.Cell class="font-medium">{rule.name}</Table.Cell>
+              <Table.Cell class="text-sm text-muted-foreground">{actionLabel(rule.action.kind)}</Table.Cell>
+              <Table.Cell class="text-right tabular-nums">{rule.priority}</Table.Cell>
+              <Table.Cell>
+                <StatusBadge tone={rule.enabled ? "success" : "destructive"}>
+                  {rule.enabled ? "Enabled" : "Disabled"}
+                </StatusBadge>
+              </Table.Cell>
+            </Table.Row>
+          {/each}
+        </Table.Body>
+      </Table.Root>
+    {/if}
+  </section>
+
+  <Card.Root>
+    {#if selectedRule}
+      <Card.Header class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div class="flex flex-col gap-1.5">
+          <Card.Title class="text-xl">Edit Rule</Card.Title>
+          <Card.Description>When a condition is true, run an action.</Card.Description>
+        </div>
+        <Button
+          class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+          onclick={handleSave}
+        >
+          Save Rule
+        </Button>
+      </Card.Header>
+
+      <Card.Content class="flex flex-col gap-4">
+        {#if message}
+          <Alert.Root>
+            <Alert.Description>{message}</Alert.Description>
+          </Alert.Root>
+        {/if}
+
+        <div class="grid gap-4 lg:grid-cols-3">
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-name">Name</Label>
+            <Input id="rule-name" bind:value={draftName} />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-priority">Priority</Label>
+            <Input id="rule-priority" class="font-mono tabular-nums" type="number" bind:value={draftPriority} />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-action">Action</Label>
+            <select
+              id="rule-action"
+              class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              bind:value={actionKind}
+            >
+              <option value="pin">Pin</option>
+              <option value="interrupt">Interrupt</option>
+              <option value="scene">Scene</option>
+              <option value="sleep">Sleep</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <Label for="rule-condition">Condition</Label>
+          <Input id="rule-condition" class="font-mono" bind:value={draftCondition} />
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-3">
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-card">Card</Label>
+            <select
+              id="rule-card"
+              class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              bind:value={actionCardId}
+            >
+              <option value="">None</option>
+              {#each $cards as card (card._id)}
+                <option value={card._id}>{card.name}</option>
+              {/each}
+            </select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-scene">Scene</Label>
+            <select
+              id="rule-scene"
+              class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              bind:value={actionSceneId}
+            >
+              <option value="">None</option>
+              {#each $scenes as scene (scene._id)}
+                <option value={scene._id}>{scene.name}</option>
+              {/each}
+            </select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-duration">Duration</Label>
+            <Input
+              id="rule-duration"
+              class="font-mono tabular-nums"
+              type="number"
+              bind:value={actionDurationMs}
+            />
+          </div>
+        </div>
+
+        <Label class="inline-flex w-fit items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-foreground/10">
+          <input bind:checked={draftEnabled} class="accent-primary" type="checkbox" />
+          Enabled
+        </Label>
+      </Card.Content>
+    {:else}
+      <Empty.Root class="border-none py-12">
+        <Empty.Header>
+          <Empty.Title>Select a rule to edit.</Empty.Title>
+        </Empty.Header>
+      </Empty.Root>
+    {/if}
+  </Card.Root>
+</div>

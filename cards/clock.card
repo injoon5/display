@@ -1,0 +1,4 @@
+<card id="clock" name="Clock" priority="64">
+  <text x="11" y="8" font="8x16" color="#e0e0e0">{{ now.hour | pad(2) }}:{{ now.minute | pad(2) }}</text>
+  <stale after="2m" style="dim" />
+</card>

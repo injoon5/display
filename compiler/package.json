@@ -1,0 +1,44 @@
+{
+  "name": "@matrix-panel/compiler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "browser": "./dist/src/index.js",
+      "import": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
+    },
+    "./colors": {
+      "types": "./dist/src/colors.d.ts",
+      "browser": "./dist/src/colors.js",
+      "import": "./dist/src/colors.js",
+      "default": "./dist/src/colors.js"
+    },
+    "./expr": {
+      "types": "./dist/src/expr.d.ts",
+      "browser": "./dist/src/expr.js",
+      "import": "./dist/src/expr.js",
+      "default": "./dist/src/expr.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@matrix-panel/emulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Matrix Portal device emulator (device HTTP + libmxr render + preview)",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}

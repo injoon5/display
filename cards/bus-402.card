@@ -1,0 +1,14 @@
+<card id="bus-402" name="Bus 402" priority="90">
+  <source id="bus" kind="seoul.bus" arsId="23-005" route="402" every="20s" />
+  <badge x="1" y="1" font="3x5" bg="#1a5fb4" fg="#e0e0e0">402</badge>
+  <text x="20" y="2" font="3x5" color="#8f9f8d">ETA</text>
+  <text x="20" y="10" font="5x7" color="{{ bus.eta_min <= 3 ? '#ff5a4f' : '#e0e0e0' }}">{{ bus.eta_min }}m</text>
+  <text x="1" y="21" font="3x5" color="#8f9f8d">NEXT</text>
+  <text x="20" y="21" font="3x5" color="#e0e0e0">{{ bus.next_eta_min | default('--') }}m</text>
+  <text x="48" y="14" font="3x5" color="#8f9f8d">LOAD</text>
+  <bar x="48" y="21" w="12" h="5" bg="#1c2320" color="#49c16d" value="{{ bus.crowding }}" max="3" />
+  <when test="{{ bus.eta_min <= 1 }}">
+    <stroke color="#ff5a4f" />
+  </when>
+  <stale after="90s" style="dim" />
+</card>

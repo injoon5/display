@@ -1,0 +1,55 @@
+{
+  "name": "wall-matrix-panel",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Wall Matrix Panel monorepo",
+  "workspaces": [
+    "compiler",
+    "emulator",
+    "fetcher",
+    "packages/*",
+    "web"
+  ],
+  "scripts": {
+    "build": "npm run build -w compiler && npm run build -w fetcher && npm run build -w emulator && npm run build -w web",
+    "bootstrap": "node scripts/bootstrap-local.mjs",
+    "compiler:build": "npm run build -w compiler",
+    "convex:codegen": "npx convex codegen",
+    "convex:dev:once": "CONVEX_AGENT_MODE=anonymous npx convex dev --once",
+    "emulate": "npm run dev -w @matrix-panel/emulator",
+    "fetcher:build": "npm run build -w fetcher",
+    "golden": "npm run build -w compiler && node scripts/golden-mxr.mjs",
+    "lint": "npm run lint:compiler && npm run lint:fetcher && npm run lint:web && npm run typecheck:convex",
+    "lint:compiler": "npm run typecheck -w @matrix-panel/compiler",
+    "lint:fetcher": "npm run typecheck -w @wall-matrix-panel/fetcher",
+    "lint:web": "npm run check -w web",
+    "stack": "node scripts/dev-stack.mjs",
+    "stack:bootstrap": "node scripts/dev-stack.mjs --bootstrap-only",
+    "stack:doctor": "node scripts/dev-stack.mjs --doctor",
+    "test": "npm run test -w compiler && npm run golden",
+    "typecheck": "npm run typecheck -w compiler && npm run typecheck -w fetcher && npm run typecheck -w @matrix-panel/emulator && npm run typecheck:convex && npm run web:check",
+    "typecheck:convex": "tsc -p convex/tsconfig.json --noEmit",
+    "web:check": "npm run check -w web",
+    "web:build": "npm run build -w web",
+    "web:dev": "npm run dev -w web"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/injoon5/display.git"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/injoon5/display/issues"
+  },
+  "homepage": "https://github.com/injoon5/display#readme",
+  "dependencies": {
+    "@matrix-panel/compiler": "*",
+    "convex": "^1.42.3",
+    "convex-helpers": "^0.1.120"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^6.0.3"
+  }
+}

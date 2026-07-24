@@ -1,0 +1,23 @@
+name: Firmware
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  host-sim-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify firmware layout
+        run: |
+          test -f firmware/CMakeLists.txt
+          test -f firmware/host_sim/CMakeLists.txt
+          test -f firmware/main/main.cpp
+
+      - name: Build host simulator
+        run: |
+          cmake -S firmware/host_sim -B firmware/host_sim/build
+          cmake --build firmware/host_sim/build

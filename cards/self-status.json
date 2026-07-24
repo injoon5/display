@@ -1,0 +1,16 @@
+{
+  "id": "self-status",
+  "name": "Self Status",
+  "priority": 58,
+  "dwellMs": 8000,
+  "elements": [
+    { "op": "text", "x": 1, "y": 3, "font": "3x5", "color": "#8f9f8d", "value": "RSSI" },
+    { "op": "text", "x": 18, "y": 3, "font": "3x5", "color": "#e0e0e0", "bind": "telemetry.rssi" },
+    { "op": "text", "x": 1, "y": 13, "font": "3x5", "color": "#8f9f8d", "value": "UP" },
+    { "op": "text", "x": 18, "y": 13, "font": "3x5", "color": "#e0e0e0", "bind": "telemetry.uptime_s" },
+    { "op": "text", "x": 1, "y": 23, "font": "3x5", "color": "#8f9f8d", "value": "PRG" },
+    { "op": "text", "x": 16, "y": 23, "font": "3x5", "color": "#e0e0e0", "bind": "device.programVersion" },
+    { "op": "text", "x": 31, "y": 23, "font": "3x5", "color": "#8f9f8d", "value": "FW" },
+    { "op": "text", "x": 41, "y": 23, "font": "3x5", "color": "#e0e0e0", "bind": "device.fwVersion" }
+  ]
+}

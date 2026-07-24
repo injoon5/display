@@ -1,0 +1,12 @@
+{
+  "id": "air",
+  "name": "Air Quality",
+  "priority": 72,
+  "dwellMs": 8000,
+  "elements": [
+    { "op": "text", "x": 1, "y": 3, "font": "3x5", "color": "#8f9f8d", "value": "PM2.5" },
+    { "op": "text", "x": 1, "y": 11, "font": "5x7", "color": "#e0e0e0", "bind": "air.pm25" },
+    { "op": "text", "x": 24, "y": 11, "font": "3x5", "color": "#8f9f8d", "value": "ug" },
+    { "op": "text", "x": 1, "y": 23, "font": "3x5", "color": "#52d6a7", "bind": "air.grade" }
+  ]
+}

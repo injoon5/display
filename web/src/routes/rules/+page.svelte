@@ -42,6 +42,21 @@
 
   let selectedRule = $derived($rules.find((rule) => rule._id === selectedRuleId) ?? null);
 
+  function actionLabel(kind: string): string {
+    switch (kind) {
+      case "pin":
+        return "Pin";
+      case "interrupt":
+        return "Interrupt";
+      case "scene":
+        return "Scene";
+      case "sleep":
+        return "Sleep";
+      default:
+        return kind;
+    }
+  }
+
   async function handleSave(): Promise<void> {
     if (!selectedRule) {
       return;
@@ -59,21 +74,21 @@
       priority: draftPriority,
       ruleId: selectedRule._id
     });
-    message = `Saved rule ${draftName}`;
+    message = `Saved ${draftName}.`;
   }
 </script>
 
 <div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
   <section class="overflow-hidden rounded-xl border bg-card/40">
     <div class="border-b px-4 py-3">
-      <h2 class="text-sm font-semibold tracking-[0.18em] uppercase">Rules</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Alarm logic, scene switching, and interrupt pins.</p>
+      <h2 class="text-sm font-semibold">Rules</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Automate the panel with conditions and actions.</p>
     </div>
     {#if $rules.length === 0}
       <Empty.Root class="border-none py-6">
         <Empty.Header>
           <Empty.Title>No rules</Empty.Title>
-          <Empty.Description>Seed demo data to create rules.</Empty.Description>
+          <Empty.Description>Load sample data to create your first rules.</Empty.Description>
         </Empty.Header>
       </Empty.Root>
     {:else}
@@ -102,11 +117,11 @@
               tabindex={0}
             >
               <Table.Cell class="font-medium">{rule.name}</Table.Cell>
-              <Table.Cell class="font-mono text-xs text-muted-foreground">{rule.action.kind}</Table.Cell>
+              <Table.Cell class="text-sm text-muted-foreground">{actionLabel(rule.action.kind)}</Table.Cell>
               <Table.Cell class="text-right tabular-nums">{rule.priority}</Table.Cell>
               <Table.Cell>
                 <StatusBadge tone={rule.enabled ? "success" : "destructive"}>
-                  {rule.enabled ? "on" : "off"}
+                  {rule.enabled ? "Enabled" : "Disabled"}
                 </StatusBadge>
               </Table.Cell>
             </Table.Row>
@@ -120,14 +135,14 @@
     {#if selectedRule}
       <Card.Header class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div class="flex flex-col gap-1.5">
-          <Card.Title class="text-xl">Rule editor</Card.Title>
-          <Card.Description>Conditions use the same source paths the cards bind to.</Card.Description>
+          <Card.Title class="text-xl">Edit Rule</Card.Title>
+          <Card.Description>When a condition is true, run an action.</Card.Description>
         </div>
         <Button
           class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
           onclick={handleSave}
         >
-          Save rule
+          Save Rule
         </Button>
       </Card.Header>
 
@@ -140,62 +155,62 @@
 
         <div class="grid gap-4 lg:grid-cols-3">
           <div class="flex flex-col gap-1.5">
-            <Label for="rule-name">name</Label>
+            <Label for="rule-name">Name</Label>
             <Input id="rule-name" bind:value={draftName} />
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="rule-priority">priority</Label>
+            <Label for="rule-priority">Priority</Label>
             <Input id="rule-priority" class="font-mono tabular-nums" type="number" bind:value={draftPriority} />
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="rule-action">action</Label>
+            <Label for="rule-action">Action</Label>
             <select
               id="rule-action"
               class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               bind:value={actionKind}
             >
-              <option value="pin">pin</option>
-              <option value="interrupt">interrupt</option>
-              <option value="scene">scene</option>
-              <option value="sleep">sleep</option>
+              <option value="pin">Pin</option>
+              <option value="interrupt">Interrupt</option>
+              <option value="scene">Scene</option>
+              <option value="sleep">Sleep</option>
             </select>
           </div>
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <Label for="rule-condition">condition</Label>
+          <Label for="rule-condition">Condition</Label>
           <Input id="rule-condition" class="font-mono" bind:value={draftCondition} />
         </div>
 
         <div class="grid gap-4 lg:grid-cols-3">
           <div class="flex flex-col gap-1.5">
-            <Label for="rule-card">target card</Label>
+            <Label for="rule-card">Card</Label>
             <select
               id="rule-card"
               class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               bind:value={actionCardId}
             >
-              <option value="">none</option>
+              <option value="">None</option>
               {#each $cards as card (card._id)}
                 <option value={card._id}>{card.name}</option>
               {/each}
             </select>
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="rule-scene">target scene</Label>
+            <Label for="rule-scene">Scene</Label>
             <select
               id="rule-scene"
               class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               bind:value={actionSceneId}
             >
-              <option value="">none</option>
+              <option value="">None</option>
               {#each $scenes as scene (scene._id)}
                 <option value={scene._id}>{scene.name}</option>
               {/each}
             </select>
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="rule-duration">duration ms</Label>
+            <Label for="rule-duration">Duration</Label>
             <Input
               id="rule-duration"
               class="font-mono tabular-nums"
@@ -207,14 +222,13 @@
 
         <Label class="inline-flex w-fit items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-foreground/10">
           <input bind:checked={draftEnabled} class="accent-primary" type="checkbox" />
-          enabled
+          Enabled
         </Label>
       </Card.Content>
     {:else}
       <Empty.Root class="border-none py-12">
         <Empty.Header>
-          <Empty.Title>Select a rule</Empty.Title>
-          <Empty.Description>Pick a rule from the list to edit conditions and actions.</Empty.Description>
+          <Empty.Title>Select a rule to edit.</Empty.Title>
         </Empty.Header>
       </Empty.Root>
     {/if}

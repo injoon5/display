@@ -75,21 +75,21 @@
       sceneId: selectedScene._id,
       schedule: draftSchedule || undefined
     });
-    message = `Saved scene ${draftName}`;
+    message = `Saved ${draftName}.`;
   }
 </script>
 
 <div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
   <section class="overflow-hidden rounded-xl border bg-card/40">
     <div class="border-b px-4 py-3">
-      <h2 class="text-sm font-semibold tracking-[0.18em] uppercase">Scenes</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Playlist builder for scheduled card queues.</p>
+      <h2 class="text-sm font-semibold">Scenes</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Build and schedule card playlists.</p>
     </div>
     {#if $scenes.length === 0}
       <Empty.Root class="border-none py-6">
         <Empty.Header>
           <Empty.Title>No scenes</Empty.Title>
-          <Empty.Description>Seed demo data to create scenes.</Empty.Description>
+          <Empty.Description>Load sample data to create your first scenes.</Empty.Description>
         </Empty.Header>
       </Empty.Root>
     {:else}
@@ -119,12 +119,12 @@
             >
               <Table.Cell class="font-medium">{scene.name}</Table.Cell>
               <Table.Cell class="font-mono text-xs text-muted-foreground">
-                {scene.schedule ?? "manual"}
+                {scene.schedule ?? "Manual"}
               </Table.Cell>
               <Table.Cell class="text-right tabular-nums">{scene.cardIds.length}</Table.Cell>
               <Table.Cell>
                 <StatusBadge tone={scene.enabled ? "success" : "destructive"}>
-                  {scene.enabled ? "on" : "off"}
+                  {scene.enabled ? "Enabled" : "Disabled"}
                 </StatusBadge>
               </Table.Cell>
             </Table.Row>
@@ -138,14 +138,14 @@
     {#if selectedScene}
       <Card.Header class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div class="flex flex-col gap-1.5">
-          <Card.Title class="text-xl">Scene builder</Card.Title>
-          <Card.Description>Reorder cards and tune the schedule window.</Card.Description>
+          <Card.Title class="text-xl">Edit Scene</Card.Title>
+          <Card.Description>Reorder cards and set the schedule.</Card.Description>
         </div>
         <Button
           class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
           onclick={handleSave}
         >
-          Save scene
+          Save Scene
         </Button>
       </Card.Header>
 
@@ -158,11 +158,11 @@
 
         <div class="grid gap-4 lg:grid-cols-3">
           <div class="flex flex-col gap-1.5">
-            <Label for="scene-name">name</Label>
+            <Label for="scene-name">Name</Label>
             <Input id="scene-name" bind:value={draftName} />
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="scene-schedule">schedule</Label>
+            <Label for="scene-schedule">Schedule</Label>
             <Input
               id="scene-schedule"
               class="font-mono"
@@ -171,7 +171,7 @@
             />
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="scene-brightness">brightness</Label>
+            <Label for="scene-brightness">Brightness</Label>
             <Input
               id="scene-brightness"
               class="font-mono tabular-nums"
@@ -185,7 +185,7 @@
 
         <Label class="inline-flex w-fit items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-foreground/10">
           <input bind:checked={draftEnabled} class="accent-primary" type="checkbox" />
-          enabled
+          Enabled
         </Label>
 
         <Separator />
@@ -193,7 +193,7 @@
         <div class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
           <div class="overflow-hidden rounded-xl border">
             <div class="border-b px-3 py-2">
-              <h3 class="text-sm font-semibold tracking-[0.18em] uppercase">Queue</h3>
+              <h3 class="text-sm font-semibold">Queue</h3>
             </div>
             {#if draftCards.length === 0}
               <Empty.Root class="border-none py-4">
@@ -228,7 +228,7 @@
                             size="xs"
                             variant="outline"
                           >
-                            up
+                            Up
                           </Button>
                           <Button
                             class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
@@ -236,7 +236,7 @@
                             size="xs"
                             variant="outline"
                           >
-                            down
+                            Down
                           </Button>
                           <Button
                             class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
@@ -244,7 +244,7 @@
                             size="xs"
                             variant="destructive"
                           >
-                            remove
+                            Remove
                           </Button>
                         </div>
                       </Table.Cell>
@@ -257,7 +257,7 @@
 
           <div class="overflow-hidden rounded-xl border">
             <div class="border-b px-3 py-2">
-              <h3 class="text-sm font-semibold tracking-[0.18em] uppercase">Available cards</h3>
+              <h3 class="text-sm font-semibold">Available Cards</h3>
             </div>
             <Table.Root>
               <Table.Header>
@@ -280,7 +280,7 @@
                         size="xs"
                         variant="secondary"
                       >
-                        add
+                        Add
                       </Button>
                     </Table.Cell>
                   </Table.Row>
@@ -293,8 +293,7 @@
     {:else}
       <Empty.Root class="border-none py-12">
         <Empty.Header>
-          <Empty.Title>Select a scene</Empty.Title>
-          <Empty.Description>Pick a scene from the list to edit its queue.</Empty.Description>
+          <Empty.Title>Select a scene to edit.</Empty.Title>
         </Empty.Header>
       </Empty.Root>
     {/if}

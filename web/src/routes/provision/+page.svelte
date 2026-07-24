@@ -17,8 +17,8 @@
   };
 
   let logs = $state<string[]>([
-    "BLE provisioning is safe to mock when Web Bluetooth is unavailable.",
-    "Expected flow: scan -> select panel -> send Wi-Fi creds -> claim token -> verify heartbeat."
+    "Bluetooth is ready when available, or setup runs in demo mode.",
+    "Scan for a panel, connect to Wi‑Fi, then claim it."
   ]);
   let wifiSsid = $state("MyBedroomWiFi");
   let deviceName = $state("Wall Matrix Panel");
@@ -26,28 +26,31 @@
 
   async function handleScan(): Promise<void> {
     if (!bluetoothAvailable) {
-      logs = [`[mock] BLE unavailable in this browser`, ...logs];
+      logs = ["Bluetooth isn’t available in this browser. Continuing in demo mode.", ...logs];
       return;
     }
     try {
       const bluetooth = (navigator as BluetoothNavigator).bluetooth;
       if (!bluetooth) {
-        logs = [`[mock] BLE unavailable in this browser`, ...logs];
+        logs = ["Bluetooth isn’t available in this browser. Continuing in demo mode.", ...logs];
         return;
       }
       const picked = await bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: ["battery_service"]
       });
-      logs = [`[ble] selected ${picked.name ?? picked.id}`, ...logs];
+      logs = [`Selected ${picked.name ?? picked.id}.`, ...logs];
     } catch (error) {
-      logs = [`[ble] ${error instanceof Error ? error.message : "scan cancelled"}`, ...logs];
+      logs = [
+        error instanceof Error ? error.message : "Scan cancelled.",
+        ...logs
+      ];
     }
   }
 
   function handleMockProvision(): void {
     logs = [
-      `[mock] provisioned ${deviceName} onto ${wifiSsid} and wrote fresh device token`,
+      `Set up ${deviceName} on ${wifiSsid} and claimed a device token.`,
       ...logs
     ];
   }
@@ -57,20 +60,20 @@
   <Card.Root>
     <Card.Header class="flex flex-col gap-2">
       <StatusBadge tone={bluetoothAvailable ? "success" : "warning"}>
-        {bluetoothAvailable ? "web-bluetooth" : "mocked"}
+        {bluetoothAvailable ? "Bluetooth Ready" : "Demo"}
       </StatusBadge>
-      <Card.Title class="text-xl">Provision a panel</Card.Title>
+      <Card.Title class="text-xl">Set Up Panel</Card.Title>
       <Card.Description>
-        Cloud UI for BLE onboarding, token claim, and first heartbeat checks.
+        Connect a panel to Wi‑Fi and claim it.
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
       <div class="flex flex-col gap-1.5">
-        <Label for="provision-name">panel name</Label>
+        <Label for="provision-name">Name</Label>
         <Input id="provision-name" bind:value={deviceName} />
       </div>
       <div class="flex flex-col gap-1.5">
-        <Label for="provision-ssid">Wi-Fi SSID</Label>
+        <Label for="provision-ssid">Wi‑Fi SSID</Label>
         <Input id="provision-ssid" bind:value={wifiSsid} />
       </div>
 
@@ -80,13 +83,13 @@
           onclick={handleScan}
           variant="secondary"
         >
-          Scan over BLE
+          Scan
         </Button>
         <Button
           class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
           onclick={handleMockProvision}
         >
-          Mock provision
+          Set Up
         </Button>
       </div>
     </Card.Content>
@@ -94,21 +97,21 @@
 
   <section class="overflow-hidden rounded-xl border bg-card/40">
     <div class="border-b px-4 py-3">
-      <h2 class="text-sm font-semibold tracking-[0.18em] uppercase">Provision log</h2>
+      <h2 class="text-sm font-semibold">Activity</h2>
       <p class="mt-1 text-sm text-muted-foreground">
-        All steps stay visible so pairing and token flow are debuggable.
+        Steps appear here as setup progresses.
       </p>
     </div>
     <div class="px-4 py-3">
       {#if logs.length === 0}
         <Empty.Root class="border-none py-6">
           <Empty.Header>
-            <Empty.Title>No log entries</Empty.Title>
-            <Empty.Description>Scan or mock provision to see steps here.</Empty.Description>
+            <Empty.Title>No activity yet</Empty.Title>
+            <Empty.Description>Scan or set up a panel to see steps here.</Empty.Description>
           </Empty.Header>
         </Empty.Root>
       {:else}
-        <ul class="flex flex-col gap-2 font-mono text-sm">
+        <ul class="flex flex-col gap-2 text-sm">
           {#each logs as line, index (`${line}-${index}`)}
             <li class="border-b border-border/60 pb-2 text-muted-foreground last:border-b-0 last:pb-0">
               {line}

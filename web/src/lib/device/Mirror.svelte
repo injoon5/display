@@ -17,7 +17,7 @@
     type SlotSnapshot,
   } from "$lib/convex";
   import LedMatrixPanel from "$lib/device/LedMatrixPanel.svelte";
-  import { MXR_DIMENSIONS, render, type RenderHotspot } from "$lib/mxr";
+  import { initMxrWasm, MXR_DIMENSIONS, render, type RenderHotspot } from "$lib/mxr";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
 
@@ -38,6 +38,7 @@
   let pokeMessage = $state("hey — look at the wall");
   let busy = $state<string | null>(null);
   let lastAction = $state<string | null>(null);
+  let wasmEpoch = $state(0);
 
   const HOMEKIT_SWITCHES = [
     { label: "Bus 402", slug: "bus-402" },
@@ -55,6 +56,9 @@
   });
 
   onMount(() => {
+    void initMxrWasm().then(() => {
+      wasmEpoch += 1;
+    });
     const syncPitch = () => {
       pitch = window.innerWidth < 720 ? 7 : 10;
     };
@@ -75,6 +79,7 @@
   });
 
   let frame = $derived.by(() => {
+    void wasmEpoch;
     if (!compiled || !card) {
       return {
         framebuffer: new Uint16Array(MXR_DIMENSIONS.width * MXR_DIMENSIONS.height),

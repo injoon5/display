@@ -8,6 +8,7 @@ import {
   pinCardLive,
   pokeLive,
   publishFirmwareLive,
+  registerDeviceLive,
   saveCardLive,
   saveRuleLive,
   saveSceneLive,
@@ -342,9 +343,11 @@ export async function activateScene(input: ActivateSceneInput): Promise<Dashboar
       updated = {
         ...device,
         activeSceneId: input.sceneId,
+        brightnessCeiling: scene.brightnessCeiling,
         dataVersion: device.dataVersion + 1,
         pinnedCardId: undefined,
         pinnedUntil: undefined,
+        playlistCardIds: scene.cardIds,
       };
       return updated;
     });
@@ -353,6 +356,57 @@ export async function activateScene(input: ActivateSceneInput): Promise<Dashboar
 
   if (!updated) throw new Error("Device not found");
   return updated;
+}
+
+export async function registerDevice(input: {
+  name: string;
+  token: string;
+  fwVersion: string;
+  fwChannel: "dev" | "stable";
+}): Promise<DashboardDevice> {
+  if (useLiveWrites()) {
+    return await registerDeviceLive(input);
+  }
+
+  const now = Date.now();
+  const created: DashboardDevice = {
+    _creationTime: now,
+    _id: `device-${now}`,
+    brightnessCeiling: 100,
+    dataEtag: `"mock-data-${now}"`,
+    dataVersion: 0,
+    fwChannel: input.fwChannel,
+    fwVersion: input.fwVersion,
+    lastSeen: now,
+    name: input.name,
+    online: true,
+    programEtag: `"mock-program-${now}"`,
+    programVersion: 0,
+    tokenHash: `mock:${input.token}`,
+  };
+
+  mockState.update((state) => {
+    const existing = state.devices.find((device) => device.tokenHash === created.tokenHash);
+    if (existing) {
+      const devices = state.devices.map((device) =>
+        device._id === existing._id
+          ? {
+              ...device,
+              fwChannel: input.fwChannel,
+              fwVersion: input.fwVersion,
+              lastSeen: now,
+              name: input.name,
+              online: true,
+            }
+          : device,
+      );
+      return { ...state, devices };
+    }
+    return { ...state, devices: [created, ...state.devices] };
+  });
+
+  const state = get(mockState);
+  return state.devices.find((device) => device.name === input.name && device.lastSeen === now) ?? created;
 }
 
 export async function simulateTelemetry(input: SimulateTelemetryInput): Promise<DashboardTelemetry> {

@@ -53,6 +53,10 @@ function buildDummyPayload(sourceId: string): Record<string, unknown> | null {
         progressMs: 87_000,
         durationMs: 214_000,
         playedAt: "2026-07-24T13:20:00+09:00",
+        // Ambient alias fields used by now-playing.card (`np.*`)
+        title: "Seoul",
+        playing: true,
+        ago: "NOW PLAYING",
       };
     case "calendar":
       return {
@@ -71,6 +75,11 @@ function buildDummyPayload(sourceId: string): Record<string, unknown> | null {
         failingChecks: 0,
         assignedToMe: 1,
         latest: "feat(convex): schema, device HTTP API, crons, seed",
+        // Ambient alias fields used by github.card (`gh.*`)
+        total: 1284,
+        streak: 47,
+        contributions: 1284,
+        contributionStreak: 47,
       };
     case "fx":
       return {
@@ -78,7 +87,28 @@ function buildDummyPayload(sourceId: string): Record<string, unknown> | null {
         jpyKrw100: 942.7,
         eurKrw: 1498.6,
         asOf: "2026-07-24T13:20:00+09:00",
+        // Ambient alias fields used by krw.card (`krw.*`)
+        rate: 1384,
+        change_pct: 0.4,
+        changePct: 0.4,
       };
+    case "todo":
+      return {
+        total: 5,
+        done: 2,
+        i1: "Ship the display",
+        i2: "Buy oat milk",
+        i3: "Call mom",
+      };
+    case "dday":
+      return {
+        days: 128,
+        label: "EXAM",
+      };
+    case "moon":
+      return null; // synthesized in runtimeScope
+    case "year":
+      return null; // synthesized in runtimeScope
     default:
       return null;
   }

@@ -1,36 +1,49 @@
-# Card catalogue
+# Cards
 
-This directory keeps the first eight Wall Matrix Panel cards in two formats:
+Stage 1 MXML sources currently in the repo (`*.card`) — **22 cards**.
 
-- `*.json` — Stage 0 cards that `compileJson` can ingest directly.
-- `*.card` — Stage 1 MXML cards with typed sources, stale metadata, and simple conditionals.
+| Slug | Name |
+|---|---|
+| `air` | Air Quality |
+| `bus-402` | Bus |
+| `calendar-next` | Calendar Next |
+| `clock` | Clock |
+| `clock-dim` | Clock Dim |
+| `dday` | D-Day |
+| `fireplace` | Fireplace |
+| `github` | GitHub |
+| `iconsheet` | Weather Icons |
+| `indoor` | Indoor |
+| `krw` | KRW/USD |
+| `life` | Life |
+| `matrix` | Matrix |
+| `moon` | Moon |
+| `now-playing` | Now Playing |
+| `rain-fx` | Rain |
+| `self-status` | Self Status |
+| `starfield` | Warp |
+| `todo` | Todo |
+| `upcoming-weather` | Forecast |
+| `weather` | Weather |
+| `year-progress` | Year |
 
-All layouts target a `64x32` matrix and follow the current compiler constraints:
+Layouts target `64×32`. Absolute `x`/`y` is the default; Stage 2 `<row>` / `<col>` /
+`<box>` / `<spacer>` packing is also supported.
 
-- `5x7` is the smallest font used, for labels and body text — it stays legible
-  where the `3x5` font turns ambiguous (`PM2.5`, `NEXT`, `ROOM`, `RSSI`)
-- `8x16` for the hero value on a card (temperature, PM2.5, clock). It is a clean
-  integer 2x scale of the `5x7` glyphs, so every stroke is a constant 2px
-- one label row, one hero row, one detail row — with a couple of pixels of
-  breathing room between them
-- accent colours are varied per card (blue / green / amber / purple) rather than
-  leaning on a single hue
-- hero/value text is `#f0f0f0`; secondary labels use the muted `#8f9f8d`
-- Stage 1 cards only use absolute `x` / `y` placement
+## Source roots
 
-## Current source roots
-
-- `bus` → `seoul.bus`
+- `bus` → `seoul.bus` (includes `eta2_min` / `eta3_min`)
 - `wx` → `kma.now`
 - `air` → `airkorea`
 - `calendar` → `google.calendar`
-- `device` → `panel.device`
-- `telemetry` → `panel.telemetry`
-- ambient → `now.*`, `room.*`
+- `spotify` → ambient `np.*`
+- `github` → ambient `gh.*`
+- `fx` → ambient `krw.*`
+- `todo` / `dday` → same-named ambient roots
+- `moon` / `year` → synthesized from wall-clock time
+- `device` / `telemetry` / `now` / `room` → panel ambient
 
-## Local compile check
-
-From the repo root:
+## Compile check
 
 ```bash
 npm run build -w compiler
@@ -40,11 +53,10 @@ import path from "node:path";
 import { compile } from "./compiler/dist/src/index.js";
 
 const dir = path.join(process.cwd(), "cards");
-const files = (await readdir(dir)).filter((name) => name.endsWith(".json") || name.endsWith(".card")).sort();
+const files = (await readdir(dir)).filter((name) => name.endsWith(".card")).sort();
 for (const file of files) {
   const source = await readFile(path.join(dir, file), "utf8");
-  const input = file.endsWith(".json") ? JSON.parse(source) : source;
-  const result = compile(input);
+  const result = compile(source);
   const errors = result.diagnostics.filter((entry) => entry.severity === "error");
   if (errors.length > 0) {
     console.error(file, errors);
@@ -55,3 +67,5 @@ for (const file of files) {
 }
 EOF
 ```
+
+Or: `npm run golden`.

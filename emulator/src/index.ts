@@ -31,6 +31,7 @@ let lastRenderAt: number | null = null;
 let bmp: Buffer | null = null;
 let ppm: Buffer | null = null;
 let running = true;
+let brightnessCeiling = 100;
 const startedAt = Date.now();
 
 const preview = startPreviewServer(
@@ -75,8 +76,11 @@ async function refreshProgram(force = false): Promise<void> {
   programBytes = bytes;
   programEtag = sync.etag || sync.manifest.etag;
   programVersion = sync.manifest.programVersion;
+  if (typeof sync.manifest.brightnessCeiling === "number") {
+    brightnessCeiling = Math.max(0, Math.min(100, sync.manifest.brightnessCeiling));
+  }
   console.log(
-    `[emulator] program v${programVersion} etag=${programEtag} bytes=${bytes.byteLength}`,
+    `[emulator] program v${programVersion} etag=${programEtag} bytes=${bytes.byteLength} brightnessCeiling=${brightnessCeiling}`,
   );
 }
 
@@ -118,6 +122,7 @@ function paint(): void {
 }
 
 async function heartbeat(): Promise<void> {
+  const brightness = Math.round((48 * brightnessCeiling) / 100);
   await client.heartbeat({
     fw: config.fwVersion,
     programVersion,
@@ -125,7 +130,7 @@ async function heartbeat(): Promise<void> {
     rssi: -42,
     heapFree: 180_000,
     psramFree: 2_000_000,
-    brightness: 48,
+    brightness,
     lux: 120,
     tempC: 36.5,
     humidity: 41,

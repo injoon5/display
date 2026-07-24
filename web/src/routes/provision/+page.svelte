@@ -6,6 +6,7 @@
   import * as Empty from "$lib/components/ui/empty/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
+  import { registerDevice } from "$lib/dashboard/repository";
 
   type BluetoothNavigator = Navigator & {
     bluetooth?: {
@@ -22,6 +23,8 @@
   ]);
   let wifiSsid = $state("MyBedroomWiFi");
   let deviceName = $state("Wall Matrix Panel");
+  let deviceToken = $state("dev-token-matrix-panel-demo");
+  let busy = $state(false);
   let bluetoothAvailable = $derived(browser && "bluetooth" in navigator);
 
   async function handleScan(): Promise<void> {
@@ -48,18 +51,40 @@
     }
   }
 
-  function handleMockProvision(): void {
+  async function handleProvision(): Promise<void> {
+    if (busy) return;
+    busy = true;
     logs = [
-      `Demo only: simulated setup for ${deviceName} on ${wifiSsid}. No device was claimed.`,
+      `Joining ${wifiSsid}…`,
+      `Registering “${deviceName}” with token ${deviceToken.slice(0, 8)}…`,
       ...logs
     ];
+    try {
+      const device = await registerDevice({
+        fwChannel: "dev",
+        fwVersion: "1.4.2-dev",
+        name: deviceName,
+        token: deviceToken
+      });
+      logs = [
+        `Claimed ${device.name} (${device._id}). Device is online and ready to sync.`,
+        ...logs
+      ];
+    } catch (error) {
+      logs = [
+        error instanceof Error ? error.message : "Provision failed.",
+        ...logs
+      ];
+    } finally {
+      busy = false;
+    }
   }
 </script>
 
 <header class="mb-4 flex flex-col gap-1">
   <h1 class="text-xl font-semibold tracking-tight">Set Up Panel</h1>
   <p class="text-sm text-muted-foreground">
-    Demo setup flow. It does not claim a real panel yet.
+    Registers or reclaims a device token against Convex. Bluetooth scan is optional.
   </p>
 </header>
 
@@ -71,7 +96,7 @@
       </StatusBadge>
       <Card.Title>Panel details</Card.Title>
       <Card.Description>
-        Name the panel and join a network.
+        Name the panel, set Wi‑Fi, and claim with a device token.
       </Card.Description>
     </Card.Header>
     <Card.Content class="flex flex-col gap-3">
@@ -82,6 +107,10 @@
       <div class="flex flex-col gap-1.5">
         <Label for="provision-ssid">Wi‑Fi SSID</Label>
         <Input id="provision-ssid" bind:value={wifiSsid} />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <Label for="provision-token">Device token</Label>
+        <Input id="provision-token" bind:value={deviceToken} />
       </div>
 
       <div class="flex flex-wrap gap-2">
@@ -94,9 +123,10 @@
         </Button>
         <Button
           class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-          onclick={handleMockProvision}
+          disabled={busy}
+          onclick={handleProvision}
         >
-          Simulate Setup
+          {busy ? "Claiming…" : "Claim Panel"}
         </Button>
       </div>
     </Card.Content>

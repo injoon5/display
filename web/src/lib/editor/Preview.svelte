@@ -4,7 +4,8 @@
   import * as Card from "$lib/components/ui/card/index.js";
   import type { SlotSnapshot } from "$lib/convex";
   import LedMatrixPanel from "$lib/device/LedMatrixPanel.svelte";
-  import { MXR_DIMENSIONS, render, type RenderHotspot } from "$lib/mxr";
+  import { initMxrWasm, MXR_DIMENSIONS, render, type RenderHotspot } from "$lib/mxr";
+  import { onMount } from "svelte";
 
   type Props = {
     compiled: CompileResult | null;
@@ -22,7 +23,17 @@
     snapshot,
   }: Props = $props();
 
+  // Bumped when WASM finishes loading so $derived re-renders with libmxr.
+  let wasmEpoch = $state(0);
+
+  onMount(() => {
+    void initMxrWasm().then(() => {
+      wasmEpoch += 1;
+    });
+  });
+
   let frame = $derived.by(() => {
+    void wasmEpoch;
     if (!compiled) {
       return {
         framebuffer: new Uint16Array(MXR_DIMENSIONS.width * MXR_DIMENSIONS.height),

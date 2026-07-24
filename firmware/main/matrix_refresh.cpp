@@ -24,8 +24,11 @@ void matrix_refresh_submit_frame(const uint16_t *fb, uint8_t brightness_pct) {
 
 void matrix_refresh_task(void *arg) {
     (void)arg;
-    ESP_LOGI(kTag, "Starting HUB75 refresh stub on core %d", xPortGetCoreID());
-    ESP_LOGI(kTag, "TODO: replace stub with Adafruit Protomatter or direct ESP-IDF HUB75 driver");
+    ESP_LOGI(kTag, "HUB75 refresh stub on core %d", xPortGetCoreID());
+    ESP_LOGI(
+        kTag,
+        "Intentional no-op without panel hardware: keeps core-0 / prio-24 affinity "
+        "for a future Adafruit Protomatter (or ESP-IDF HUB75) driver. Not a TODO bug.");
 
     TickType_t last_wake = xTaskGetTickCount();
     while (true) {

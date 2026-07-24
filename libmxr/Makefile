@@ -33,8 +33,9 @@ wasm:
 		mkdir -p $(WASM_DIR); \
 		emcc $(LIBMXR_SRCS) -I. -O3 \
 			-sEXPORTED_FUNCTIONS='["_mxr_render","_mxr_validate","_mxr_measure_text","_mxr_estimate_amps","_malloc","_free"]' \
-			-sEXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPU8","HEAPU16"]' \
-			-sMODULARIZE -sENVIRONMENT=web \
+			-sEXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPU8","HEAPU16","HEAP32"]' \
+			-sMODULARIZE=1 -sEXPORT_ES6=1 -sALLOW_MEMORY_GROWTH=1 \
+			-sENVIRONMENT=web \
 			-o $(WASM_DIR)/mxr.js; \
 		echo "WASM written to $(WASM_DIR)/mxr.js"; \
 	else \

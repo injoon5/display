@@ -10,6 +10,8 @@ export type SyncManifest = {
   bytecodeUrl: string;
   bytecodeSha256: string;
   assetBundleSha256: string;
+  brightnessCeiling?: number | null;
+  playlistCardId?: string | null;
   scenes: unknown[];
   rules: unknown[];
 };

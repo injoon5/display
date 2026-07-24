@@ -46,7 +46,8 @@ npm run emulate            # device emulator only
 npm run build -w compiler
 ```
 
-Then use the command block in `cards/README.md` to compile every `*.json` and `*.card`.
+Then use the command block in `cards/README.md` to compile every `*.card`
+(and optional `*.json` Stage 0 cards if present).
 
 ## Offline firmware host simulator
 

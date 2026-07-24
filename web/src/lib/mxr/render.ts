@@ -1,4 +1,5 @@
 import { rgb565, type SlotMapEntry } from "$lib/compiler";
+import { initMxrWasm, isMxrWasmReady, renderWithWasm } from "./wasm";
 
 const WIDTH = 64;
 const HEIGHT = 32;
@@ -722,6 +723,25 @@ function compare(left: number | null, right: number, cmp: number): boolean {
   }
 }
 
+function tryRenderBytecode(input: RenderInput): RenderFrame {
+  // Kick off WASM load on first render; subsequent frames use it once ready.
+  void initMxrWasm();
+
+  if (isMxrWasmReady()) {
+    const wasmFb = renderWithWasm(input.bytecode, input.slots, input.nowMs);
+    if (wasmFb) {
+      // WASM owns the pixels; TS still builds hotspots / warnings for the editor.
+      const meta = renderBytecode(input);
+      return {
+        ...meta,
+        framebuffer: wasmFb,
+      };
+    }
+  }
+
+  return renderBytecode(input);
+}
+
 export function render(input: RenderInput): RenderFrame {
   const looksLikeStage0 =
     typeof input.source === "string" && input.source.trimStart().startsWith("{");
@@ -737,7 +757,7 @@ export function render(input: RenderInput): RenderFrame {
 
   if (hasMxrBytecode) {
     try {
-      return renderBytecode(input);
+      return tryRenderBytecode(input);
     } catch (error) {
       return {
         framebuffer: createFramebuffer(),
@@ -758,7 +778,7 @@ export function render(input: RenderInput): RenderFrame {
   }
 
   try {
-    return renderBytecode(input);
+    return tryRenderBytecode(input);
   } catch (error) {
     return {
       framebuffer: createFramebuffer(),
@@ -772,12 +792,11 @@ export function render(input: RenderInput): RenderFrame {
 }
 
 /*
- * Preview strategy until emcc WASM ships (npm run mxr:wasm -w web):
- * the TypeScript bytecode interpreter mirrors libmxr opcodes + the
- * length-prefixed string table. Golden tests compile cards with the
- * shared compiler and validate through native libmxr.
+ * Preview prefers libmxr WASM (npm run mxr:wasm -w web) when available.
+ * The TypeScript bytecode interpreter remains the silent fallback and still
+ * supplies editor hotspots. Golden tests compile cards with the shared
+ * compiler and validate through native libmxr.
  */
-
 
 export function blitFramebuffer(canvas: HTMLCanvasElement, framebuffer: Uint16Array, scale = 8): void {
   if (!targetCanvas) {
@@ -826,8 +845,6 @@ export const MXR_DIMENSIONS = {
 } as const;
 
 /*
- * Swap this fallback out for the real libmxr wasm build later:
+ * WASM glue lives in ./wasm.ts (initMxrWasm / renderWithWasm). Rebuild with:
  *   npm run mxr:wasm -w web
- * The script wraps the ../libmxr Makefile wasm target and copies the generated
- * assets into the web app once emcc is available.
  */

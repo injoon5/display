@@ -343,3 +343,74 @@ export const listEnabled = internalQuery({
     return cards.filter((card) => card.enabled);
   },
 });
+
+const cardVersionValidator = v.object({
+  _id: v.id("cardVersions"),
+  _creationTime: v.number(),
+  cardId: v.id("cards"),
+  version: v.number(),
+  source: v.string(),
+  compiledStorageId: v.id("_storage"),
+  deployedAt: v.number(),
+});
+
+export const listVersions = dashboardQuery({
+  args: { cardId: v.id("cards") },
+  returns: v.array(cardVersionValidator),
+  handler: async (ctx, args) => {
+    const versions = await ctx.db
+      .query("cardVersions")
+      .withIndex("by_card", (q) => q.eq("cardId", args.cardId))
+      .collect();
+    return versions.sort((left, right) => right.version - left.version);
+  },
+});
+
+export const rollback = dashboardMutation({
+  args: {
+    cardId: v.id("cards"),
+    version: v.number(),
+  },
+  returns: cardValidator,
+  handler: async (ctx, args) => {
+    const card = await ctx.db.get("cards", args.cardId);
+    if (!card) {
+      throw new Error("Card not found");
+    }
+
+    const versions = await ctx.db
+      .query("cardVersions")
+      .withIndex("by_card", (q) => q.eq("cardId", args.cardId).eq("version", args.version))
+      .collect();
+    const target = versions[0];
+    if (!target) {
+      throw new Error(`Version ${args.version} not found`);
+    }
+
+    await ctx.db.patch("cards", args.cardId, {
+      source: target.source,
+      compiledStorageId: target.compiledStorageId,
+      updatedAt: Date.now(),
+    });
+
+    const latestVersion = await ctx.db
+      .query("cardVersions")
+      .withIndex("by_card", (q) => q.eq("cardId", args.cardId))
+      .order("desc")
+      .first();
+    const nextVersion = (latestVersion?.version ?? 0) + 1;
+    await ctx.db.insert("cardVersions", {
+      cardId: args.cardId,
+      version: nextVersion,
+      source: target.source,
+      compiledStorageId: target.compiledStorageId,
+      deployedAt: Date.now(),
+    });
+
+    const updated = await ctx.db.get("cards", args.cardId);
+    if (!updated) {
+      throw new Error("Card rollback failed");
+    }
+    return updated;
+  },
+});

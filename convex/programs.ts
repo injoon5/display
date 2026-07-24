@@ -46,6 +46,8 @@ export const manifest = internalQuery({
     bytecodeUrl: v.string(),
     bytecodeSha256: v.string(),
     assetBundleSha256: v.string(),
+    brightnessCeiling: v.union(v.number(), v.null()),
+    playlistCardId: v.union(v.id("cards"), v.null()),
     scenes: v.array(sceneValidator),
     rules: v.array(ruleValidator),
   }),
@@ -74,6 +76,8 @@ export const manifest = internalQuery({
       bytecodeUrl,
       bytecodeSha256: stripEtag(device.programEtag) ?? device.programEtag,
       assetBundleSha256: stripEtag(device.programEtag) ?? device.programEtag,
+      brightnessCeiling: device.brightnessCeiling ?? null,
+      playlistCardId: device.playlistCardId ?? null,
       scenes,
       rules,
     };
@@ -147,6 +151,13 @@ export const dataFrame = internalQuery({
     fetchedAtBySource.set("time", args.nowMs);
     fetchedAtBySource.set("room", indoorFetchedAt(sources) ?? latestTelemetry?.at ?? device.lastSeen);
     fetchedAtBySource.set("ambient", args.nowMs);
+    fetchedAtBySource.set("np", fetchedAtBySource.get("spotify") ?? args.nowMs);
+    fetchedAtBySource.set("gh", fetchedAtBySource.get("github") ?? args.nowMs);
+    fetchedAtBySource.set("krw", fetchedAtBySource.get("fx") ?? args.nowMs);
+    fetchedAtBySource.set("todo", fetchedAtBySource.get("todo") ?? args.nowMs);
+    fetchedAtBySource.set("dday", fetchedAtBySource.get("dday") ?? args.nowMs);
+    fetchedAtBySource.set("moon", args.nowMs);
+    fetchedAtBySource.set("year", args.nowMs);
 
     const slots: Record<string, unknown> = {};
     const ages: Record<string, number> = {};
@@ -165,6 +176,8 @@ export const dataFrame = internalQuery({
         pinnedCardId:
           device.pinnedUntil && device.pinnedUntil > args.nowMs ? (device.pinnedCardId ?? null) : null,
         pinnedUntil: device.pinnedUntil ?? null,
+        playlistCardId: device.playlistCardId ?? null,
+        brightnessCeiling: device.brightnessCeiling ?? null,
         cardCount: cards.length,
         programStorageId: device.programStorageId ?? null,
       },

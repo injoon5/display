@@ -108,7 +108,11 @@ Do not reuse HUB75 pins (`2,14,21,35–42,45,47,48`).
 
 The retry policy is `1 → 2 → 4 → 8 → 16 → 30s` with ±20% jitter and a hard reboot after 10 minutes of continuous failure.
 
-The slot-frame decoder currently accepts JSON directly and preserves the previous slot frame when the backend serves raw CBOR; that keeps the transport logic live while the final CBOR decoder is still a TODO.
+`/device/data` is requested with `Accept: application/cbor, application/json`. The slot-frame decoder accepts JSON when `Content-Type` looks like JSON or the body starts with `{`; otherwise it decodes the compact CBOR map shape (`v` / `t` / `s` / `a`) produced by the Convex `encodeSlotFrame` helper.
+
+### OTA signatures
+
+`scripts/release.sh` writes a manifest whose `signature` is a deterministic 64-hex stand-in (the image sha256) when no signing key is configured. Set `R2_URL` for the published artifact URL (otherwise a local `file://` path is used). Production builds should set `OTA_SIGNATURE` to a real ed25519 signature, bake `MX_OTA_ED25519_PUBKEY_HEX`, and set `CONFIG_MX_OTA_ALLOW_UNSIGNED=0`.
 
 ## Host simulator
 

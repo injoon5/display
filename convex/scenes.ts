@@ -176,6 +176,8 @@ export const activate = dashboardMutation({
       activeSceneId: args.sceneId,
       pinnedCardId: undefined,
       pinnedUntil: undefined,
+      brightnessCeiling: scene.brightnessCeiling,
+      playlistCardIds: scene.cardIds,
     });
     await bumpAllDevicesDataEtag(ctx, "scene-activate");
 
@@ -207,6 +209,8 @@ export const activateInternal = internalMutation({
       activeSceneId: args.sceneId,
       pinnedCardId: undefined,
       pinnedUntil: undefined,
+      brightnessCeiling: scene.brightnessCeiling,
+      playlistCardIds: scene.cardIds,
     });
     await bumpAllDevicesDataEtag(ctx, "scene-activate-internal");
 
@@ -232,10 +236,17 @@ export const applySchedule = internalMutation({
     const devices = await ctx.db.query("devices").collect();
     let updated = 0;
     for (const device of devices) {
-      if (device.activeSceneId !== activeScheduledScene._id) {
+      if (
+        device.activeSceneId !== activeScheduledScene._id ||
+        device.brightnessCeiling !== activeScheduledScene.brightnessCeiling
+      ) {
         updated += 1;
         await ctx.db.patch("devices", device._id, {
           activeSceneId: activeScheduledScene._id,
+          brightnessCeiling: activeScheduledScene.brightnessCeiling,
+          playlistCardIds: activeScheduledScene.cardIds,
+          pinnedCardId: undefined,
+          pinnedUntil: undefined,
         });
       }
     }

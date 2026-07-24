@@ -1,49 +1,59 @@
 <script lang="ts">
-  import * as Alert from "$lib/components/ui/alert/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { dashboardStatus, seedLiveDemo } from "$lib/convex";
-  import { modeLabel } from "$lib/mode-label";
 
   let busy = $state(false);
-  let message = $state<string | null>(null);
   let status = $derived($dashboardStatus);
-
-  async function handleSeed(): Promise<void> {
-    busy = true;
-    message = null;
-    try {
-      await seedLiveDemo();
-      message = "Sample data loaded.";
-    } catch (error) {
-      message = error instanceof Error ? error.message : "Couldn’t load sample data.";
-    } finally {
-      busy = false;
-    }
-  }
+  let degraded = $derived(status.mode === "degraded");
 </script>
 
 {#if status.mode !== "live"}
-  <Alert.Root class="mb-1" variant={status.mode === "degraded" ? "destructive" : "default"}>
-    <Alert.Title>
-      {status.mode === "degraded" ? "Convex limited" : modeLabel(status.mode)}
-    </Alert.Title>
-    <Alert.Description class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <span>
-        {#if status.mode === "degraded"}
-          {status.lastError ?? "Live backend is unreachable. Showing local demo data."}
+  <div
+    class="glass flex flex-col gap-2 rounded-xl px-3.5 py-2.5 sm:flex-row sm:items-center sm:gap-3"
+    role="status"
+  >
+    <span
+      class="relative flex size-2 shrink-0 items-center justify-center"
+      aria-hidden="true"
+    >
+      <span
+        class="absolute inline-flex size-full rounded-full opacity-60 motion-safe:animate-ping"
+        class:bg-amber-400={!degraded}
+        class:bg-destructive={degraded}
+      ></span>
+      <span
+        class="relative inline-flex size-2 rounded-full"
+        class:bg-amber-400={!degraded}
+        class:bg-destructive={degraded}
+      ></span>
+    </span>
+
+    <p class="min-w-0 flex-1 text-sm text-pretty">
+      <span class="font-medium">{degraded ? "Live backend unreachable" : "Demo mode"}</span>
+      <span class="text-muted-foreground">
+        · {#if degraded}
+          {status.lastError ?? "Showing local sample data."}
         {:else}
-          Local browser data until Convex is ready. Load sample data anytime.
+          Local sample data until a panel connects.
         {/if}
       </span>
-      <Button disabled={busy} onclick={handleSeed} size="sm" variant="secondary">
-        {busy ? "Loading…" : "Load Sample Data"}
-      </Button>
-    </Alert.Description>
-  </Alert.Root>
-{/if}
+    </p>
 
-{#if message}
-  <Alert.Root class="mb-1">
-    <Alert.Description>{message}</Alert.Description>
-  </Alert.Root>
+    <Button
+      class="press shrink-0"
+      disabled={busy}
+      size="sm"
+      variant="secondary"
+      onclick={async () => {
+        busy = true;
+        try {
+          await seedLiveDemo();
+        } finally {
+          busy = false;
+        }
+      }}
+    >
+      {busy ? "Loading…" : "Load sample data"}
+    </Button>
+  </div>
 {/if}

@@ -5,85 +5,43 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Empty from "$lib/components/ui/empty/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
-  import { cards, dashboardStatus, resetMockState, seedLiveDemo } from "$lib/convex";
-  import { modeLabel } from "$lib/mode-label";
+  import { cards, resetMockState } from "$lib/convex";
 
   let actionMessage = $state<string | null>(null);
-
-  async function handleSeed(): Promise<void> {
-    actionMessage = null;
-    try {
-      await seedLiveDemo();
-      actionMessage = "Sample data loaded.";
-    } catch {
-      actionMessage = "Couldn’t load sample data.";
-    }
-  }
 
   function handleReset(): void {
     resetMockState();
     actionMessage = "Data reset.";
   }
-
-  let status = $derived($dashboardStatus);
-
-  function modeTone(mode: string): "success" | "warning" | "secondary" {
-    switch (mode) {
-      case "live":
-        return "success";
-      case "degraded":
-        return "warning";
-      case "mock":
-        return "secondary";
-      default:
-        return "warning";
-    }
-  }
 </script>
 
-<header class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-  <div class="flex flex-col gap-2">
-    <div class="flex flex-wrap items-center gap-2">
-      <StatusBadge tone={modeTone(status.mode)}>{modeLabel(status.mode)}</StatusBadge>
-    </div>
-    <h1 class="text-xl font-semibold tracking-tight">Cards</h1>
-    <p class="text-sm text-muted-foreground">
+<header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div class="flex flex-col gap-1">
+    <h1 class="text-xl font-semibold tracking-tight text-balance">Cards</h1>
+    <p class="text-sm text-muted-foreground text-pretty">
       Layouts that can appear on your panel.
     </p>
   </div>
   <div class="flex flex-wrap gap-2">
-    <Button
-      class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-      onclick={handleSeed}
-      variant="secondary"
-    >
-      Load Sample Data
-    </Button>
-    <Button
-      class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-      onclick={handleReset}
-      variant="outline"
-    >
-      Reset
-    </Button>
+    <Button class="press" onclick={handleReset} size="sm" variant="outline">Reset data</Button>
   </div>
 </header>
 
 {#if actionMessage}
-  <Alert.Root class="mt-4">
+  <Alert.Root>
     <Alert.Description>{actionMessage}</Alert.Description>
   </Alert.Root>
 {/if}
 
 {#if $cards.length === 0}
-  <Empty.Root class="mt-4">
+  <Empty.Root>
     <Empty.Header>
       <Empty.Title>No cards yet</Empty.Title>
       <Empty.Description>Load sample data to see your first cards.</Empty.Description>
     </Empty.Header>
   </Empty.Root>
 {:else}
-  <div class="mt-4 overflow-hidden rounded-xl border">
+  <div class="overflow-hidden rounded-xl border bg-card/40">
     <Table.Root>
       <Table.Header>
         <Table.Row>

@@ -99,7 +99,7 @@
   <p class="text-sm text-muted-foreground">View and update the data each card reads.</p>
 </header>
 
-<div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
+<div class="grid items-start gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
   <section class="overflow-hidden rounded-xl border bg-card/40">
     <div class="border-b px-4 py-3">
       <h2 class="text-sm font-semibold">All sources</h2>

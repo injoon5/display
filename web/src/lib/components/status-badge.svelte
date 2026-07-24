@@ -37,9 +37,9 @@
   const toneClass = $derived.by(() => {
     switch (tone) {
       case "success":
-        return "border-transparent bg-emerald-500/15 text-emerald-300";
+        return "border-transparent bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
       case "warning":
-        return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+        return "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-200";
       default:
         return "";
     }

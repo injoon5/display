@@ -29,8 +29,8 @@ A 64×32 RGB LED wall panel for a Seoul bedroom — production-shaped software, 
                                                      │  • sensors       │
 ┌────────────────────────────────────────────────────└──────────────────┘
 │                CONTROL PLANE (LAN only)                                    │
-│  iPhone / HomePod ──── HAP over Wi-Fi ───────────────────────────────────┘
-│  (on/off, brightness, scenes, occupancy) — works with internet down
+│  iPhone ──── Shortcuts / dashboard / optional IDF HAP ───────────────────┘
+│  (on/off, brightness, scenes, occupancy) — works with content plane down
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 

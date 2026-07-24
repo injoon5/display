@@ -34,7 +34,7 @@ void matrix_refresh_task(void *arg) {
     while (true) {
         // This task is intentionally high priority and pinned to core 0 so
         // the eventual HUB75 bit-angle-modulation driver never contends with
-        // HomeSpan, Wi-Fi, or TLS on core 1.
+        // HAP/mDNS, Wi-Fi, or TLS on core 1.
         taskENTER_CRITICAL(&s_refresh_lock);
         const uint8_t brightness = s_refresh_brightness;
         (void)brightness;

@@ -4,6 +4,7 @@
   import StatTile from "$lib/components/stat-tile.svelte";
   import * as Card from "$lib/components/ui/card/index.js";
   import * as Empty from "$lib/components/ui/empty/index.js";
+  import * as Table from "$lib/components/ui/table/index.js";
   import {
     buildSlotSnapshot,
     cards,
@@ -102,23 +103,36 @@
         </div>
         <StatusBadge tone="success">{scene?.name ?? "idle"}</StatusBadge>
       </Card.Header>
-      <Card.Content class="flex flex-col gap-2">
+      <Card.Content>
         {#if scene}
-          {#each scene.cardIds as cardId, index (cardId)}
-            {@const card = $cards.find((entry) => entry._id === cardId)}
-            <a
-              class="flex items-center justify-between gap-3 rounded-lg bg-muted/30 px-3 py-2.5 ring-1 ring-foreground/10 transition-[background-color,box-shadow,transform] duration-150 ease-[var(--ease-out)] hover:bg-muted/50 hover:ring-foreground/20 active:scale-[0.99]"
-              href={card ? `/cards/${card.slug}` : "/cards"}
-            >
-              <div class="min-w-0">
-                <div class="truncate font-medium">{card?.name ?? cardId}</div>
-                <div class="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
-                  {card?.slug ?? "unknown"}
-                </div>
-              </div>
-              <StatusBadge tone="warning">#{index + 1}</StatusBadge>
-            </a>
-          {/each}
+          <Table.Root>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head class="w-10">#</Table.Head>
+                <Table.Head>Name</Table.Head>
+                <Table.Head>Slug</Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {#each scene.cardIds as cardId, index (cardId)}
+                {@const card = $cards.find((entry) => entry._id === cardId)}
+                <Table.Row>
+                  <Table.Cell class="tabular-nums text-muted-foreground">{index + 1}</Table.Cell>
+                  <Table.Cell class="max-w-[9rem] truncate font-medium">
+                    <a
+                      class="hover:underline"
+                      href={card ? `/cards/${card.slug}` : "/cards"}
+                    >
+                      {card?.name ?? cardId}
+                    </a>
+                  </Table.Cell>
+                  <Table.Cell class="max-w-[7rem] truncate font-mono text-[11px] text-muted-foreground">
+                    {card?.slug ?? "unknown"}
+                  </Table.Cell>
+                </Table.Row>
+              {/each}
+            </Table.Body>
+          </Table.Root>
         {:else}
           <Empty.Root class="border-none py-6">
             <Empty.Header>
@@ -135,18 +149,29 @@
         <Card.Title>Source freshness</Card.Title>
         <Card.Description>Oldest data tends to show up here first.</Card.Description>
       </Card.Header>
-      <Card.Content class="flex flex-col gap-2">
-        {#each [...$sources].sort((left, right) => left.fetchedAt - right.fetchedAt).slice(0, 6) as source (source._id)}
-          <div class="flex items-center justify-between gap-3 rounded-lg bg-muted/30 px-3 py-2.5 ring-1 ring-foreground/10">
-            <div class="min-w-0">
-              <div class="truncate font-medium">{source.sourceId}</div>
-              <div class="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">{source.kind}</div>
-            </div>
-            <StatusBadge tone="warning" class="tabular">
-              {Math.max(0, Math.round((nowMs - source.fetchedAt) / 1000))}s
-            </StatusBadge>
-          </div>
-        {/each}
+      <Card.Content>
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Source</Table.Head>
+              <Table.Head>Kind</Table.Head>
+              <Table.Head class="text-right">Age</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {#each [...$sources].sort((left, right) => left.fetchedAt - right.fetchedAt).slice(0, 6) as source (source._id)}
+              <Table.Row>
+                <Table.Cell class="max-w-[8rem] truncate font-medium">{source.sourceId}</Table.Cell>
+                <Table.Cell class="max-w-[6rem] truncate font-mono text-[11px] text-muted-foreground">
+                  {source.kind}
+                </Table.Cell>
+                <Table.Cell class="text-right tabular-nums text-muted-foreground">
+                  {Math.max(0, Math.round((nowMs - source.fetchedAt) / 1000))}s
+                </Table.Cell>
+              </Table.Row>
+            {/each}
+          </Table.Body>
+        </Table.Root>
       </Card.Content>
     </Card.Root>
   </div>

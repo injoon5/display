@@ -17,7 +17,7 @@
 
   let {
     filename = "card.card",
-    label = "Card source",
+    label = "Editor",
     value = $bindable("")
   }: Props = $props();
 
@@ -117,10 +117,10 @@
 <Card.Root class="gap-0 overflow-hidden py-0" size="sm">
   <Card.Header class="flex-row items-start justify-between gap-3 border-b border-border/60 py-(--card-spacing)">
     <div>
-      <Card.Title class="tracking-[0.18em] uppercase">{label}</Card.Title>
+      <Card.Title>{label}</Card.Title>
       <Card.Description class="mt-1 font-mono text-[11px]">{filename}</Card.Description>
     </div>
-    <StatusBadge tone="success">{value.trim().startsWith("<") ? "mxml" : "stage0-json"}</StatusBadge>
+    <StatusBadge tone="success">{value.trim().startsWith("<") ? "Markup" : "JSON"}</StatusBadge>
   </Card.Header>
   <Card.Content class="px-0">
     <div

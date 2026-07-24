@@ -21,7 +21,7 @@
     hovered = $bindable<RenderHotspot | null>(null),
     online = true,
     pitch = 10,
-    title = "64×32 HUB75 panel",
+    title = "LED Panel",
     ondoubletap,
     onhotspot,
   }: Props = $props();
@@ -57,7 +57,7 @@
     <div class="led-face">
       <div class="led-mask">
         <button
-          aria-label="{title}. Double-click to advance card. Click a hotspot to pin related content."
+          aria-label="{title}. Double-click to advance. Click a hotspot to pin."
           class="led-surface"
           onclick={handlePointer}
           onkeydown={handleKeydown}
@@ -92,11 +92,9 @@
   </div>
 
   {#if hovered}
-    <div class="mt-2 font-mono text-[11px] text-muted-foreground">
-      hotspot {hovered.sourceId}:{hovered.path}
-      {#if hovered.value !== undefined}
-        · {typeof hovered.value === "object" ? JSON.stringify(hovered.value) : String(hovered.value)}
-      {/if}
+    <div class="mt-2 text-[11px] text-muted-foreground">
+      {hovered.path}{#if hovered.value !== undefined}
+        · {typeof hovered.value === "object" ? JSON.stringify(hovered.value) : String(hovered.value)}{/if}
     </div>
   {/if}
 </div>
@@ -171,8 +169,7 @@
     color: rgba(255, 255, 255, 0.72);
     font-size: 8px;
     font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    letter-spacing: 0.02em;
     line-height: 1.2;
   }
 

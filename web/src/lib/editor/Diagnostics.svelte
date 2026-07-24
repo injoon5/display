@@ -16,18 +16,18 @@
 <Card.Root size="sm">
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <Card.Title class="tracking-[0.18em] uppercase">Diagnostics</Card.Title>
-      <Card.Description>Compiler output, layout validation, and slot pressure.</Card.Description>
+      <Card.Title>Diagnostics</Card.Title>
+      <Card.Description>Issues found while building this card.</Card.Description>
     </div>
     <StatusBadge class="tabular-nums" tone={hasErrors ? "destructive" : "success"}>
-      {diagnostics.length} entries
+      {diagnostics.length} {diagnostics.length === 1 ? "issue" : "issues"}
     </StatusBadge>
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-2">
     {#if diagnostics.length === 0}
       <div class="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 ring-1 ring-emerald-500/20">
-        No diagnostics. This card compiles cleanly.
+        No issues. This card looks good.
       </div>
     {:else}
       {#each diagnostics as entry, index (`${entry.code}-${index}`)}

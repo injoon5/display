@@ -98,7 +98,7 @@
 
   async function runAction(label: string, action: () => Promise<void>): Promise<void> {
     if (!device) {
-      toast.error("No device online");
+      toast.error("No panel connected");
       return;
     }
     busy = label;
@@ -107,7 +107,7 @@
       lastAction = label;
       toast.success(label);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Action failed";
+      const message = error instanceof Error ? error.message : "Something went wrong";
       toast.error(message);
     } finally {
       busy = null;
@@ -140,7 +140,7 @@
 
   async function handleDoubleTap(): Promise<void> {
     if (!device || !scene) {
-      toast.message("No scene queue to advance");
+      toast.message("Nothing to advance yet");
       return;
     }
 
@@ -157,7 +157,7 @@
     const next = queue[(currentIndex + 1) % queue.length];
     if (!next) return;
 
-    await runAction(`Double-tap → ${next.slug}`, async () => {
+    await runAction(`Next: ${next.slug}`, async () => {
       await pinCard({ cardId: next._id, deviceId: device._id, durationMs: 30_000 });
     });
   }
@@ -165,24 +165,24 @@
   async function handleHotspot(hotspot: RenderHotspot): Promise<void> {
     const related = resolveHotspotCard(hotspot);
     if (!device || !related) {
-      toast.message(`Hotspot ${hotspot.sourceId}:${hotspot.path}`);
+      toast.message(`Pinned area: ${hotspot.path}`);
       return;
     }
-    await runAction(`Hotspot pin ${related.slug}`, async () => {
+    await runAction(`Pinned ${related.slug}`, async () => {
       await pinCard({ cardId: related._id, deviceId: device._id, durationMs: 60_000 });
     });
   }
 
   async function handleBrightness(value: number): Promise<void> {
     if (!device) return;
-    await runAction(`Brightness ${value}%`, async () => {
+    await runAction(`Brightness set to ${value}%`, async () => {
       await simulateTelemetry({ brightness: value, deviceId: device._id });
     });
   }
 
   async function handlePresence(kind: "room" | "bed", value: boolean): Promise<void> {
     if (!device) return;
-    await runAction(`${kind} presence ${value ? "on" : "off"}`, async () => {
+    await runAction(`${kind === "room" ? "Room" : "Bed"} ${value ? "occupied" : "empty"}`, async () => {
       await simulateTelemetry({
         deviceId: device._id,
         ...(kind === "room" ? { presenceRoom: value } : { presenceBed: value }),
@@ -194,15 +194,15 @@
 <Card.Root size="sm">
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <Card.Title>Device mirror</Card.Title>
+      <Card.Title>Live View</Card.Title>
       <Card.Description>
-        Discrete 64×32 LED panel — double-click advances, hotspot click pins.
+        Double-click to advance. Click a hotspot to pin.
       </Card.Description>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <StatusBadge tone="warning">{card?.slug ?? "no-card"}</StatusBadge>
+      <StatusBadge tone="warning">{card?.slug ?? "No Card"}</StatusBadge>
       {#if device?.pinnedCardId}
-        <StatusBadge tone="success">pinned</StatusBadge>
+        <StatusBadge tone="success">Pinned</StatusBadge>
       {/if}
     </div>
   </Card.Header>
@@ -220,7 +220,7 @@
 
     <div class="grid gap-3 sm:grid-cols-2">
       <div class="flex flex-col gap-2 rounded-lg bg-muted/25 p-3 ring-1 ring-foreground/10">
-        <div class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Frame</div>
+        <div class="text-xs font-medium text-muted-foreground">Frame</div>
         <div class="flex flex-wrap gap-2">
           <Button
             disabled={!device || busy !== null}
@@ -228,7 +228,7 @@
             variant="secondary"
             onclick={() => void handleDoubleTap()}
           >
-            Double-tap advance
+            Next Card
           </Button>
           <Button
             disabled={!device?.pinnedCardId || busy !== null}
@@ -244,13 +244,13 @@
           </Button>
         </div>
         {#if lastAction}
-          <p class="font-mono text-[11px] text-muted-foreground">last: {lastAction}</p>
+          <p class="font-mono text-[11px] text-muted-foreground">Last: {lastAction}</p>
         {/if}
       </div>
 
       <div class="flex flex-col gap-2 rounded-lg bg-muted/25 p-3 ring-1 ring-foreground/10">
-        <div class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          Brightness (HomeKit ceiling)
+        <div class="text-xs font-medium text-muted-foreground">
+          Brightness
         </div>
         <input
           aria-label="Brightness"
@@ -272,8 +272,8 @@
     </div>
 
     <div class="flex flex-col gap-2 rounded-lg bg-muted/25 p-3 ring-1 ring-foreground/10">
-      <div class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        HomeKit switches
+      <div class="text-xs font-medium text-muted-foreground">
+        Quick Pins
       </div>
       <div class="flex flex-wrap gap-2">
         {#each HOMEKIT_SWITCHES as item (item.slug)}
@@ -282,7 +282,7 @@
             size="sm"
             variant={card?.slug === item.slug ? "default" : "outline"}
             onclick={() =>
-              void runAction(`Switch ${item.label}`, async () => {
+              void runAction(`Pinned ${item.label}`, async () => {
                 await pinSlug(item.slug, 60_000);
               })}
           >
@@ -294,7 +294,7 @@
 
     <div class="grid gap-3 sm:grid-cols-2">
       <div class="flex flex-col gap-2 rounded-lg bg-muted/25 p-3 ring-1 ring-foreground/10">
-        <div class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Scenes</div>
+        <div class="text-xs font-medium text-muted-foreground">Scenes</div>
         <div class="flex flex-wrap gap-2">
           {#each scenes as entry (entry._id)}
             <Button
@@ -314,7 +314,7 @@
       </div>
 
       <div class="flex flex-col gap-2 rounded-lg bg-muted/25 p-3 ring-1 ring-foreground/10">
-        <div class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Presence</div>
+        <div class="text-xs font-medium text-muted-foreground">Presence</div>
         <div class="flex flex-wrap gap-2">
           <Button
             disabled={!device || busy !== null}
@@ -337,7 +337,7 @@
     </div>
 
     <div class="flex flex-col gap-2 rounded-lg bg-muted/25 p-3 ring-1 ring-foreground/10">
-      <div class="text-xs font-medium tracking-wide text-muted-foreground uppercase">Poke</div>
+      <div class="text-xs font-medium text-muted-foreground">Message</div>
       <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div class="grid w-full gap-1.5">
           <Label for="poke-message">Message</Label>
@@ -345,13 +345,13 @@
             id="poke-message"
             bind:value={pokeMessage}
             maxlength={48}
-            placeholder="Takeover text"
+            placeholder="Message"
           />
         </div>
         <Button
           disabled={!device || !pokeMessage.trim() || busy !== null}
           onclick={() =>
-            void runAction("Poke", async () => {
+            void runAction("Message sent", async () => {
               if (!device) return;
               await poke({
                 deviceId: device._id,
@@ -360,7 +360,7 @@
               });
             })}
         >
-          Send poke
+          Send
         </Button>
       </div>
     </div>

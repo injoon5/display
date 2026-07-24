@@ -47,8 +47,8 @@
 <Card.Root size="sm">
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <Card.Title class="tracking-[0.18em] uppercase">Live preview</Card.Title>
-      <Card.Description>64×32 discrete LED matrix (HUB75-style).</Card.Description>
+      <Card.Title>Preview</Card.Title>
+      <Card.Description>How the card looks on the panel.</Card.Description>
     </div>
     <div class="flex items-center gap-2">
       <StatusBadge tone="success">{frame.mode}</StatusBadge>
@@ -61,7 +61,7 @@
       framebuffer={frame.framebuffer}
       hotspots={frame.hotspots}
       pitch={8}
-      title="Live card preview"
+      title="Preview"
       bind:hovered
     />
 

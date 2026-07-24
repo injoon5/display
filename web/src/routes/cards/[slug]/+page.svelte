@@ -197,7 +197,7 @@
 
   <div class="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.4fr)_520px]">
     <div class="flex flex-col gap-4">
-      <CardEditor bind:value={source} filename={`${slug}.card`} label="Card editor" />
+      <CardEditor bind:value={source} filename={`${slug}.card`} label="Editor" />
       <Diagnostics compiled={compiled} />
     </div>
 

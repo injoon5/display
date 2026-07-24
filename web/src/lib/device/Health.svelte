@@ -22,19 +22,19 @@
 <Card.Root size="sm">
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <Card.Title>Device health</Card.Title>
-      <Card.Description>Link state, firmware, sensors, and runtime headroom.</Card.Description>
+      <Card.Title>Status</Card.Title>
+      <Card.Description>Connection, firmware, and sensors.</Card.Description>
     </div>
     <StatusBadge tone={device?.online ? "success" : "destructive"}>
-      {device?.online ? "online" : "offline"}
+      {device?.online ? "Online" : "Offline"}
     </StatusBadge>
   </Card.Header>
   <Card.Content class="grid grid-cols-2 gap-2">
-    <StatTile label="Convex mode" value={statusLabel} />
-    <StatTile label="Firmware" value={device?.fwVersion ?? "n/a"} />
+    <StatTile label="Connection" value={statusLabel} />
+    <StatTile label="Firmware" value={device?.fwVersion ?? "—"} />
     <StatTile label="RSSI" value={`${telemetry.rssi} dBm`} />
-    <StatTile label="Heap free" value={`${telemetry.heapFree.toLocaleString()} B`} />
-    <StatTile label="Ambient lux" value={telemetry.lux} />
-    <StatTile label="Last heartbeat" value={device ? minutesAgo(device.lastSeen) : "n/a"} />
+    <StatTile label="Memory" value={`${telemetry.heapFree.toLocaleString()} B`} />
+    <StatTile label="Light" value={telemetry.lux} />
+    <StatTile label="Last seen" value={device ? minutesAgo(device.lastSeen) : "—"} />
   </Card.Content>
 </Card.Root>

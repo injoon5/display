@@ -30,8 +30,8 @@
 <Card.Root size="sm">
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <Card.Title class="tracking-[0.18em] uppercase">Slot inspector</Card.Title>
-      <Card.Description>Hover the preview to inspect bound values and freshness.</Card.Description>
+      <Card.Title>Slots</Card.Title>
+      <Card.Description>Hover the preview to inspect values.</Card.Description>
     </div>
     <StatusBadge class="tabular-nums" tone="warning">{slotMap.length} slots</StatusBadge>
   </Card.Header>
@@ -64,9 +64,7 @@
           </div>
           <div class="mt-1 flex items-center justify-between gap-3">
             <span class="text-sm tabular-nums">{formatValue(slot?.value)}</span>
-            <span class="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase"
-              >{entry.type}</span
-            >
+            <span class="text-[11px] font-medium text-muted-foreground">{entry.type}</span>
           </div>
         </div>
       {/each}

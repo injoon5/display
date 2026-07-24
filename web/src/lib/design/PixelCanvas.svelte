@@ -25,7 +25,7 @@
     hotspots = [],
     hovered = $bindable<RenderHotspot | null>(null),
     pitch = 10,
-    title = "Matrix framebuffer",
+    title = "LED Panel",
   }: Props = $props();
 
   let canvas = $state<HTMLCanvasElement | null>(null);

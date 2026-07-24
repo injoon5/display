@@ -8,7 +8,7 @@
     label?: string;
   };
 
-  let { amps, budget = 4, label = "draw" }: Props = $props();
+  let { amps, budget = 4, label = "Draw" }: Props = $props();
 
   let percent = $derived(Math.min(100, Math.max(0, (amps / budget) * 100)));
   let tone = $derived.by((): "success" | "warning" | "destructive" => {
@@ -35,8 +35,8 @@
 <Card.Root size="sm">
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <Card.Title>Power meter</Card.Title>
-      <Card.Description>Estimated panel current versus supply headroom.</Card.Description>
+      <Card.Title>Power</Card.Title>
+      <Card.Description>Estimated current against your budget.</Card.Description>
     </div>
     <StatusBadge tone={tone} class="tabular">{amps.toFixed(2)} A</StatusBadge>
   </Card.Header>
@@ -44,7 +44,7 @@
     <div class="rounded-lg bg-muted/40 p-3 ring-1 ring-foreground/10">
       <div class="mb-2 flex items-end justify-between text-xs text-muted-foreground">
         <span>{label}</span>
-        <span class="tabular">{budget.toFixed(1)} A budget</span>
+        <span class="tabular">{budget.toFixed(1)} A limit</span>
       </div>
       <div class="h-3 rounded-full bg-background/60 p-0.5 ring-1 ring-foreground/10">
         <div

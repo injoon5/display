@@ -78,8 +78,8 @@
 <Card.Root size="sm">
   <Card.Header class="flex-row items-start justify-between gap-3">
     <div>
-      <Card.Title class="tracking-[0.18em] uppercase">Simulate panel</Card.Title>
-      <Card.Description>Override source paths, scrub time, and force card re-renders.</Card.Description>
+      <Card.Title>Simulate</Card.Title>
+      <Card.Description>Try different values and times.</Card.Description>
     </div>
     <StatusBadge class="tabular-nums" tone="success">{overrideCount} overrides</StatusBadge>
   </Card.Header>
@@ -88,7 +88,7 @@
     <div class="rounded-lg bg-muted/40 p-3 ring-1 ring-foreground/10">
       <div class="mb-2 flex items-center justify-between gap-3">
         <div>
-          <p class="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">Time scrubber</p>
+          <p class="text-[11px] font-medium text-muted-foreground">Time</p>
           <p class="mt-1 font-mono text-sm tabular-nums">{kstLabel}</p>
         </div>
         <Button
@@ -123,7 +123,7 @@
         onclick={addManualOverride}
         variant="secondary"
       >
-        Override
+        Add
       </Button>
     </div>
 
@@ -141,9 +141,7 @@
         >
           <div class="flex items-center justify-between gap-3">
             <code class="font-mono text-xs">{entry.path}</code>
-            <span class="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase"
-              >{entry.type}</span
-            >
+            <span class="text-[11px] font-medium text-muted-foreground">{entry.type}</span>
           </div>
           <div class="mt-3 flex flex-wrap items-center gap-2">
             {#if entry.type === "boolean"}
@@ -155,7 +153,7 @@
                     setOverride(entry.path, (event.currentTarget as HTMLInputElement).checked)}
                   type="checkbox"
                 />
-                active
+                On
               </label>
             {:else if entry.type === "number"}
               <Input

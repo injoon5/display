@@ -4,10 +4,10 @@
   "priority": 78,
   "dwellMs": 10000,
   "elements": [
-    { "op": "text", "x": 1, "y": 3, "font": "3x5", "color": "#8f9f8d", "value": "NEXT" },
-    { "op": "text", "x": 1, "y": 11, "font": "3x5", "color": "#e0e0e0", "bind": "calendar.next.title" },
-    { "op": "text", "x": 1, "y": 23, "font": "3x5", "color": "#8f9f8d", "value": "IN" },
-    { "op": "text", "x": 12, "y": 23, "font": "3x5", "color": "#e0e0e0", "bind": "calendar.next.countdownMin" },
-    { "op": "text", "x": 28, "y": 23, "font": "3x5", "color": "#8f9f8d", "value": "m" }
+    { "op": "text", "x": 2, "y": 0, "font": "5x7", "color": "#b07cff", "value": "NEXT" },
+    { "op": "text", "x": 2, "y": 11, "font": "5x7", "color": "#f0f0f0", "bind": "calendar.next.title" },
+    { "op": "text", "x": 2, "y": 24, "font": "5x7", "color": "#8f9f8d", "value": "IN" },
+    { "op": "text", "x": 17, "y": 24, "font": "5x7", "color": "#f0f0f0", "bind": "calendar.next.countdownMin" },
+    { "op": "text", "x": 41, "y": 24, "font": "5x7", "color": "#8f9f8d", "value": "min" }
   ]
 }

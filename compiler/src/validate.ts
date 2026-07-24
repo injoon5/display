@@ -33,7 +33,7 @@ function estimateExpressionLength(expr: Expr): number {
     case "path":
     case "unary":
     case "binary":
-      return 6;
+      return 5;
     case "ternary":
       return Math.max(estimateExpressionLength(expr.consequent), estimateExpressionLength(expr.alternate));
     case "filter":
@@ -63,6 +63,10 @@ function estimateExpressionLength(expr: Expr): number {
         case "lower":
         case "comma":
         case "fixed":
+        case "round":
+        case "floor":
+        case "ceil":
+        case "abs":
           return estimateExpressionLength(expr.input);
         default:
           return 10;

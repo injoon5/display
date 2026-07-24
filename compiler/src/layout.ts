@@ -224,6 +224,10 @@ function estimateExpressionLength(expr: Expr, typeContext: TypecheckContext): nu
         case "lower":
         case "comma":
         case "fixed":
+        case "round":
+        case "floor":
+        case "ceil":
+        case "abs":
           return estimateExpressionLength(expr.input, typeContext);
         default:
           return estimateTypeLength(typeName(inferExpressionType(expr, typeContext)));

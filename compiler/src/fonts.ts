@@ -9,7 +9,7 @@ export interface FontMetrics {
 export const FONT_METRICS: Record<FontMetrics["name"], FontMetrics> = {
   "3x5": { id: 0, name: "3x5", glyphWidth: 3, glyphHeight: 5, advance: 4 },
   "5x7": { id: 1, name: "5x7", glyphWidth: 5, glyphHeight: 7, advance: 6 },
-  "8x16": { id: 2, name: "8x16", glyphWidth: 8, glyphHeight: 16, advance: 8 },
+  "8x16": { id: 2, name: "8x16", glyphWidth: 10, glyphHeight: 14, advance: 12 },
   seg7: { id: 3, name: "seg7", glyphWidth: 12, glyphHeight: 20, advance: 12 }
 };
 

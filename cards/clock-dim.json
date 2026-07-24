@@ -4,6 +4,6 @@
   "priority": 40,
   "dwellMs": 12000,
   "elements": [
-    { "op": "text", "x": 11, "y": 8, "font": "8x16", "color": "#66706a", "bind": "now.hhmm" }
+    { "op": "text", "x": 3, "y": 9, "font": "8x16", "color": "#66706a", "bind": "now.hhmm" }
   ]
 }

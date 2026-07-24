@@ -277,25 +277,181 @@ function estimatedTemplateText(parts: TemplatePart[], font: string, typeContext:
   return { h: height, w: width };
 }
 
-function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: TypecheckContext): RenderNode[] {
+interface LayoutDefaults {
+  x?: number;
+  y?: number;
+}
+
+function translateNodes(nodes: RenderNode[], dx: number, dy: number): RenderNode[] {
+  return nodes.map((node) => {
+    if (node.kind === "group") {
+      return { ...node, children: translateNodes(node.children, dx, dy) };
+    }
+    if (node.kind === "line") {
+      return {
+        ...node,
+        x: node.x + dx,
+        x2: (node.x2 ?? node.x) + dx,
+        y: node.y + dy,
+        y2: (node.y2 ?? node.y) + dy
+      };
+    }
+    return { ...node, x: node.x + dx, y: node.y + dy };
+  });
+}
+
+function measureDrawNode(node: DrawNode, typeContext: TypecheckContext): { h: number; w: number; x: number; y: number } {
+  switch (node.kind) {
+    case "text": {
+      const size = estimatedTemplateText(node.template, node.font, typeContext);
+      return { h: size.h, w: size.w, x: node.x, y: node.y };
+    }
+    case "marquee": {
+      const h = FONT_METRICS[node.font as keyof typeof FONT_METRICS]?.glyphHeight ?? 7;
+      return { h, w: node.w, x: node.x, y: node.y };
+    }
+    case "icon":
+      return { h: 8, w: 8, x: node.x, y: node.y };
+    case "line": {
+      const x1 = Math.min(node.x, node.x2 ?? node.x);
+      const y1 = Math.min(node.y, node.y2 ?? node.y);
+      const x2 = Math.max(node.x, node.x2 ?? node.x);
+      const y2 = Math.max(node.y, node.y2 ?? node.y);
+      return { h: y2 - y1, w: x2 - x1, x: x1, y: y1 };
+    }
+    case "bar":
+    case "fx":
+    case "frect":
+    case "rect":
+    case "stroke":
+    case "pixel":
+      return { h: node.h, w: node.w, x: node.x, y: node.y };
+    default: {
+      const exhaustive: never = node;
+      return exhaustive;
+    }
+  }
+}
+
+function measureNodes(nodes: RenderNode[], typeContext: TypecheckContext): { h: number; w: number } {
+  let maxX = 0;
+  let maxY = 0;
+  const visit = (node: RenderNode): void => {
+    if (node.kind === "group") {
+      for (const child of node.children) {
+        visit(child);
+      }
+      return;
+    }
+    const bounds = measureDrawNode(node, typeContext);
+    maxX = Math.max(maxX, bounds.x + bounds.w);
+    maxY = Math.max(maxY, bounds.y + bounds.h);
+  };
+  for (const node of nodes) {
+    visit(node);
+  }
+  return { h: maxY, w: maxX };
+}
+
+function layoutPacked(
+  direction: "col" | "row",
+  node: MxmlNode,
+  diagnostics: Diagnostic[],
+  typeContext: TypecheckContext,
+  defaults?: LayoutDefaults
+): RenderNode[] {
+  const x = parseInteger(node.attrs, "x", node.span, diagnostics, defaults?.x);
+  const y = parseInteger(node.attrs, "y", node.span, diagnostics, defaults?.y);
+  const gap = parseInteger(node.attrs, "gap", node.span, diagnostics, 0) ?? 0;
+  if (x === null || y === null) {
+    return [];
+  }
+
+  let cursorX = x;
+  let cursorY = y;
+  const output: RenderNode[] = [];
+  const childDefaults: LayoutDefaults = { x: 0, y: 0 };
+
+  for (const child of node.children) {
+    if (child.tagName === "spacer") {
+      const spacerW = parseInteger(child.attrs, "w", child.span, diagnostics, 0) ?? 0;
+      const spacerH = parseInteger(child.attrs, "h", child.span, diagnostics, 0) ?? 0;
+      if (direction === "row") {
+        cursorX += spacerW + gap;
+      } else {
+        cursorY += spacerH + gap;
+      }
+      continue;
+    }
+
+    const childNodes = layoutNode(child, diagnostics, typeContext, childDefaults);
+    const size = measureNodes(childNodes, typeContext);
+    output.push(...translateNodes(childNodes, cursorX, cursorY));
+    if (direction === "row") {
+      cursorX += size.w + gap;
+    } else {
+      cursorY += size.h + gap;
+    }
+  }
+
+  return output;
+}
+
+function layoutBox(node: MxmlNode, diagnostics: Diagnostic[], typeContext: TypecheckContext, defaults?: LayoutDefaults): RenderNode[] {
+  const x = parseInteger(node.attrs, "x", node.span, diagnostics, defaults?.x);
+  const y = parseInteger(node.attrs, "y", node.span, diagnostics, defaults?.y);
+  // Optional size attrs — validate when present; clipping is not applied in Stage 2 basics.
+  parseInteger(node.attrs, "w", node.span, diagnostics);
+  parseInteger(node.attrs, "h", node.span, diagnostics);
+  if (x === null || y === null) {
+    return [];
+  }
+
+  const childDefaults: LayoutDefaults = { x: 0, y: 0 };
+  return node.children.flatMap((child) => {
+    if (child.tagName === "spacer") {
+      // Spacers only affect row/col cursors; inside a box they emit nothing.
+      parseInteger(child.attrs, "w", child.span, diagnostics, 0);
+      parseInteger(child.attrs, "h", child.span, diagnostics, 0);
+      return [];
+    }
+    return translateNodes(layoutNode(child, diagnostics, typeContext, childDefaults), x, y);
+  });
+}
+
+function layoutNode(
+  node: MxmlNode,
+  diagnostics: Diagnostic[],
+  typeContext: TypecheckContext,
+  defaults?: LayoutDefaults
+): RenderNode[] {
   if (node.tagName === "source" || node.tagName === "show" || node.tagName === "stale") {
     return [];
   }
 
-  if (node.tagName === "row" || node.tagName === "col" || node.tagName === "box" || node.tagName === "spacer") {
-    diagnostics.push({
-      code: "layout.unsupported-container",
-      message: `Stage 1 only supports absolute layout; <${node.tagName}> is not implemented`,
-      severity: "error",
-      span: node.span
-    });
+  if (node.tagName === "spacer") {
+    // Top-level spacer (or spacer outside row/col) produces no render nodes.
+    parseInteger(node.attrs, "w", node.span, diagnostics, 0);
+    parseInteger(node.attrs, "h", node.span, diagnostics, 0);
     return [];
+  }
+
+  if (node.tagName === "row") {
+    return layoutPacked("row", node, diagnostics, typeContext, defaults);
+  }
+
+  if (node.tagName === "col") {
+    return layoutPacked("col", node, diagnostics, typeContext, defaults);
+  }
+
+  if (node.tagName === "box") {
+    return layoutBox(node, diagnostics, typeContext, defaults);
   }
 
   if (node.tagName === "when") {
     return [
       {
-        children: node.children.flatMap((child) => layoutNode(child, diagnostics, typeContext)),
+        children: node.children.flatMap((child) => layoutNode(child, diagnostics, typeContext, defaults)),
         kind: "group",
         span: node.span,
         test: exprValue(node.attrs, "test") ?? undefined
@@ -317,7 +473,7 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
     return [
       {
         blinkRateMs: blinkRateMs ?? 600,
-        children: node.children.flatMap((child) => layoutNode(child, diagnostics, typeContext)),
+        children: node.children.flatMap((child) => layoutNode(child, diagnostics, typeContext, defaults)),
         kind: "group",
         span: node.span
       }
@@ -325,8 +481,8 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
   }
 
   if (node.tagName === "text") {
-    const x = parseInteger(node.attrs, "x", node.span, diagnostics);
-    const y = parseInteger(node.attrs, "y", node.span, diagnostics);
+    const x = parseInteger(node.attrs, "x", node.span, diagnostics, defaults?.x);
+    const y = parseInteger(node.attrs, "y", node.span, diagnostics, defaults?.y);
     if (x === null || y === null) {
       return [];
     }
@@ -344,8 +500,8 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
   }
 
   if (node.tagName === "badge") {
-    const x = parseInteger(node.attrs, "x", node.span, diagnostics);
-    const y = parseInteger(node.attrs, "y", node.span, diagnostics);
+    const x = parseInteger(node.attrs, "x", node.span, diagnostics, defaults?.x);
+    const y = parseInteger(node.attrs, "y", node.span, diagnostics, defaults?.y);
     if (x === null || y === null) {
       return [];
     }
@@ -375,8 +531,8 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
   }
 
   if (node.tagName === "bar") {
-    const x = parseInteger(node.attrs, "x", node.span, diagnostics);
-    const y = parseInteger(node.attrs, "y", node.span, diagnostics);
+    const x = parseInteger(node.attrs, "x", node.span, diagnostics, defaults?.x);
+    const y = parseInteger(node.attrs, "y", node.span, diagnostics, defaults?.y);
     const w = parseInteger(node.attrs, "w", node.span, diagnostics);
     const h = parseInteger(node.attrs, "h", node.span, diagnostics);
     if (x === null || y === null || w === null || h === null) {
@@ -399,8 +555,8 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
   }
 
   if (node.tagName === "icon") {
-    const x = parseInteger(node.attrs, "x", node.span, diagnostics);
-    const y = parseInteger(node.attrs, "y", node.span, diagnostics);
+    const x = parseInteger(node.attrs, "x", node.span, diagnostics, defaults?.x);
+    const y = parseInteger(node.attrs, "y", node.span, diagnostics, defaults?.y);
     if (x === null || y === null) {
       return [];
     }
@@ -417,8 +573,8 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
   }
 
   if (node.tagName === "marquee") {
-    const x = parseInteger(node.attrs, "x", node.span, diagnostics);
-    const y = parseInteger(node.attrs, "y", node.span, diagnostics);
+    const x = parseInteger(node.attrs, "x", node.span, diagnostics, defaults?.x);
+    const y = parseInteger(node.attrs, "y", node.span, diagnostics, defaults?.y);
     const w = parseInteger(node.attrs, "w", node.span, diagnostics, 64) ?? 64;
     if (x === null || y === null) {
       return [];
@@ -439,7 +595,7 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
   }
 
   if (node.tagName === "fx") {
-    const kinds: Record<string, number> = { starfield: 0, warp: 0, matrix: 1, fire: 2, fireplace: 2, life: 3, conway: 3, flow: 4, rain: 5, vu: 6, moon: 7, grass: 8, graph: 9, wxicon: 10 };
+    const kinds: Record<string, number> = { starfield: 0, warp: 0, matrix: 1, fire: 2, fireplace: 2, life: 3, conway: 3, snow: 4, rain: 5, vu: 6, moon: 7, grass: 8, graph: 9, wxicon: 10 };
     const kindName = literalValue(node.attrs, "kind") ?? "starfield";
     const fx = kinds[kindName] ?? 0;
     return [
@@ -451,14 +607,14 @@ function layoutNode(node: MxmlNode, diagnostics: Diagnostic[], typeContext: Type
         kind: "fx",
         span: node.span,
         w: parseInteger(node.attrs, "w", node.span, diagnostics, 64) ?? 64,
-        x: parseInteger(node.attrs, "x", node.span, diagnostics, 0) ?? 0,
-        y: parseInteger(node.attrs, "y", node.span, diagnostics, 0) ?? 0
+        x: parseInteger(node.attrs, "x", node.span, diagnostics, defaults?.x ?? 0) ?? 0,
+        y: parseInteger(node.attrs, "y", node.span, diagnostics, defaults?.y ?? 0) ?? 0
       }
     ];
   }
 
-  const x = parseInteger(node.attrs, "x", node.span, diagnostics, node.tagName === "stroke" ? 0 : undefined);
-  const y = parseInteger(node.attrs, "y", node.span, diagnostics, node.tagName === "stroke" ? 0 : undefined);
+  const x = parseInteger(node.attrs, "x", node.span, diagnostics, defaults?.x ?? (node.tagName === "stroke" ? 0 : undefined));
+  const y = parseInteger(node.attrs, "y", node.span, diagnostics, defaults?.y ?? (node.tagName === "stroke" ? 0 : undefined));
   if (x === null || y === null) {
     return [];
   }

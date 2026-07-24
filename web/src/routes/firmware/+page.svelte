@@ -1,12 +1,12 @@
 <script lang="ts">
   import StatusBadge from "$lib/components/status-badge.svelte";
-  import StatTile from "$lib/components/stat-tile.svelte";
   import * as Alert from "$lib/components/ui/alert/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Card from "$lib/components/ui/card/index.js";
   import * as Empty from "$lib/components/ui/empty/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
+  import * as Table from "$lib/components/ui/table/index.js";
   import { firmware, publishFirmware } from "$lib/convex";
 
   let version = $state("1.5.1-dev");
@@ -72,36 +72,50 @@
     </Card.Content>
   </Card.Root>
 
-  <Card.Root>
-    <Card.Header>
-      <Card.Title class="text-sm tracking-[0.18em] uppercase">Release history</Card.Title>
-      <Card.Description>Newest first, grouped by release channel.</Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-3">
-      {#each $firmware as release (release._id)}
-        <div class="rounded-lg bg-muted/30 p-4 ring-1 ring-foreground/10">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <div class="text-lg font-semibold">{release.version}</div>
-              <div class="mt-1 truncate font-mono text-[11px] text-muted-foreground">{release.r2Url}</div>
-            </div>
-            <StatusBadge tone={release.channel === "stable" ? "success" : "warning"}>
-              {release.channel}
-            </StatusBadge>
-          </div>
-          <div class="mt-3 grid gap-3 md:grid-cols-2">
-            <StatTile label="sha256" value={release.sha256} />
-            <StatTile label="released" value={new Date(release.releasedAt).toLocaleString()} />
-          </div>
-        </div>
-      {:else}
-        <Empty.Root class="border-none py-6">
-          <Empty.Header>
-            <Empty.Title>No releases</Empty.Title>
-            <Empty.Description>Publish firmware metadata to start the history.</Empty.Description>
-          </Empty.Header>
-        </Empty.Root>
-      {/each}
-    </Card.Content>
-  </Card.Root>
+  <section class="overflow-hidden rounded-xl border bg-card/40">
+    <div class="border-b px-4 py-3">
+      <h2 class="text-sm font-semibold tracking-[0.18em] uppercase">Release history</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Newest first, grouped by release channel.</p>
+    </div>
+    {#if $firmware.length === 0}
+      <Empty.Root class="border-none py-6">
+        <Empty.Header>
+          <Empty.Title>No releases</Empty.Title>
+          <Empty.Description>Publish firmware metadata to start the history.</Empty.Description>
+        </Empty.Header>
+      </Empty.Root>
+    {:else}
+      <Table.Root>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>Version</Table.Head>
+            <Table.Head>Channel</Table.Head>
+            <Table.Head>sha256</Table.Head>
+            <Table.Head>Released</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {#each $firmware as release (release._id)}
+            <Table.Row>
+              <Table.Cell>
+                <div class="font-medium">{release.version}</div>
+                <div class="mt-0.5 max-w-[18rem] truncate font-mono text-[11px] text-muted-foreground">
+                  {release.r2Url}
+                </div>
+              </Table.Cell>
+              <Table.Cell>
+                <StatusBadge tone={release.channel === "stable" ? "success" : "warning"}>
+                  {release.channel}
+                </StatusBadge>
+              </Table.Cell>
+              <Table.Cell class="font-mono text-xs">{release.sha256}</Table.Cell>
+              <Table.Cell class="text-muted-foreground">
+                {new Date(release.releasedAt).toLocaleString()}
+              </Table.Cell>
+            </Table.Row>
+          {/each}
+        </Table.Body>
+      </Table.Root>
+    {/if}
+  </section>
 </div>

@@ -7,8 +7,8 @@
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { Separator } from "$lib/components/ui/separator/index.js";
+  import * as Table from "$lib/components/ui/table/index.js";
   import { cards, saveScene, scenes } from "$lib/convex";
-  import { cn } from "$lib/utils.js";
 
   let selectedSceneId = $state<string | null>(null);
   let draftName = $state("");
@@ -79,38 +79,52 @@
   }
 </script>
 
-<div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-  <Card.Root>
-    <Card.Header>
-      <Card.Title class="text-sm tracking-[0.18em] uppercase">Scenes</Card.Title>
-      <Card.Description>Playlist builder for scheduled card queues.</Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-2">
-      {#each $scenes as scene (scene._id)}
-        <button
-          class={cn(
-            "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-foreground/10 transition-[background-color,box-shadow] duration-150 ease-[var(--ease-out)] hover:bg-muted/50",
-            selectedSceneId === scene._id ? "bg-muted/50 ring-foreground/20" : "bg-muted/30"
-          )}
-          onclick={() => (selectedSceneId = scene._id)}
-          type="button"
-        >
-          <div class="min-w-0">
-            <div class="truncate font-medium">{scene.name}</div>
-            <div class="mt-1 font-mono text-[11px] text-muted-foreground">{scene.schedule ?? "manual"}</div>
-          </div>
-          <StatusBadge class="tabular-nums" tone="warning">{scene.cardIds.length}</StatusBadge>
-        </button>
-      {:else}
-        <Empty.Root class="border-none py-6">
-          <Empty.Header>
-            <Empty.Title>No scenes</Empty.Title>
-            <Empty.Description>Seed demo data to create scenes.</Empty.Description>
-          </Empty.Header>
-        </Empty.Root>
-      {/each}
-    </Card.Content>
-  </Card.Root>
+<div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
+  <section class="overflow-hidden rounded-xl border bg-card/40">
+    <div class="border-b px-4 py-3">
+      <h2 class="text-sm font-semibold tracking-[0.18em] uppercase">Scenes</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Playlist builder for scheduled card queues.</p>
+    </div>
+    {#if $scenes.length === 0}
+      <Empty.Root class="border-none py-6">
+        <Empty.Header>
+          <Empty.Title>No scenes</Empty.Title>
+          <Empty.Description>Seed demo data to create scenes.</Empty.Description>
+        </Empty.Header>
+      </Empty.Root>
+    {:else}
+      <Table.Root>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>Name</Table.Head>
+            <Table.Head>Schedule</Table.Head>
+            <Table.Head class="text-right">Cards</Table.Head>
+            <Table.Head>Enabled</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {#each $scenes as scene (scene._id)}
+            <Table.Row
+              class="cursor-pointer"
+              data-state={selectedSceneId === scene._id ? "selected" : undefined}
+              onclick={() => (selectedSceneId = scene._id)}
+            >
+              <Table.Cell class="font-medium">{scene.name}</Table.Cell>
+              <Table.Cell class="font-mono text-xs text-muted-foreground">
+                {scene.schedule ?? "manual"}
+              </Table.Cell>
+              <Table.Cell class="text-right tabular-nums">{scene.cardIds.length}</Table.Cell>
+              <Table.Cell>
+                <StatusBadge tone={scene.enabled ? "success" : "destructive"}>
+                  {scene.enabled ? "on" : "off"}
+                </StatusBadge>
+              </Table.Cell>
+            </Table.Row>
+          {/each}
+        </Table.Body>
+      </Table.Root>
+    {/if}
+  </section>
 
   <Card.Root>
     {#if selectedScene}
@@ -169,74 +183,102 @@
         <Separator />
 
         <div class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div class="flex flex-col gap-2">
-            <h3 class="text-sm font-semibold tracking-[0.18em] uppercase">Queue</h3>
-            {#each draftCards as cardId, index (cardId)}
-              {@const card = $cards.find((entry) => entry._id === cardId)}
-              <div class="rounded-lg bg-muted/30 px-3 py-3 ring-1 ring-foreground/10">
-                <div class="flex items-center justify-between gap-3">
-                  <div class="min-w-0">
-                    <div class="truncate font-medium">{card?.name ?? cardId}</div>
-                    <div class="mt-1 font-mono text-[11px] text-muted-foreground">{card?.slug ?? "unknown"}</div>
-                  </div>
-                  <div class="flex gap-2">
-                    <Button
-                      class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-                      onclick={() => move(index, -1)}
-                      size="xs"
-                      variant="outline"
-                    >
-                      up
-                    </Button>
-                    <Button
-                      class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-                      onclick={() => move(index, 1)}
-                      size="xs"
-                      variant="outline"
-                    >
-                      down
-                    </Button>
-                    <Button
-                      class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-                      onclick={() => removeCard(cardId)}
-                      size="xs"
-                      variant="destructive"
-                    >
-                      remove
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            {:else}
+          <div class="overflow-hidden rounded-xl border">
+            <div class="border-b px-3 py-2">
+              <h3 class="text-sm font-semibold tracking-[0.18em] uppercase">Queue</h3>
+            </div>
+            {#if draftCards.length === 0}
               <Empty.Root class="border-none py-4">
                 <Empty.Header>
                   <Empty.Title>Empty queue</Empty.Title>
                   <Empty.Description>Add cards from the list on the right.</Empty.Description>
                 </Empty.Header>
               </Empty.Root>
-            {/each}
+            {:else}
+              <Table.Root>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.Head>Card</Table.Head>
+                    <Table.Head class="w-[1%] text-right">Actions</Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {#each draftCards as cardId, index (cardId)}
+                    {@const card = $cards.find((entry) => entry._id === cardId)}
+                    <Table.Row>
+                      <Table.Cell>
+                        <div class="font-medium">{card?.name ?? cardId}</div>
+                        <div class="font-mono text-[11px] text-muted-foreground">
+                          {card?.slug ?? "unknown"}
+                        </div>
+                      </Table.Cell>
+                      <Table.Cell class="text-right">
+                        <div class="inline-flex gap-2">
+                          <Button
+                            class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+                            onclick={() => move(index, -1)}
+                            size="xs"
+                            variant="outline"
+                          >
+                            up
+                          </Button>
+                          <Button
+                            class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+                            onclick={() => move(index, 1)}
+                            size="xs"
+                            variant="outline"
+                          >
+                            down
+                          </Button>
+                          <Button
+                            class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+                            onclick={() => removeCard(cardId)}
+                            size="xs"
+                            variant="destructive"
+                          >
+                            remove
+                          </Button>
+                        </div>
+                      </Table.Cell>
+                    </Table.Row>
+                  {/each}
+                </Table.Body>
+              </Table.Root>
+            {/if}
           </div>
 
-          <div class="flex flex-col gap-2">
-            <h3 class="text-sm font-semibold tracking-[0.18em] uppercase">Available cards</h3>
-            {#each $cards as card (card._id)}
-              <div class="rounded-lg bg-muted/30 px-3 py-3 ring-1 ring-foreground/10">
-                <div class="flex items-center justify-between gap-3">
-                  <div class="min-w-0">
-                    <div class="truncate font-medium">{card.name}</div>
-                    <div class="mt-1 font-mono text-[11px] text-muted-foreground">{card.slug}</div>
-                  </div>
-                  <Button
-                    class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-                    onclick={() => addCard(card._id)}
-                    size="xs"
-                    variant="secondary"
-                  >
-                    add
-                  </Button>
-                </div>
-              </div>
-            {/each}
+          <div class="overflow-hidden rounded-xl border">
+            <div class="border-b px-3 py-2">
+              <h3 class="text-sm font-semibold tracking-[0.18em] uppercase">Available cards</h3>
+            </div>
+            <Table.Root>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Card</Table.Head>
+                  <Table.Head class="w-[1%] text-right"></Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {#each $cards as card (card._id)}
+                  <Table.Row>
+                    <Table.Cell>
+                      <div class="font-medium">{card.name}</div>
+                      <div class="font-mono text-[11px] text-muted-foreground">{card.slug}</div>
+                    </Table.Cell>
+                    <Table.Cell class="text-right">
+                      <Button
+                        class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+                        onclick={() => addCard(card._id)}
+                        size="xs"
+                        variant="secondary"
+                      >
+                        add
+                      </Button>
+                    </Table.Cell>
+                  </Table.Row>
+                {/each}
+              </Table.Body>
+            </Table.Root>
           </div>
         </div>
       </Card.Content>

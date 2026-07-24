@@ -6,8 +6,8 @@
   import * as Empty from "$lib/components/ui/empty/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
+  import * as Table from "$lib/components/ui/table/index.js";
   import { cards, rules, saveRule, scenes } from "$lib/convex";
-  import { cn } from "$lib/utils.js";
 
   let selectedRuleId = $state<string | null>(null);
   let draftName = $state("");
@@ -63,38 +63,50 @@
   }
 </script>
 
-<div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-  <Card.Root>
-    <Card.Header>
-      <Card.Title class="text-sm tracking-[0.18em] uppercase">Rules</Card.Title>
-      <Card.Description>Alarm logic, scene switching, and interrupt pins.</Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-2">
-      {#each $rules as rule (rule._id)}
-        <button
-          class={cn(
-            "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-foreground/10 transition-[background-color,box-shadow] duration-150 ease-[var(--ease-out)] hover:bg-muted/50",
-            selectedRuleId === rule._id ? "bg-muted/50 ring-foreground/20" : "bg-muted/30"
-          )}
-          onclick={() => (selectedRuleId = rule._id)}
-          type="button"
-        >
-          <div class="min-w-0">
-            <div class="truncate font-medium">{rule.name}</div>
-            <div class="mt-1 font-mono text-[11px] text-muted-foreground">{rule.action.kind}</div>
-          </div>
-          <StatusBadge class="tabular-nums" tone="warning">{rule.priority}</StatusBadge>
-        </button>
-      {:else}
-        <Empty.Root class="border-none py-6">
-          <Empty.Header>
-            <Empty.Title>No rules</Empty.Title>
-            <Empty.Description>Seed demo data to create rules.</Empty.Description>
-          </Empty.Header>
-        </Empty.Root>
-      {/each}
-    </Card.Content>
-  </Card.Root>
+<div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
+  <section class="overflow-hidden rounded-xl border bg-card/40">
+    <div class="border-b px-4 py-3">
+      <h2 class="text-sm font-semibold tracking-[0.18em] uppercase">Rules</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Alarm logic, scene switching, and interrupt pins.</p>
+    </div>
+    {#if $rules.length === 0}
+      <Empty.Root class="border-none py-6">
+        <Empty.Header>
+          <Empty.Title>No rules</Empty.Title>
+          <Empty.Description>Seed demo data to create rules.</Empty.Description>
+        </Empty.Header>
+      </Empty.Root>
+    {:else}
+      <Table.Root>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>Name</Table.Head>
+            <Table.Head>Action</Table.Head>
+            <Table.Head class="text-right">Priority</Table.Head>
+            <Table.Head>Enabled</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {#each $rules as rule (rule._id)}
+            <Table.Row
+              class="cursor-pointer"
+              data-state={selectedRuleId === rule._id ? "selected" : undefined}
+              onclick={() => (selectedRuleId = rule._id)}
+            >
+              <Table.Cell class="font-medium">{rule.name}</Table.Cell>
+              <Table.Cell class="font-mono text-xs text-muted-foreground">{rule.action.kind}</Table.Cell>
+              <Table.Cell class="text-right tabular-nums">{rule.priority}</Table.Cell>
+              <Table.Cell>
+                <StatusBadge tone={rule.enabled ? "success" : "destructive"}>
+                  {rule.enabled ? "on" : "off"}
+                </StatusBadge>
+              </Table.Cell>
+            </Table.Row>
+          {/each}
+        </Table.Body>
+      </Table.Root>
+    {/if}
+  </section>
 
   <Card.Root>
     {#if selectedRule}

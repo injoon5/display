@@ -92,24 +92,30 @@
     </Card.Content>
   </Card.Root>
 
-  <Card.Root>
-    <Card.Header>
-      <Card.Title class="text-sm tracking-[0.18em] uppercase">Provision log</Card.Title>
-      <Card.Description>All steps stay visible so pairing and token flow are debuggable.</Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-2">
-      {#each logs as line, index (`${line}-${index}`)}
-        <div class="rounded-lg bg-muted/30 px-3 py-3 font-mono text-sm ring-1 ring-foreground/10">
-          {line}
-        </div>
-      {:else}
+  <section class="overflow-hidden rounded-xl border bg-card/40">
+    <div class="border-b px-4 py-3">
+      <h2 class="text-sm font-semibold tracking-[0.18em] uppercase">Provision log</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        All steps stay visible so pairing and token flow are debuggable.
+      </p>
+    </div>
+    <div class="px-4 py-3">
+      {#if logs.length === 0}
         <Empty.Root class="border-none py-6">
           <Empty.Header>
             <Empty.Title>No log entries</Empty.Title>
             <Empty.Description>Scan or mock provision to see steps here.</Empty.Description>
           </Empty.Header>
         </Empty.Root>
-      {/each}
-    </Card.Content>
-  </Card.Root>
+      {:else}
+        <ul class="flex flex-col gap-2 font-mono text-sm">
+          {#each logs as line, index (`${line}-${index}`)}
+            <li class="border-b border-border/60 pb-2 text-muted-foreground last:border-b-0 last:pb-0">
+              {line}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  </section>
 </div>

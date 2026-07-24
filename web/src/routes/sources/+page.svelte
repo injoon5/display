@@ -1,5 +1,4 @@
 <script lang="ts">
-  import StatusBadge from "$lib/components/status-badge.svelte";
   import StatTile from "$lib/components/stat-tile.svelte";
   import * as Alert from "$lib/components/ui/alert/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -7,9 +6,9 @@
   import * as Empty from "$lib/components/ui/empty/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { Separator } from "$lib/components/ui/separator/index.js";
+  import * as Table from "$lib/components/ui/table/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { sources, writeSource, type DashboardSource } from "$lib/convex";
-  import { cn } from "$lib/utils.js";
 
   let selectedSourceId = $state<string | null>(null);
   let draftJson = $state("{}");
@@ -75,38 +74,44 @@
   }
 </script>
 
-<div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-  <Card.Root>
-    <Card.Header>
-      <Card.Title class="text-sm tracking-[0.18em] uppercase">Sources</Card.Title>
-      <Card.Description>Probe providers, inspect raw payloads, and poke test values.</Card.Description>
-    </Card.Header>
-    <Card.Content class="flex flex-col gap-2">
-      {#each $sources as source (source._id)}
-        <button
-          class={cn(
-            "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-foreground/10 transition-[background-color,box-shadow] duration-150 ease-[var(--ease-out)] hover:bg-muted/50",
-            selectedSourceId === source.sourceId ? "bg-muted/50 ring-foreground/20" : "bg-muted/30"
-          )}
-          onclick={() => (selectedSourceId = source.sourceId)}
-          type="button"
-        >
-          <div class="min-w-0">
-            <div class="truncate font-medium">{source.sourceId}</div>
-            <div class="mt-1 font-mono text-[11px] text-muted-foreground">{source.kind}</div>
-          </div>
-          <StatusBadge class="tabular-nums" tone="warning">{source.intervalMs / 1000}s</StatusBadge>
-        </button>
-      {:else}
-        <Empty.Root class="border-none py-6">
-          <Empty.Header>
-            <Empty.Title>No sources</Empty.Title>
-            <Empty.Description>Seed demo data to populate providers.</Empty.Description>
-          </Empty.Header>
-        </Empty.Root>
-      {/each}
-    </Card.Content>
-  </Card.Root>
+<div class="grid gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
+  <section class="overflow-hidden rounded-xl border bg-card/40">
+    <div class="border-b px-4 py-3">
+      <h2 class="text-sm font-semibold tracking-[0.18em] uppercase">Sources</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Probe providers, inspect raw payloads, and poke test values.</p>
+    </div>
+    {#if $sources.length === 0}
+      <Empty.Root class="border-none py-6">
+        <Empty.Header>
+          <Empty.Title>No sources</Empty.Title>
+          <Empty.Description>Seed demo data to populate providers.</Empty.Description>
+        </Empty.Header>
+      </Empty.Root>
+    {:else}
+      <Table.Root>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>Source</Table.Head>
+            <Table.Head>Kind</Table.Head>
+            <Table.Head class="text-right">Interval</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {#each $sources as source (source._id)}
+            <Table.Row
+              class="cursor-pointer"
+              data-state={selectedSourceId === source.sourceId ? "selected" : undefined}
+              onclick={() => (selectedSourceId = source.sourceId)}
+            >
+              <Table.Cell class="font-medium">{source.sourceId}</Table.Cell>
+              <Table.Cell class="font-mono text-xs text-muted-foreground">{source.kind}</Table.Cell>
+              <Table.Cell class="text-right tabular-nums">{source.intervalMs / 1000}s</Table.Cell>
+            </Table.Row>
+          {/each}
+        </Table.Body>
+      </Table.Root>
+    {/if}
+  </section>
 
   <Card.Root>
     {#if selected}
@@ -153,12 +158,12 @@
           </div>
 
           <div class="flex flex-col gap-3">
-            <div class="rounded-lg bg-muted/40 p-3 ring-1 ring-foreground/10">
+            <div class="rounded-lg border bg-muted/20 p-3">
               <p class="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">Config</p>
               <pre class="mt-3 overflow-auto font-mono text-xs">{JSON.stringify(selected.config, null, 2)}</pre>
             </div>
             <Separator />
-            <div class="rounded-lg bg-muted/40 p-3 ring-1 ring-foreground/10">
+            <div class="rounded-lg border bg-muted/20 p-3">
               <p class="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">Health</p>
               <div class="mt-3 grid gap-2">
                 <StatTile label="Failures" value={selected.consecutiveFailures} />

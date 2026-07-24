@@ -78,10 +78,24 @@ On boot the firmware:
 
 1. mounts SPIFFS
 2. loads last-good program and slot cache
-3. renders immediately
-4. connects Wi-Fi in the background
+3. renders immediately (cached data starts dim until a live sync)
+4. connects Wi-Fi in the background (`esp_wifi_connect` when already provisioned)
 
 If sync has not completed, the renderer overlays a dim 1px status marker at `(63,0)`. If data is stale, the frame is dimmed to 50%.
+
+Staleness is measured from the device uptime clock at the moment a live `/device/data` frame arrives — not from the server timestamp — so it stays correct without NTP/RTC.
+
+### Pins (Matrix Portal S3)
+
+| Function | GPIO | Notes |
+|---|---|---|
+| I²C SDA / SCL | 16 / 17 | STEMMA QT + onboard LIS3DH |
+| LIS3DH INT1 | 15 | Double-tap edge stub |
+| LD2410C UART TX / RX | 18 / 8 | Labeled TXO / RXI header |
+| LD2450 UART TX / RX | 12 / 3 | A0 / A1 |
+| HX711 DOUT / SCK | 9 / 10 | A2 / A3 |
+
+Do not reuse HUB75 pins (`2,14,21,35–42,45,47,48`).
 
 ### Net sync status
 

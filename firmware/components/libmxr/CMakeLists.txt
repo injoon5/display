@@ -11,6 +11,7 @@ set(LIBMXR_SOURCES
     "${LIBMXR_ROOT}/fonts.c"
     "${LIBMXR_ROOT}/anim.c"
     "${LIBMXR_ROOT}/gamma.c"
+    "${LIBMXR_ROOT}/effects.c"
 )
 
 idf_component_register(

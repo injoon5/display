@@ -7,6 +7,7 @@ set(MXR_SOURCES
     fonts.c
     anim.c
     gamma.c
+    effects.c
 )
 
 if(COMMAND idf_component_register)

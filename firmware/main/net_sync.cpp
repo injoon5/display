@@ -18,7 +18,6 @@
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "esp_random.h"
-#include "esp_restart.h"
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
@@ -139,8 +138,8 @@ bool perform_request(
 
 uint32_t compute_backoff_ms(uint32_t failure_count) {
     static constexpr std::array<uint32_t, 6> kSteps = {1000, 2000, 4000, 8000, 16000, 30000};
-    const uint32_t capped_index = std::min<uint32_t>(failure_count, kSteps.size()) - 1;
-    const float base = static_cast<float>(kSteps[capped_index]);
+    const uint32_t index = failure_count == 0 ? 0 : std::min<uint32_t>(failure_count, kSteps.size()) - 1;
+    const float base = static_cast<float>(kSteps[index]);
     const float jitter = (static_cast<float>(esp_random() % 401) / 1000.0f) - 0.20f;
     return static_cast<uint32_t>(base * (1.0f + jitter));
 }
@@ -179,8 +178,60 @@ bool fetch_binary_url(const char *url, std::vector<uint8_t> *bytes) {
         ESP_LOGW(kTag, "Binary fetch returned %d for %s", status_code, url);
         return false;
     }
-    *bytes = response.body;
+    *bytes = std::move(response.body);
     return true;
+}
+
+void append_etag_query(char *dst, size_t dst_len, const char *key, const char *etag) {
+    if (!dst || dst_len == 0 || !key) {
+        return;
+    }
+
+    const size_t used = strnlen(dst, dst_len);
+    if (used >= dst_len - 1) {
+        return;
+    }
+
+    const bool has_query = strchr(dst, '?') != nullptr;
+    char *out = dst + used;
+    size_t remaining = dst_len - used;
+    const int wrote = snprintf(out, remaining, "%c%s=", has_query ? '&' : '?', key);
+    if (wrote <= 0 || static_cast<size_t>(wrote) >= remaining) {
+        dst[used] = '\0';
+        return;
+    }
+    out += wrote;
+    remaining -= static_cast<size_t>(wrote);
+
+    if (!etag) {
+        return;
+    }
+
+    // Strip surrounding quotes and percent-encode reserved query characters.
+    const char *start = etag;
+    size_t len = strlen(etag);
+    if (len >= 2 && start[0] == '"' && start[len - 1] == '"') {
+        ++start;
+        len -= 2;
+    }
+
+    for (size_t i = 0; i < len && remaining > 1; ++i) {
+        const unsigned char c = static_cast<unsigned char>(start[i]);
+        const bool safe =
+            (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+            c == '-' || c == '_' || c == '.' || c == '~';
+        if (safe) {
+            *out++ = static_cast<char>(c);
+            --remaining;
+        } else if (remaining > 3) {
+            snprintf(out, remaining, "%%%02X", c);
+            out += 3;
+            remaining -= 3;
+        } else {
+            break;
+        }
+    }
+    *out = '\0';
 }
 
 bool sync_program() {
@@ -330,6 +381,7 @@ bool sync_data() {
 
     s_data_version = frame.data_version;
     renderer_apply_slot_frame(frame);
+    renderer_mark_data_fresh();
     offline_store_slot_frame(frame, s_data_etag, response.body.data(), response.body.size());
     renderer_set_synced(true);
     s_synced_once = true;
@@ -425,13 +477,9 @@ void net_sync_task(void *arg) {
         bool data_changed = false;
         if (cycle_ok) {
             char wait_url[MX_HTTP_URL_BYTES];
-            snprintf(
-                wait_url,
-                sizeof(wait_url),
-                "%s/device/wait?program=%s&data=%s",
-                MX_API_BASE_URL,
-                s_program_etag,
-                s_data_etag);
+            snprintf(wait_url, sizeof(wait_url), "%s/device/wait", MX_API_BASE_URL);
+            append_etag_query(wait_url, sizeof(wait_url), "program", s_program_etag);
+            append_etag_query(wait_url, sizeof(wait_url), "data", s_data_etag);
 
             HttpBuffer response;
             int status_code = 0;

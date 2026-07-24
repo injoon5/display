@@ -1,4 +1,12 @@
 <script lang="ts">
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import StatTile from "$lib/components/stat-tile.svelte";
+  import * as Alert from "$lib/components/ui/alert/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as Card from "$lib/components/ui/card/index.js";
+  import * as Empty from "$lib/components/ui/empty/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
   import { firmware, publishFirmware } from "$lib/convex";
 
   let version = $state("1.5.1-dev");
@@ -15,74 +23,85 @@
 </script>
 
 <div class="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-  <section class="panel rounded-3xl p-5">
-    <div>
-      <h2 class="text-xl font-semibold text-zinc-50">Firmware publish</h2>
-      <p class="mt-1 text-sm text-[color:var(--muted)]">Channel metadata only; OTA assets remain external.</p>
-    </div>
-
-    <div class="mt-4 space-y-3">
-      <label class="block rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-        <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">version</span>
-        <input bind:value={version} class="mt-2 w-full bg-transparent font-mono outline-none" />
-      </label>
-      <label class="block rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-        <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">channel</span>
-        <select bind:value={channel} class="mt-2 w-full bg-transparent outline-none">
+  <Card.Root>
+    <Card.Header>
+      <Card.Title class="text-xl">Firmware publish</Card.Title>
+      <Card.Description>Channel metadata only; OTA assets remain external.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-3">
+      <div class="flex flex-col gap-1.5">
+        <Label for="fw-version">version</Label>
+        <Input id="fw-version" class="font-mono" bind:value={version} />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <Label for="fw-channel">channel</Label>
+        <select
+          id="fw-channel"
+          class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          bind:value={channel}
+        >
           <option value="dev">dev</option>
           <option value="stable">stable</option>
         </select>
-      </label>
-      <label class="block rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-        <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">r2 url</span>
-        <input bind:value={r2Url} class="mt-2 w-full bg-transparent font-mono outline-none" />
-      </label>
-      <label class="block rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-        <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">sha256</span>
-        <input bind:value={sha256} class="mt-2 w-full bg-transparent font-mono outline-none" />
-      </label>
-      <label class="block rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-        <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">signature</span>
-        <input bind:value={signature} class="mt-2 w-full bg-transparent font-mono outline-none" />
-      </label>
-    </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <Label for="fw-r2">r2 url</Label>
+        <Input id="fw-r2" class="font-mono" bind:value={r2Url} />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <Label for="fw-sha">sha256</Label>
+        <Input id="fw-sha" class="font-mono" bind:value={sha256} />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <Label for="fw-sig">signature</Label>
+        <Input id="fw-sig" class="font-mono" bind:value={signature} />
+      </div>
 
-    <button class="mt-4 rounded-xl border border-lime-500/20 bg-lime-500/10 px-4 py-2 text-sm text-lime-100" onclick={handlePublish}>
-      Publish metadata
-    </button>
+      <Button
+        class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+        onclick={handlePublish}
+      >
+        Publish metadata
+      </Button>
 
-    {#if message}
-      <div class="mt-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3 text-sm text-zinc-200">{message}</div>
-    {/if}
-  </section>
+      {#if message}
+        <Alert.Root>
+          <Alert.Description>{message}</Alert.Description>
+        </Alert.Root>
+      {/if}
+    </Card.Content>
+  </Card.Root>
 
-  <section class="panel rounded-3xl p-5">
-    <div class="mb-3">
-      <h2 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">Release history</h2>
-      <p class="mt-1 text-xs text-[color:var(--muted)]">Newest first, grouped by release channel.</p>
-    </div>
-    <div class="space-y-3">
+  <Card.Root>
+    <Card.Header>
+      <Card.Title class="text-sm tracking-[0.18em] uppercase">Release history</Card.Title>
+      <Card.Description>Newest first, grouped by release channel.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-3">
       {#each $firmware as release (release._id)}
-        <div class="rounded-2xl border border-white/5 bg-black/20 p-4">
+        <div class="rounded-lg bg-muted/30 p-4 ring-1 ring-foreground/10">
           <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="text-lg font-semibold text-zinc-50">{release.version}</div>
-              <div class="mt-1 font-mono text-[11px] text-[color:var(--muted)]">{release.r2Url}</div>
+            <div class="min-w-0">
+              <div class="text-lg font-semibold">{release.version}</div>
+              <div class="mt-1 truncate font-mono text-[11px] text-muted-foreground">{release.r2Url}</div>
             </div>
-            <span class={`badge ${release.channel === "stable" ? "badge-green" : "badge-amber"}`}>{release.channel}</span>
+            <StatusBadge tone={release.channel === "stable" ? "success" : "warning"}>
+              {release.channel}
+            </StatusBadge>
           </div>
           <div class="mt-3 grid gap-3 md:grid-cols-2">
-            <div class="rounded-xl border border-white/5 bg-black/20 px-3 py-2">
-              <div class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">sha256</div>
-              <div class="mt-1 font-mono text-xs text-zinc-100">{release.sha256}</div>
-            </div>
-            <div class="rounded-xl border border-white/5 bg-black/20 px-3 py-2">
-              <div class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">released</div>
-              <div class="mt-1 font-mono text-xs text-zinc-100">{new Date(release.releasedAt).toLocaleString()}</div>
-            </div>
+            <StatTile label="sha256" value={release.sha256} />
+            <StatTile label="released" value={new Date(release.releasedAt).toLocaleString()} />
           </div>
         </div>
+      {:else}
+        <Empty.Root class="border-none py-6">
+          <Empty.Header>
+            <Empty.Title>No releases</Empty.Title>
+            <Empty.Description>Publish firmware metadata to start the history.</Empty.Description>
+          </Empty.Header>
+        </Empty.Root>
       {/each}
-    </div>
-  </section>
+    </Card.Content>
+  </Card.Root>
 </div>

@@ -1,4 +1,11 @@
 <script lang="ts">
+  import { resolve } from "$app/paths";
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import StatTile from "$lib/components/stat-tile.svelte";
+  import * as Alert from "$lib/components/ui/alert/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as Card from "$lib/components/ui/card/index.js";
+  import * as Empty from "$lib/components/ui/empty/index.js";
   import { cards, dashboardStatus, resetMockState, seedLiveDemo } from "$lib/convex";
 
   let actionMessage = $state<string | null>(null);
@@ -21,66 +28,80 @@
   let status = $derived($dashboardStatus);
 </script>
 
-<section class="panel rounded-3xl p-5">
-  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-    <div>
-      <div class="flex items-center gap-2">
-        <span class="badge badge-green">cards</span>
-        <span class={`badge ${status.mode === "live" ? "badge-green" : "badge-amber"}`}>{status.mode}</span>
+<Card.Root class="shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_12px_40px_rgba(0,0,0,0.28)]">
+  <Card.Header class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <StatusBadge tone="success">cards</StatusBadge>
+        <StatusBadge tone={status.mode === "live" ? "success" : "warning"}>{status.mode}</StatusBadge>
       </div>
-      <h2 class="mt-3 text-xl font-semibold text-zinc-50">Card catalogue</h2>
-      <p class="mt-1 text-sm text-[color:var(--muted)]">
+      <Card.Title class="text-xl">Card catalogue</Card.Title>
+      <Card.Description>
         Seed set: bus-402, weather, air, clock, clock-dim, indoor, calendar-next, self-status.
-      </p>
+      </Card.Description>
     </div>
     <div class="flex flex-wrap gap-2">
-      <button class="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm text-amber-100" onclick={handleSeed}>
+      <Button
+        class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+        onclick={handleSeed}
+        variant="secondary"
+      >
         Seed demo
-      </button>
-      <button class="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-200" onclick={handleReset}>
+      </Button>
+      <Button
+        class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+        onclick={handleReset}
+        variant="outline"
+      >
         Reset mock
-      </button>
+      </Button>
     </div>
-  </div>
-
+  </Card.Header>
   {#if actionMessage}
-    <div class="mt-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3 text-sm text-zinc-200">
-      {actionMessage}
-    </div>
+    <Card.Content>
+      <Alert.Root>
+        <Alert.Description>{actionMessage}</Alert.Description>
+      </Alert.Root>
+    </Card.Content>
   {/if}
-</section>
+</Card.Root>
 
-<div class="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-  {#each $cards as card (card._id)}
-    <a class="panel rounded-3xl p-4 transition hover:border-lime-400/20 hover:bg-lime-400/6" href={`/cards/${card.slug}`}>
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <h3 class="text-lg font-semibold text-zinc-50">{card.name}</h3>
-          <p class="mt-1 font-mono text-xs text-[color:var(--muted)]">{card.slug}</p>
+{#if $cards.length === 0}
+  <Empty.Root class="mt-4">
+    <Empty.Header>
+      <Empty.Title>No cards yet</Empty.Title>
+      <Empty.Description>Seed the demo catalogue to populate card definitions.</Empty.Description>
+    </Empty.Header>
+  </Empty.Root>
+{:else}
+  <div class="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+    {#each $cards as card (card._id)}
+      <a
+        class="rounded-xl bg-card p-4 ring-1 ring-foreground/10 transition-[background-color,box-shadow,transform] duration-150 ease-[var(--ease-out)] hover:bg-muted/50 hover:ring-foreground/20 active:scale-[0.99]"
+        href={resolve("/cards/[slug]", { slug: card.slug })}
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="truncate text-lg font-semibold">{card.name}</h3>
+            <p class="mt-1 font-mono text-xs text-muted-foreground">{card.slug}</p>
+          </div>
+          <StatusBadge tone={card.enabled ? "success" : "destructive"}>
+            {card.enabled ? "enabled" : "disabled"}
+          </StatusBadge>
         </div>
-        <span class={`badge ${card.enabled ? "badge-green" : "badge-red"}`}>{card.enabled ? "enabled" : "disabled"}</span>
-      </div>
 
-      <dl class="mt-4 grid grid-cols-3 gap-3 text-sm">
-        <div class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2">
-          <dt class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">slots</dt>
-          <dd class="mt-1 font-mono text-zinc-100">{card.slotMap.length}</dd>
+        <div class="mt-4 grid grid-cols-3 gap-3">
+          <StatTile label="slots" value={card.slotMap.length} />
+          <StatTile label="amps" value={card.estimatedAmps.toFixed(2)} />
+          <StatTile label="priority" value={card.priority} />
         </div>
-        <div class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2">
-          <dt class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">amps</dt>
-          <dd class="mt-1 font-mono text-zinc-100">{card.estimatedAmps.toFixed(2)}</dd>
-        </div>
-        <div class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2">
-          <dt class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">priority</dt>
-          <dd class="mt-1 font-mono text-zinc-100">{card.priority}</dd>
-        </div>
-      </dl>
 
-      <div class="mt-4 flex flex-wrap gap-2">
-        {#each card.sourceRefs as sourceId}
-          <span class="badge badge-amber">{sourceId}</span>
-        {/each}
-      </div>
-    </a>
-  {/each}
-</div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          {#each card.sourceRefs as sourceId (sourceId)}
+            <StatusBadge tone="warning">{sourceId}</StatusBadge>
+          {/each}
+        </div>
+      </a>
+    {/each}
+  </div>
+{/if}

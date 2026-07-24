@@ -1,5 +1,13 @@
 <script lang="ts">
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import * as Alert from "$lib/components/ui/alert/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as Card from "$lib/components/ui/card/index.js";
+  import * as Empty from "$lib/components/ui/empty/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
   import { cards, rules, saveRule, scenes } from "$lib/convex";
+  import { cn } from "$lib/utils.js";
 
   let selectedRuleId = $state<string | null>(null);
   let draftName = $state("");
@@ -56,99 +64,139 @@
 </script>
 
 <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-  <section class="panel rounded-3xl p-4">
-    <div class="mb-3">
-      <h2 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">Rules</h2>
-      <p class="mt-1 text-xs text-[color:var(--muted)]">Alarm logic, scene switching, and interrupt pins.</p>
-    </div>
-    <div class="space-y-2">
+  <Card.Root>
+    <Card.Header>
+      <Card.Title class="text-sm tracking-[0.18em] uppercase">Rules</Card.Title>
+      <Card.Description>Alarm logic, scene switching, and interrupt pins.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-2">
       {#each $rules as rule (rule._id)}
         <button
-          class={`w-full rounded-2xl border px-3 py-3 text-left ${selectedRuleId === rule._id ? "border-lime-400/20 bg-lime-400/8" : "border-white/5 bg-black/20"}`}
+          class={cn(
+            "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-foreground/10 transition-[background-color,box-shadow] duration-150 ease-[var(--ease-out)] hover:bg-muted/50",
+            selectedRuleId === rule._id ? "bg-muted/50 ring-foreground/20" : "bg-muted/30"
+          )}
           onclick={() => (selectedRuleId = rule._id)}
+          type="button"
         >
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <div class="font-medium text-zinc-100">{rule.name}</div>
-              <div class="mt-1 font-mono text-[11px] text-[color:var(--muted)]">{rule.action.kind}</div>
-            </div>
-            <span class="badge badge-amber">{rule.priority}</span>
+          <div class="min-w-0">
+            <div class="truncate font-medium">{rule.name}</div>
+            <div class="mt-1 font-mono text-[11px] text-muted-foreground">{rule.action.kind}</div>
           </div>
+          <StatusBadge class="tabular-nums" tone="warning">{rule.priority}</StatusBadge>
         </button>
+      {:else}
+        <Empty.Root class="border-none py-6">
+          <Empty.Header>
+            <Empty.Title>No rules</Empty.Title>
+            <Empty.Description>Seed demo data to create rules.</Empty.Description>
+          </Empty.Header>
+        </Empty.Root>
       {/each}
-    </div>
-  </section>
+    </Card.Content>
+  </Card.Root>
 
-  <section class="panel rounded-3xl p-5">
+  <Card.Root>
     {#if selectedRule}
-      <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div>
-          <h2 class="text-xl font-semibold text-zinc-50">Rule editor</h2>
-          <p class="mt-1 text-sm text-[color:var(--muted)]">Conditions use the same source paths the cards bind to.</p>
+      <Card.Header class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div class="flex flex-col gap-1.5">
+          <Card.Title class="text-xl">Rule editor</Card.Title>
+          <Card.Description>Conditions use the same source paths the cards bind to.</Card.Description>
         </div>
-        <button class="rounded-xl border border-lime-500/20 bg-lime-500/10 px-4 py-2 text-sm text-lime-100" onclick={handleSave}>
+        <Button
+          class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+          onclick={handleSave}
+        >
           Save rule
-        </button>
-      </div>
+        </Button>
+      </Card.Header>
 
-      {#if message}
-        <div class="mt-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3 text-sm text-zinc-200">{message}</div>
-      {/if}
+      <Card.Content class="flex flex-col gap-4">
+        {#if message}
+          <Alert.Root>
+            <Alert.Description>{message}</Alert.Description>
+          </Alert.Root>
+        {/if}
 
-      <div class="mt-4 grid gap-4 lg:grid-cols-3">
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">name</span>
-          <input bind:value={draftName} class="mt-2 w-full bg-transparent outline-none" />
-        </label>
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">priority</span>
-          <input bind:value={draftPriority} class="mt-2 w-full bg-transparent font-mono outline-none" type="number" />
-        </label>
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">action</span>
-          <select bind:value={actionKind} class="mt-2 w-full bg-transparent outline-none">
-            <option value="pin">pin</option>
-            <option value="interrupt">interrupt</option>
-            <option value="scene">scene</option>
-            <option value="sleep">sleep</option>
-          </select>
-        </label>
-      </div>
+        <div class="grid gap-4 lg:grid-cols-3">
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-name">name</Label>
+            <Input id="rule-name" bind:value={draftName} />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-priority">priority</Label>
+            <Input id="rule-priority" class="font-mono tabular-nums" type="number" bind:value={draftPriority} />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-action">action</Label>
+            <select
+              id="rule-action"
+              class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              bind:value={actionKind}
+            >
+              <option value="pin">pin</option>
+              <option value="interrupt">interrupt</option>
+              <option value="scene">scene</option>
+              <option value="sleep">sleep</option>
+            </select>
+          </div>
+        </div>
 
-      <label class="mt-4 block rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-        <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">condition</span>
-        <input bind:value={draftCondition} class="mt-2 w-full bg-transparent font-mono outline-none" />
-      </label>
+        <div class="flex flex-col gap-1.5">
+          <Label for="rule-condition">condition</Label>
+          <Input id="rule-condition" class="font-mono" bind:value={draftCondition} />
+        </div>
 
-      <div class="mt-4 grid gap-4 lg:grid-cols-3">
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">target card</span>
-          <select bind:value={actionCardId} class="mt-2 w-full bg-transparent outline-none">
-            <option value="">none</option>
-            {#each $cards as card (card._id)}
-              <option value={card._id}>{card.name}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">target scene</span>
-          <select bind:value={actionSceneId} class="mt-2 w-full bg-transparent outline-none">
-            <option value="">none</option>
-            {#each $scenes as scene (scene._id)}
-              <option value={scene._id}>{scene.name}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">duration ms</span>
-          <input bind:value={actionDurationMs} class="mt-2 w-full bg-transparent font-mono outline-none" type="number" />
-        </label>
-      </div>
+        <div class="grid gap-4 lg:grid-cols-3">
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-card">target card</Label>
+            <select
+              id="rule-card"
+              class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              bind:value={actionCardId}
+            >
+              <option value="">none</option>
+              {#each $cards as card (card._id)}
+                <option value={card._id}>{card.name}</option>
+              {/each}
+            </select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-scene">target scene</Label>
+            <select
+              id="rule-scene"
+              class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              bind:value={actionSceneId}
+            >
+              <option value="">none</option>
+              {#each $scenes as scene (scene._id)}
+                <option value={scene._id}>{scene.name}</option>
+              {/each}
+            </select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="rule-duration">duration ms</Label>
+            <Input
+              id="rule-duration"
+              class="font-mono tabular-nums"
+              type="number"
+              bind:value={actionDurationMs}
+            />
+          </div>
+        </div>
 
-      <label class="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-100">
-        <input bind:checked={draftEnabled} class="accent-lime-400" type="checkbox" />
-        enabled
-      </label>
+        <Label class="inline-flex w-fit items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-foreground/10">
+          <input bind:checked={draftEnabled} class="accent-primary" type="checkbox" />
+          enabled
+        </Label>
+      </Card.Content>
+    {:else}
+      <Empty.Root class="border-none py-12">
+        <Empty.Header>
+          <Empty.Title>Select a rule</Empty.Title>
+          <Empty.Description>Pick a rule from the list to edit conditions and actions.</Empty.Description>
+        </Empty.Header>
+      </Empty.Root>
     {/if}
-  </section>
+  </Card.Root>
 </div>

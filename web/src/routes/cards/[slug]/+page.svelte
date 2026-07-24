@@ -1,4 +1,11 @@
 <script lang="ts">
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import * as Alert from "$lib/components/ui/alert/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as Card from "$lib/components/ui/card/index.js";
+  import * as Empty from "$lib/components/ui/empty/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
   import { compile } from "$lib/compiler";
   import {
     buildSlotSnapshot,
@@ -112,71 +119,90 @@
 </script>
 
 {#if !card}
-  <section class="panel rounded-3xl p-6">
-    <h2 class="text-xl font-semibold text-zinc-50">Card not found</h2>
-    <p class="mt-2 text-sm text-[color:var(--muted)]">Choose a card from the catalogue to open the live editor.</p>
-    <a class="mt-4 inline-flex rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-100" href="/cards">
-      Back to cards
-    </a>
-  </section>
+  <Empty.Root>
+    <Empty.Header>
+      <Empty.Title>Card not found</Empty.Title>
+      <Empty.Description>Choose a card from the catalogue to open the live editor.</Empty.Description>
+    </Empty.Header>
+    <Empty.Content>
+      <Button
+        class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+        href="/cards"
+        variant="outline"
+      >
+        Back to cards
+      </Button>
+    </Empty.Content>
+  </Empty.Root>
 {:else}
-  <section class="panel rounded-3xl p-5">
-    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="badge badge-green">editor</span>
-          <span class="badge badge-amber">{card.slug}</span>
+  <Card.Root class="shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_12px_40px_rgba(0,0,0,0.28)]">
+    <Card.Header class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div class="flex flex-col gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <StatusBadge tone="success">editor</StatusBadge>
+          <StatusBadge tone="warning">{card.slug}</StatusBadge>
         </div>
-        <h2 class="mt-3 text-xl font-semibold text-zinc-50">{card.name}</h2>
-        <p class="mt-1 text-sm text-[color:var(--muted)]">
+        <Card.Title class="text-xl">{card.name}</Card.Title>
+        <Card.Description>
           Svelte 5 live preview loop: state → compile → render → framebuffer.
-        </p>
+        </Card.Description>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">name</span>
-          <input bind:value={name} class="mt-2 w-full bg-transparent outline-none" />
-        </label>
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">slug</span>
-          <input bind:value={slug} class="mt-2 w-full bg-transparent font-mono outline-none" />
-        </label>
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">priority</span>
-          <input bind:value={priority} class="mt-2 w-full bg-transparent font-mono outline-none" type="number" />
-        </label>
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">dwell ms</span>
-          <input bind:value={dwellMs} class="mt-2 w-full bg-transparent font-mono outline-none" type="number" />
-        </label>
+      <div class="grid w-full gap-3 sm:grid-cols-2 xl:max-w-3xl xl:grid-cols-4">
+        <div class="flex flex-col gap-1.5">
+          <Label for="card-name">name</Label>
+          <Input id="card-name" bind:value={name} />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <Label for="card-slug">slug</Label>
+          <Input id="card-slug" class="font-mono" bind:value={slug} />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <Label for="card-priority">priority</Label>
+          <Input id="card-priority" class="font-mono tabular-nums" type="number" bind:value={priority} />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <Label for="card-dwell">dwell ms</Label>
+          <Input id="card-dwell" class="font-mono tabular-nums" type="number" bind:value={dwellMs} />
+        </div>
       </div>
-    </div>
+    </Card.Header>
 
-    <div class="mt-4 flex flex-wrap items-center gap-3">
-      <label class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-100">
-        <input bind:checked={enabled} class="accent-lime-400" type="checkbox" />
-        enabled
-      </label>
-      <button class="rounded-xl border border-lime-500/20 bg-lime-500/10 px-4 py-2 text-sm text-lime-100" onclick={handleSave}>
-        Save card
-      </button>
-      <button class="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm text-amber-100" onclick={handleDeploy}>
-        Deploy to device
-      </button>
+    <Card.Content class="flex flex-col gap-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <Label class="inline-flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-foreground/10">
+          <input bind:checked={enabled} class="accent-primary" type="checkbox" />
+          enabled
+        </Label>
+        <Button
+          class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+          onclick={handleSave}
+        >
+          Save card
+        </Button>
+        <Button
+          class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+          onclick={handleDeploy}
+          variant="secondary"
+        >
+          Deploy to device
+        </Button>
+      </div>
       {#if actionMessage}
-        <span class="text-sm text-zinc-200">{actionMessage}</span>
+        <Alert.Root>
+          <Alert.Description>{actionMessage}</Alert.Description>
+        </Alert.Root>
       {/if}
-    </div>
-  </section>
+    </Card.Content>
+  </Card.Root>
 
   <div class="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.4fr)_520px]">
-    <div class="space-y-4">
+    <div class="flex flex-col gap-4">
       <CardEditor bind:value={source} filename={`${slug}.card`} label="Card editor" />
       <Diagnostics compiled={compiled} />
     </div>
 
-    <div class="space-y-4">
+    <div class="flex flex-col gap-4">
       <div class="grid gap-4 xl:grid-cols-2 2xl:grid-cols-1">
         <Preview bind:hovered {compiled} {nowMs} {source} snapshot={snapshot} />
         <Mirror card={card} {nowMs} snapshot={snapshot} />

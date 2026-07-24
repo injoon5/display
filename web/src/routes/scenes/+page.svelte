@@ -1,5 +1,14 @@
 <script lang="ts">
+  import StatusBadge from "$lib/components/status-badge.svelte";
+  import * as Alert from "$lib/components/ui/alert/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import * as Card from "$lib/components/ui/card/index.js";
+  import * as Empty from "$lib/components/ui/empty/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
+  import { Separator } from "$lib/components/ui/separator/index.js";
   import { cards, saveScene, scenes } from "$lib/convex";
+  import { cn } from "$lib/utils.js";
 
   let selectedSceneId = $state<string | null>(null);
   let draftName = $state("");
@@ -71,105 +80,173 @@
 </script>
 
 <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-  <section class="panel rounded-3xl p-4">
-    <div class="mb-3">
-      <h2 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">Scenes</h2>
-      <p class="mt-1 text-xs text-[color:var(--muted)]">Playlist builder for scheduled card queues.</p>
-    </div>
-    <div class="space-y-2">
+  <Card.Root>
+    <Card.Header>
+      <Card.Title class="text-sm tracking-[0.18em] uppercase">Scenes</Card.Title>
+      <Card.Description>Playlist builder for scheduled card queues.</Card.Description>
+    </Card.Header>
+    <Card.Content class="flex flex-col gap-2">
       {#each $scenes as scene (scene._id)}
         <button
-          class={`w-full rounded-2xl border px-3 py-3 text-left ${selectedSceneId === scene._id ? "border-lime-400/20 bg-lime-400/8" : "border-white/5 bg-black/20"}`}
+          class={cn(
+            "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left ring-1 ring-foreground/10 transition-[background-color,box-shadow] duration-150 ease-[var(--ease-out)] hover:bg-muted/50",
+            selectedSceneId === scene._id ? "bg-muted/50 ring-foreground/20" : "bg-muted/30"
+          )}
           onclick={() => (selectedSceneId = scene._id)}
+          type="button"
         >
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <div class="font-medium text-zinc-100">{scene.name}</div>
-              <div class="mt-1 font-mono text-[11px] text-[color:var(--muted)]">{scene.schedule ?? "manual"}</div>
-            </div>
-            <span class="badge badge-amber">{scene.cardIds.length}</span>
+          <div class="min-w-0">
+            <div class="truncate font-medium">{scene.name}</div>
+            <div class="mt-1 font-mono text-[11px] text-muted-foreground">{scene.schedule ?? "manual"}</div>
           </div>
+          <StatusBadge class="tabular-nums" tone="warning">{scene.cardIds.length}</StatusBadge>
         </button>
+      {:else}
+        <Empty.Root class="border-none py-6">
+          <Empty.Header>
+            <Empty.Title>No scenes</Empty.Title>
+            <Empty.Description>Seed demo data to create scenes.</Empty.Description>
+          </Empty.Header>
+        </Empty.Root>
       {/each}
-    </div>
-  </section>
+    </Card.Content>
+  </Card.Root>
 
-  <section class="panel rounded-3xl p-5">
+  <Card.Root>
     {#if selectedScene}
-      <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div>
-          <h2 class="text-xl font-semibold text-zinc-50">Scene builder</h2>
-          <p class="mt-1 text-sm text-[color:var(--muted)]">Reorder cards and tune the schedule window.</p>
+      <Card.Header class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div class="flex flex-col gap-1.5">
+          <Card.Title class="text-xl">Scene builder</Card.Title>
+          <Card.Description>Reorder cards and tune the schedule window.</Card.Description>
         </div>
-        <button class="rounded-xl border border-lime-500/20 bg-lime-500/10 px-4 py-2 text-sm text-lime-100" onclick={handleSave}>
+        <Button
+          class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+          onclick={handleSave}
+        >
           Save scene
-        </button>
-      </div>
+        </Button>
+      </Card.Header>
 
-      {#if message}
-        <div class="mt-4 rounded-2xl border border-white/5 bg-black/20 px-4 py-3 text-sm text-zinc-200">{message}</div>
-      {/if}
+      <Card.Content class="flex flex-col gap-4">
+        {#if message}
+          <Alert.Root>
+            <Alert.Description>{message}</Alert.Description>
+          </Alert.Root>
+        {/if}
 
-      <div class="mt-4 grid gap-4 lg:grid-cols-3">
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">name</span>
-          <input bind:value={draftName} class="mt-2 w-full bg-transparent outline-none" />
-        </label>
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">schedule</span>
-          <input bind:value={draftSchedule} class="mt-2 w-full bg-transparent font-mono outline-none" placeholder="weekday 06:30-09:30" />
-        </label>
-        <label class="rounded-2xl border border-white/5 bg-black/20 px-3 py-2 text-sm">
-          <span class="text-[11px] uppercase tracking-[0.18em] text-[color:var(--muted)]">brightness</span>
-          <input bind:value={draftBrightness} class="mt-2 w-full bg-transparent font-mono outline-none" max="100" min="1" type="number" />
-        </label>
-      </div>
-
-      <label class="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-zinc-100">
-        <input bind:checked={draftEnabled} class="accent-lime-400" type="checkbox" />
-        enabled
-      </label>
-
-      <div class="mt-5 grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div class="space-y-2">
-          <h3 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">Queue</h3>
-          {#each draftCards as cardId, index (cardId)}
-            {@const card = $cards.find((entry) => entry._id === cardId)}
-            <div class="rounded-2xl border border-white/5 bg-black/20 px-3 py-3">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <div class="font-medium text-zinc-100">{card?.name ?? cardId}</div>
-                  <div class="mt-1 font-mono text-[11px] text-[color:var(--muted)]">{card?.slug ?? "unknown"}</div>
-                </div>
-                <div class="flex gap-2">
-                  <button class="rounded-lg border border-white/10 px-2 py-1 text-xs" onclick={() => move(index, -1)}>up</button>
-                  <button class="rounded-lg border border-white/10 px-2 py-1 text-xs" onclick={() => move(index, 1)}>down</button>
-                  <button class="rounded-lg border border-red-400/20 px-2 py-1 text-xs text-red-200" onclick={() => removeCard(cardId)}>
-                    remove
-                  </button>
-                </div>
-              </div>
-            </div>
-          {/each}
+        <div class="grid gap-4 lg:grid-cols-3">
+          <div class="flex flex-col gap-1.5">
+            <Label for="scene-name">name</Label>
+            <Input id="scene-name" bind:value={draftName} />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="scene-schedule">schedule</Label>
+            <Input
+              id="scene-schedule"
+              class="font-mono"
+              placeholder="weekday 06:30-09:30"
+              bind:value={draftSchedule}
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="scene-brightness">brightness</Label>
+            <Input
+              id="scene-brightness"
+              class="font-mono tabular-nums"
+              max="100"
+              min="1"
+              type="number"
+              bind:value={draftBrightness}
+            />
+          </div>
         </div>
 
-        <div class="space-y-2">
-          <h3 class="text-sm font-semibold tracking-[0.18em] text-zinc-100 uppercase">Available cards</h3>
-          {#each $cards as card (card._id)}
-            <div class="rounded-2xl border border-white/5 bg-black/20 px-3 py-3">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <div class="font-medium text-zinc-100">{card.name}</div>
-                  <div class="mt-1 font-mono text-[11px] text-[color:var(--muted)]">{card.slug}</div>
+        <Label class="inline-flex w-fit items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-foreground/10">
+          <input bind:checked={draftEnabled} class="accent-primary" type="checkbox" />
+          enabled
+        </Label>
+
+        <Separator />
+
+        <div class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div class="flex flex-col gap-2">
+            <h3 class="text-sm font-semibold tracking-[0.18em] uppercase">Queue</h3>
+            {#each draftCards as cardId, index (cardId)}
+              {@const card = $cards.find((entry) => entry._id === cardId)}
+              <div class="rounded-lg bg-muted/30 px-3 py-3 ring-1 ring-foreground/10">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="truncate font-medium">{card?.name ?? cardId}</div>
+                    <div class="mt-1 font-mono text-[11px] text-muted-foreground">{card?.slug ?? "unknown"}</div>
+                  </div>
+                  <div class="flex gap-2">
+                    <Button
+                      class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+                      onclick={() => move(index, -1)}
+                      size="xs"
+                      variant="outline"
+                    >
+                      up
+                    </Button>
+                    <Button
+                      class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+                      onclick={() => move(index, 1)}
+                      size="xs"
+                      variant="outline"
+                    >
+                      down
+                    </Button>
+                    <Button
+                      class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+                      onclick={() => removeCard(cardId)}
+                      size="xs"
+                      variant="destructive"
+                    >
+                      remove
+                    </Button>
+                  </div>
                 </div>
-                <button class="rounded-lg border border-lime-400/20 px-2 py-1 text-xs text-lime-100" onclick={() => addCard(card._id)}>
-                  add
-                </button>
               </div>
-            </div>
-          {/each}
+            {:else}
+              <Empty.Root class="border-none py-4">
+                <Empty.Header>
+                  <Empty.Title>Empty queue</Empty.Title>
+                  <Empty.Description>Add cards from the list on the right.</Empty.Description>
+                </Empty.Header>
+              </Empty.Root>
+            {/each}
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <h3 class="text-sm font-semibold tracking-[0.18em] uppercase">Available cards</h3>
+            {#each $cards as card (card._id)}
+              <div class="rounded-lg bg-muted/30 px-3 py-3 ring-1 ring-foreground/10">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="truncate font-medium">{card.name}</div>
+                    <div class="mt-1 font-mono text-[11px] text-muted-foreground">{card.slug}</div>
+                  </div>
+                  <Button
+                    class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+                    onclick={() => addCard(card._id)}
+                    size="xs"
+                    variant="secondary"
+                  >
+                    add
+                  </Button>
+                </div>
+              </div>
+            {/each}
+          </div>
         </div>
-      </div>
+      </Card.Content>
+    {:else}
+      <Empty.Root class="border-none py-12">
+        <Empty.Header>
+          <Empty.Title>Select a scene</Empty.Title>
+          <Empty.Description>Pick a scene from the list to edit its queue.</Empty.Description>
+        </Empty.Header>
+      </Empty.Root>
     {/if}
-  </section>
+  </Card.Root>
 </div>

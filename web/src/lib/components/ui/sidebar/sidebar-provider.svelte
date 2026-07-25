@@ -37,7 +37,9 @@
 
 <svelte:window onkeydown={sidebar.handleShortcutKeydown} />
 
-<Tooltip.Provider delayDuration={0}>
+<!-- A short delay stops tooltips firing on every pass of the cursor; the skip
+     window then opens neighbouring tooltips instantly while one is already open. -->
+<Tooltip.Provider delayDuration={350} skipDelayDuration={300}>
 	<div
 		data-slot="sidebar-wrapper"
 		style="--sidebar-width: {SIDEBAR_WIDTH}; --sidebar-width-icon: {SIDEBAR_WIDTH_ICON}; {style}"

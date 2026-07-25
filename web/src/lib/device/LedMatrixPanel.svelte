@@ -50,8 +50,9 @@
     <div class="led-face">
       <div class="led-mask">
         <button
-          aria-label="{title}. Double-click to advance. Click a hotspot to pin."
+          aria-label="{title}. Press to advance to the next card. Click a hotspot to pin it."
           class="led-surface"
+          data-hotspots={hotspots.length > 0}
           onclick={handleClick}
           ondblclick={handleDoubleClick}
           onkeydown={handleKeydown}
@@ -85,12 +86,12 @@
     </div>
   </div>
 
-  {#if hovered}
-    <div class="mt-2 text-[11px] text-muted-foreground">
+  <div class="mt-2 h-4 truncate font-mono text-[11px] tabular-nums text-muted-foreground">
+    {#if hovered}
       {hovered.path}{#if hovered.value !== undefined}
         · {typeof hovered.value === "object" ? JSON.stringify(hovered.value) : String(hovered.value)}{/if}
-    </div>
-  {/if}
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -98,8 +99,9 @@
     container-type: inline-size;
   }
 
+  /* Bezel radius = mask radius + bezel padding, so the corners stay concentric. */
   .led-bezel {
-    border-radius: 10px;
+    border-radius: 18px;
     background:
       linear-gradient(160deg, #3a3a3c 0%, #1c1c1e 42%, #0f0f10 100%);
     box-shadow:
@@ -136,9 +138,21 @@
     margin: 0;
     border: 0;
     background: transparent;
-    cursor: crosshair;
+    cursor: default;
     line-height: 0;
     max-width: 100%;
+    outline: none;
+  }
+
+  .led-surface[data-hotspots="true"] {
+    cursor: crosshair;
+  }
+
+  /* The panel is the primary control on the page — keyboard focus has to be
+     visible on it, and the ring sits inside the mask so it is never clipped. */
+  .led-surface:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -3px;
   }
 
   .led-surface :global(canvas) {

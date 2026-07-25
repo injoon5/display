@@ -21,37 +21,49 @@
       case "destructive":
         return "bg-destructive";
       case "warning":
-        return "bg-amber-400";
+        return "bg-warning";
       case "success":
-        return "bg-emerald-400";
+        return "bg-success";
       default: {
         const _exhaustive: never = tone;
         return _exhaustive;
       }
     }
   });
+  let headroom = $derived(Math.max(0, budget - amps));
 </script>
 
-<Card.Root size="sm" class="glass border-0 shadow-none">
-  <Card.Header class="flex-row items-start justify-between gap-3">
-    <div>
-      <Card.Title>Power</Card.Title>
-      <Card.Description>Estimated draw vs budget.</Card.Description>
-    </div>
-    <StatusBadge tone={tone} class="tabular">{amps.toFixed(2)} A</StatusBadge>
+<Card.Root size="sm">
+  <Card.Header>
+    <Card.Title level={2}>Power</Card.Title>
+    <Card.Description>Estimated draw vs budget.</Card.Description>
+    <Card.Action>
+      <StatusBadge {tone}>{amps.toFixed(2)} A</StatusBadge>
+    </Card.Action>
   </Card.Header>
-  <Card.Content>
-    <div class="rounded-lg bg-muted/40 p-3 ring-1 ring-foreground/10">
-      <div class="mb-2 flex items-end justify-between text-xs text-muted-foreground">
-        <span>{label}</span>
-        <span class="tabular">{budget.toFixed(1)} A limit</span>
-      </div>
-      <div class="h-3 rounded-full bg-background/60 p-0.5 ring-1 ring-foreground/10">
-        <div
-          class={`h-full rounded-full transition-[width] duration-200 ease-[var(--ease-out)] ${barClass}`}
-          style={`width:${percent}%`}
-        ></div>
-      </div>
+  <Card.Content class="flex flex-col gap-2">
+    <div class="flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+      <span>{label}</span>
+      <span class="tabular-nums">{budget.toFixed(1)} A budget</span>
     </div>
+    <!-- role="meter" so the value is announced, and the fill is scaled rather
+         than re-laid-out on every telemetry tick. -->
+    <div
+      class="h-2 overflow-hidden rounded-full bg-foreground/10"
+      role="meter"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={budget}
+      aria-valuenow={Number(amps.toFixed(2))}
+      aria-valuetext="{amps.toFixed(2)} A of {budget.toFixed(1)} A"
+    >
+      <div
+        class="h-full w-full origin-left rounded-full transition-transform duration-300 ease-[var(--ease-out)] {barClass}"
+        style="transform: scaleX({percent / 100})"
+      ></div>
+    </div>
+    <p class="text-xs tabular-nums text-muted-foreground">
+      {headroom.toFixed(2)} A headroom
+    </p>
   </Card.Content>
 </Card.Root>

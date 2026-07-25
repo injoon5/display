@@ -20,6 +20,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # compiler/dist is gitignored, and convex/ + web/ import @matrix-panel/compiler
+      # for its types, so typechecking needs the build first (same as cards.yml).
+      - name: Build compiler package
+        run: npm run build -w compiler
+
       - name: Typecheck workspaces and Convex
         run: npm run typecheck
 

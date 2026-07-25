@@ -1,9 +1,10 @@
 <script lang="ts">
   import { html } from "@codemirror/lang-html";
   import { json } from "@codemirror/lang-json";
+  import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
   import { Compartment, EditorSelection, EditorState, type Extension } from "@codemirror/state";
-  import { oneDark } from "@codemirror/theme-one-dark";
   import { EditorView } from "@codemirror/view";
+  import { tags } from "@lezer/highlight";
   import { basicSetup } from "codemirror";
   import StatusBadge from "$lib/components/status-badge.svelte";
   import * as Card from "$lib/components/ui/card/index.js";
@@ -15,11 +16,7 @@
     value?: string;
   };
 
-  let {
-    filename = "card.card",
-    label = "Editor",
-    value = $bindable("")
-  }: Props = $props();
+  let { filename = "card.card", label = "Editor", value = $bindable("") }: Props = $props();
 
   let host = $state<HTMLDivElement | null>(null);
   let view = $state<EditorView | null>(null);
@@ -27,33 +24,62 @@
   const language = new Compartment();
   const readOnly = new Compartment();
 
+  // Everything below resolves through the theme tokens, so the editor follows
+  // the light/dark appearance instead of being a dark box in a light app.
   const panelTheme = EditorView.theme({
     "&": {
       backgroundColor: "transparent",
-      color: "#ecf4e7",
-      fontFamily: "\"JetBrains Mono\", monospace",
+      color: "var(--foreground)",
+      fontFamily: "var(--font-mono)",
       fontSize: "13px",
-      height: "100%"
+      height: "100%",
+    },
+    "&.cm-focused": {
+      outline: "none",
+    },
+    ".cm-scroller": {
+      fontFamily: "var(--font-mono)",
+      lineHeight: "1.6",
     },
     ".cm-content": {
-      padding: "16px",
-      minHeight: "26rem"
+      padding: "12px 0",
+      minHeight: "24rem",
+      caretColor: "var(--foreground)",
     },
     ".cm-gutters": {
-      backgroundColor: "rgba(4, 6, 4, 0.72)",
-      borderRight: "1px solid rgba(167, 243, 104, 0.08)",
-      color: "#7f907d"
+      backgroundColor: "transparent",
+      borderRight: "1px solid var(--border)",
+      color: "var(--muted-foreground)",
+      paddingRight: "4px",
     },
     ".cm-activeLine": {
-      backgroundColor: "rgba(132, 204, 22, 0.08)"
+      backgroundColor: "var(--code-active-line)",
     },
     ".cm-activeLineGutter": {
-      backgroundColor: "rgba(132, 204, 22, 0.06)"
+      backgroundColor: "var(--code-active-line)",
+      color: "var(--foreground)",
     },
-    ".cm-selectionBackground": {
-      backgroundColor: "rgba(245, 158, 11, 0.22) !important"
-    }
+    ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": {
+      backgroundColor: "var(--code-selection)",
+    },
+    ".cm-cursor, .cm-dropCursor": {
+      borderLeftColor: "var(--foreground)",
+    },
+    ".cm-matchingBracket, &.cm-focused .cm-matchingBracket": {
+      backgroundColor: "var(--code-selection)",
+      outline: "none",
+    },
   });
+
+  const highlight = HighlightStyle.define([
+    { tag: [tags.keyword, tags.tagName], color: "var(--code-keyword)" },
+    { tag: [tags.string, tags.special(tags.string)], color: "var(--code-string)" },
+    { tag: [tags.number, tags.bool, tags.null], color: "var(--code-number)" },
+    { tag: [tags.attributeName, tags.propertyName], color: "var(--code-attribute)" },
+    { tag: [tags.comment, tags.meta], color: "var(--code-comment)", fontStyle: "italic" },
+    { tag: [tags.punctuation, tags.bracket, tags.angleBracket], color: "var(--code-punctuation)" },
+    { tag: tags.invalid, color: "var(--destructive)" },
+  ]);
 
   function languageFor(source: string): Extension {
     return source.trim().startsWith("<") ? html() : json();
@@ -69,8 +95,8 @@
       effects: language.reconfigure(languageFor(nextValue)),
       selection: EditorSelection.single(
         Math.min(selection.head, nextValue.length),
-        Math.min(selection.anchor, nextValue.length)
-      )
+        Math.min(selection.anchor, nextValue.length),
+      ),
     });
   }
 
@@ -85,8 +111,8 @@
         doc: value,
         extensions: [
           basicSetup,
-          oneDark,
           panelTheme,
+          syntaxHighlighting(highlight),
           EditorView.lineWrapping,
           language.of(languageFor(value)),
           readOnly.of(EditorState.readOnly.of(false)),
@@ -96,11 +122,11 @@
             }
             value = update.state.doc.toString();
             view?.dispatch({
-              effects: language.reconfigure(languageFor(value))
+              effects: language.reconfigure(languageFor(value)),
             });
-          })
-        ]
-      })
+          }),
+        ],
+      }),
     });
 
     return () => {
@@ -114,18 +140,18 @@
   });
 </script>
 
-<Card.Root class="gap-0 overflow-hidden py-0" size="sm">
-  <Card.Header class="flex-row items-start justify-between gap-3 border-b border-border/60 py-(--card-spacing)">
-    <div>
-      <Card.Title>{label}</Card.Title>
-      <Card.Description class="mt-1 font-mono text-[11px]">{filename}</Card.Description>
-    </div>
-    <StatusBadge tone="success">{value.trim().startsWith("<") ? "Markup" : "JSON"}</StatusBadge>
+<Card.Root class="gap-0 py-0" size="sm">
+  <Card.Header class="border-b py-3">
+    <Card.Title level={2}>{label}</Card.Title>
+    <Card.Description class="mt-0.5 font-mono text-[11px]">{filename}</Card.Description>
+    <Card.Action>
+      <StatusBadge tone="mono">{value.trim().startsWith("<") ? "MXML" : "JSON"}</StatusBadge>
+    </Card.Action>
   </Card.Header>
   <Card.Content class="px-0">
     <div
       bind:this={host}
-      class="min-h-[28rem] bg-[linear-gradient(180deg,rgba(8,11,8,0.94),rgba(8,11,8,0.98))]"
+      class="min-h-[24rem] px-1 focus-within:ring-3 focus-within:ring-ring/50 focus-within:ring-inset"
     ></div>
   </Card.Content>
 </Card.Root>

@@ -1,6 +1,9 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { dashboardStatus, seedLiveDemo } from "$lib/convex";
+  import CloudOffIcon from "@lucide/svelte/icons/cloud-off";
+  import FlaskConicalIcon from "@lucide/svelte/icons/flask-conical";
 
   let busy = $state(false);
   let status = $derived($dashboardStatus);
@@ -8,27 +11,26 @@
 </script>
 
 {#if status.mode !== "live"}
+  <!-- An icon plus a label carries the state, so it never rests on colour alone. -->
   <div
-    class="glass flex flex-col gap-2 rounded-xl px-3.5 py-2.5 sm:flex-row sm:items-center sm:gap-3"
+    class="glass flex flex-col gap-2.5 px-3.5 py-2.5 sm:flex-row sm:items-center sm:gap-3"
     role="status"
+    aria-live="polite"
   >
     <span
-      class="relative flex size-2 shrink-0 items-center justify-center"
+      class="flex size-7 shrink-0 items-center justify-center rounded-md {degraded
+        ? 'bg-destructive-surface text-destructive'
+        : 'bg-warning-surface text-warning'}"
       aria-hidden="true"
     >
-      <span
-        class="absolute inline-flex size-full rounded-full opacity-60 motion-safe:animate-ping"
-        class:bg-amber-400={!degraded}
-        class:bg-destructive={degraded}
-      ></span>
-      <span
-        class="relative inline-flex size-2 rounded-full"
-        class:bg-amber-400={!degraded}
-        class:bg-destructive={degraded}
-      ></span>
+      {#if degraded}
+        <CloudOffIcon class="size-4" />
+      {:else}
+        <FlaskConicalIcon class="size-4" />
+      {/if}
     </span>
 
-    <p class="min-w-0 flex-1 text-sm text-pretty">
+    <p class="min-w-0 flex-1 text-sm">
       <span class="font-medium">{degraded ? "Live backend unreachable" : "Demo mode"}</span>
       <span class="text-muted-foreground">
         · {#if degraded}
@@ -40,7 +42,7 @@
     </p>
 
     <Button
-      class="press shrink-0"
+      class="w-full shrink-0 sm:w-auto"
       disabled={busy}
       size="sm"
       variant="secondary"
@@ -53,6 +55,9 @@
         }
       }}
     >
+      {#if busy}
+        <Spinner aria-label="" />
+      {/if}
       {busy ? "Loading…" : "Load sample data"}
     </Button>
   </div>

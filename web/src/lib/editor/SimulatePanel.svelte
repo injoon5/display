@@ -3,8 +3,12 @@
   import StatusBadge from "$lib/components/status-badge.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Card from "$lib/components/ui/card/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
   import type { SlotSnapshot } from "$lib/convex";
+  import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
+  import XIcon from "@lucide/svelte/icons/x";
 
   type Props = {
     nowMs?: number;
@@ -17,12 +21,12 @@
     nowMs = $bindable<number>(Date.now()),
     overrides = $bindable<Record<string, unknown>>({}),
     slotMap,
-    snapshot
+    snapshot,
   }: Props = $props();
 
   const baseNow = Date.now();
   let manualPath = $state("");
-  let manualValue = $state("\"demo\"");
+  let manualValue = $state('"demo"');
   let scrubMinutes = $state(Math.round((nowMs - baseNow) / 60_000));
 
   $effect(() => {
@@ -68,96 +72,106 @@
     new Intl.DateTimeFormat("en-US", {
       dateStyle: "medium",
       timeStyle: "medium",
-      timeZone: "Asia/Seoul"
-    }).format(nowMs)
+      timeZone: "Asia/Seoul",
+    }).format(nowMs),
   );
 
   let overrideCount = $derived(Object.keys(overrides).length);
+  let offsetLabel = $derived(`${scrubMinutes > 0 ? "+" : ""}${scrubMinutes}m`);
 </script>
 
 <Card.Root size="sm">
-  <Card.Header class="flex-row items-start justify-between gap-3">
-    <div>
-      <Card.Title>Simulate</Card.Title>
-      <Card.Description>Try different values and times.</Card.Description>
-    </div>
-    <StatusBadge class="tabular-nums" tone="success">{overrideCount} overrides</StatusBadge>
+  <Card.Header>
+    <Card.Title level={2}>Simulate</Card.Title>
+    <Card.Description>Try different values and times without touching the panel.</Card.Description>
+    <Card.Action>
+      <StatusBadge tone={overrideCount > 0 ? "warning" : "neutral"}>
+        {overrideCount}
+        {overrideCount === 1 ? "override" : "overrides"}
+      </StatusBadge>
+    </Card.Action>
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-4">
-    <div class="rounded-lg bg-muted/40 p-3 ring-1 ring-foreground/10">
+    <div class="panel-inset p-3">
       <div class="mb-2 flex items-center justify-between gap-3">
-        <div>
-          <p class="text-[11px] font-medium text-muted-foreground">Time</p>
-          <p class="mt-1 font-mono text-sm tabular-nums">{kstLabel}</p>
+        <div class="min-w-0">
+          <p class="text-[11px] font-medium text-muted-foreground">Panel time (Seoul)</p>
+          <p class="mt-1 truncate font-mono text-sm tabular-nums">{kstLabel}</p>
         </div>
-        <Button
-          class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-          onclick={resetClock}
-          size="sm"
-          variant="outline"
-        >
-          Reset
+        <Button disabled={scrubMinutes === 0} onclick={resetClock} size="sm" variant="outline">
+          <RotateCcwIcon />
+          Now
         </Button>
       </div>
+      <Label class="sr-only" for="simulate-clock">Time offset in minutes</Label>
       <input
+        id="simulate-clock"
         bind:value={scrubMinutes}
-        class="w-full accent-lime-400"
+        class="h-6 w-full accent-foreground"
         max="720"
         min="-720"
         step="15"
         type="range"
       />
-      <div class="mt-2 flex justify-between text-[11px] tabular-nums text-muted-foreground">
-        <span>-12h</span>
-        <span>{scrubMinutes > 0 ? "+" : ""}{scrubMinutes}m</span>
+      <div class="mt-1 flex justify-between text-[11px] tabular-nums text-muted-foreground">
+        <span>−12h</span>
+        <span class="font-medium text-foreground">{offsetLabel}</span>
         <span>+12h</span>
       </div>
     </div>
 
-    <div class="grid gap-2 md:grid-cols-[1.1fr_1fr_auto]">
-      <Input bind:value={manualPath} class="font-mono" placeholder="path, e.g. air.pm25" />
-      <Input bind:value={manualValue} class="font-mono" placeholder="JSON value" />
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+      <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+        <Label for="override-path">Path</Label>
+        <Input id="override-path" bind:value={manualPath} class="font-mono" placeholder="air.pm25" />
+      </div>
+      <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+        <Label for="override-value">Value</Label>
+        <Input
+          id="override-value"
+          bind:value={manualValue}
+          class="font-mono"
+          placeholder="JSON value"
+        />
+      </div>
       <Button
-        class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+        class="w-full sm:w-auto"
+        disabled={!manualPath.trim()}
         onclick={addManualOverride}
+        size="sm"
         variant="secondary"
       >
         Add
       </Button>
     </div>
 
-    <div class="flex max-h-[28rem] flex-col gap-2 overflow-auto pr-1">
+    <div class="flex max-h-[28rem] flex-col gap-2 overflow-y-auto overscroll-contain pr-2">
       {#each slotMap as entry (entry.path)}
         {@const slot = snapshot.byPath[entry.path]}
         {@const overridden = entry.path in overrides}
         <div
-          class={[
-            "rounded-lg p-3 ring-1",
-            overridden
-              ? "bg-amber-500/10 ring-amber-500/25"
-              : "bg-muted/40 ring-foreground/10"
-          ]}
+          class="rounded-md px-3 py-2.5 ring-1 ring-inset {overridden
+            ? 'bg-warning-surface ring-warning-border'
+            : 'bg-foreground/[0.035] ring-border/70'}"
         >
           <div class="flex items-center justify-between gap-3">
-            <code class="font-mono text-xs">{entry.path}</code>
-            <span class="text-[11px] font-medium text-muted-foreground">{entry.type}</span>
+            <code class="min-w-0 truncate font-mono text-xs">{entry.path}</code>
+            <span class="shrink-0 text-[11px] font-medium text-muted-foreground">{entry.type}</span>
           </div>
-          <div class="mt-3 flex flex-wrap items-center gap-2">
+          <div class="mt-2 flex items-center gap-2">
             {#if entry.type === "boolean"}
-              <label class="inline-flex items-center gap-2 text-sm">
-                <input
+              <Label class="flex min-h-9 flex-1 items-center gap-2.5 text-sm">
+                <Checkbox
                   checked={Boolean(overridden ? overrides[entry.path] : slot?.value)}
-                  class="accent-lime-400"
-                  onchange={(event) =>
-                    setOverride(entry.path, (event.currentTarget as HTMLInputElement).checked)}
-                  type="checkbox"
+                  onCheckedChange={(checked) => setOverride(entry.path, checked)}
                 />
                 On
-              </label>
+              </Label>
             {:else if entry.type === "number"}
               <Input
-                class="min-w-[8rem] font-mono tabular-nums"
+                aria-label="Value for {entry.path}"
+                class="flex-1 font-mono tabular-nums"
                 onchange={(event) =>
                   setOverride(entry.path, Number((event.currentTarget as HTMLInputElement).value))}
                 type="number"
@@ -165,7 +179,8 @@
               />
             {:else}
               <Input
-                class="min-w-[14rem] font-mono"
+                aria-label="Value for {entry.path}"
+                class="flex-1 font-mono"
                 onchange={(event) =>
                   setOverride(entry.path, (event.currentTarget as HTMLInputElement).value)}
                 type="text"
@@ -173,12 +188,13 @@
               />
             {/if}
             <Button
-              class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
+              aria-label="Clear the override on {entry.path}"
+              disabled={!overridden}
               onclick={() => clearOverride(entry.path)}
-              size="sm"
-              variant="outline"
+              size="icon-sm"
+              variant="ghost"
             >
-              Clear
+              <XIcon />
             </Button>
           </div>
         </div>

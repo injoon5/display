@@ -56,15 +56,13 @@
 </script>
 
 <Card.Root size="sm">
-  <Card.Header class="flex-row items-start justify-between gap-3">
-    <div>
-      <Card.Title>Preview</Card.Title>
-      <Card.Description>How the card looks on the panel.</Card.Description>
-    </div>
-    <div class="flex items-center gap-2">
-      <StatusBadge tone="success">{frame.mode}</StatusBadge>
-      <StatusBadge class="tabular-nums" tone="warning">{compiled?.slotMap.length ?? 0} slots</StatusBadge>
-    </div>
+  <Card.Header>
+    <Card.Title level={2}>Preview</Card.Title>
+    <Card.Description>How the card looks on the panel.</Card.Description>
+    <Card.Action class="flex items-center gap-2">
+      <StatusBadge tone="mono">{frame.mode}</StatusBadge>
+      <StatusBadge tone="neutral">{compiled?.slotMap.length ?? 0} slots</StatusBadge>
+    </Card.Action>
   </Card.Header>
 
   <Card.Content class="flex flex-col gap-3">
@@ -77,13 +75,15 @@
     />
 
     {#if frame.warnings.length > 0}
-      <div class="flex flex-col gap-2">
+      <ul class="flex flex-col gap-2">
         {#each frame.warnings as warning (warning)}
-          <div class="rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-100 ring-1 ring-amber-500/20">
+          <li
+            class="rounded-md bg-warning-surface px-3 py-2 text-xs text-warning ring-1 ring-warning-border ring-inset"
+          >
             {warning}
-          </div>
+          </li>
         {/each}
-      </div>
+      </ul>
     {/if}
   </Card.Content>
 </Card.Root>

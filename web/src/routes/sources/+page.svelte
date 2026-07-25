@@ -1,19 +1,21 @@
 <script lang="ts">
+  import RecordPicker from "$lib/components/record-picker.svelte";
   import StatTile from "$lib/components/stat-tile.svelte";
-  import * as Alert from "$lib/components/ui/alert/index.js";
+  import StatusBadge from "$lib/components/status-badge.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Card from "$lib/components/ui/card/index.js";
   import * as Empty from "$lib/components/ui/empty/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
-  import { Separator } from "$lib/components/ui/separator/index.js";
-  import * as Table from "$lib/components/ui/table/index.js";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { sources, writeSource, type DashboardSource } from "$lib/convex";
+  import RadioIcon from "@lucide/svelte/icons/radio";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+  import { toast } from "svelte-sonner";
 
   let selectedSourceId = $state<string | null>(null);
   let draftJson = $state("{}");
   let lastLoaded = $state<string | null>(null);
-  let message = $state<string | null>(null);
   let busy = $state(false);
 
   $effect(() => {
@@ -29,6 +31,17 @@
   });
 
   let selected = $derived($sources.find((source) => source.sourceId === selectedSourceId) ?? null);
+  let jsonError = $derived.by(() => {
+    try {
+      const parsed: unknown = JSON.parse(draftJson);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        return "Source data must be a JSON object.";
+      }
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "Invalid JSON.";
+    }
+  });
 
   function bumpDemoPayload(source: DashboardSource): Record<string, unknown> {
     switch (source.sourceId) {
@@ -47,23 +60,23 @@
     if (!selected || busy) {
       return;
     }
+    if (jsonError) {
+      toast.error(jsonError);
+      return;
+    }
     busy = true;
-    message = null;
     try {
-      const parsed = JSON.parse(draftJson) as unknown;
-      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-        throw new Error("Source data must be a JSON object.");
-      }
+      const parsed = JSON.parse(draftJson) as Record<string, unknown>;
       await writeSource({
-        data: parsed as Record<string, unknown>,
+        data: parsed,
         intervalMs: selected.intervalMs,
         kind: selected.kind,
         origin: selected.origin,
-        sourceId: selected.sourceId
+        sourceId: selected.sourceId,
       });
-      message = `Saved data for ${selected.sourceId}.`;
+      toast.success(`Saved data for ${selected.sourceId}.`);
     } catch (error) {
-      message = error instanceof Error ? error.message : "Couldn’t save source data.";
+      toast.error(error instanceof Error ? error.message : "Couldn’t save source data.");
     } finally {
       busy = false;
     }
@@ -74,7 +87,6 @@
       return;
     }
     busy = true;
-    message = null;
     try {
       const nextPayload = bumpDemoPayload(selected);
       draftJson = JSON.stringify(nextPayload, null, 2);
@@ -83,134 +95,125 @@
         intervalMs: selected.intervalMs,
         kind: selected.kind,
         origin: selected.origin,
-        sourceId: selected.sourceId
+        sourceId: selected.sourceId,
       });
-      message = `Refreshed ${selected.sourceId}.`;
+      toast.success(`Refreshed ${selected.sourceId}.`);
     } catch (error) {
-      message = error instanceof Error ? error.message : "Couldn’t refresh source.";
+      toast.error(error instanceof Error ? error.message : "Couldn’t refresh source.");
     } finally {
       busy = false;
     }
   }
 </script>
 
-<header class="mb-4 flex flex-col gap-1">
-  <h1 class="text-xl font-semibold tracking-tight">Sources</h1>
-  <p class="text-sm text-muted-foreground">View and update the data each card reads.</p>
-</header>
-
-<div class="grid items-start gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
-  <section class="overflow-hidden rounded-xl border bg-card/40">
-    <div class="border-b px-4 py-3">
-      <h2 class="text-sm font-semibold">All sources</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Select a source to inspect.</p>
-    </div>
-    {#if $sources.length === 0}
-      <Empty.Root class="border-none py-6">
-        <Empty.Header>
-          <Empty.Title>No sources</Empty.Title>
-          <Empty.Description>Load sample data to populate sources.</Empty.Description>
-        </Empty.Header>
-      </Empty.Root>
-    {:else}
-      <Table.Root>
-        <Table.Header>
-          <Table.Row>
-            <Table.Head>Source</Table.Head>
-            <Table.Head>Kind</Table.Head>
-            <Table.Head class="text-right">Interval</Table.Head>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {#each $sources as source (source._id)}
-            <Table.Row
-              class="cursor-pointer"
-              data-state={selectedSourceId === source.sourceId ? "selected" : undefined}
-              aria-selected={selectedSourceId === source.sourceId}
-              onclick={() => (selectedSourceId = source.sourceId)}
-              onkeydown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  selectedSourceId = source.sourceId;
-                }
-              }}
-              tabindex={0}
-            >
-              <Table.Cell class="font-medium">{source.sourceId}</Table.Cell>
-              <Table.Cell class="font-mono text-xs text-muted-foreground">{source.kind}</Table.Cell>
-              <Table.Cell class="text-right tabular-nums">{source.intervalMs / 1000}s</Table.Cell>
-            </Table.Row>
-          {/each}
-        </Table.Body>
-      </Table.Root>
-    {/if}
-  </section>
+<div class="grid items-start gap-5 xl:grid-cols-[minmax(260px,20rem)_minmax(0,1fr)]">
+  <RecordPicker
+    items={$sources}
+    selectedId={selectedSourceId}
+    getId={(source: DashboardSource) => source.sourceId}
+    onselect={(id) => (selectedSourceId = id)}
+    title="All sources"
+    description="Select a source to inspect."
+    emptyTitle="No sources"
+    emptyDescription="Load sample data to populate sources."
+    icon={RadioIcon}
+  >
+    {#snippet row(source: DashboardSource)}
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-medium">{source.sourceId}</span>
+        <span class="block truncate font-mono text-[11px] text-muted-foreground">
+          {source.kind}
+        </span>
+      </span>
+      <span class="shrink-0 text-xs tabular-nums text-muted-foreground">
+        {source.intervalMs / 1000}s
+      </span>
+    {/snippet}
+  </RecordPicker>
 
   <Card.Root>
     {#if selected}
-      <Card.Header class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div class="flex flex-col gap-1.5">
-          <Card.Title class="text-xl">{selected.sourceId}</Card.Title>
-          <Card.Description>
-            Origin {selected.origin} · interval
-            <span class="tabular-nums">{selected.intervalMs / 1000}</span>s
-          </Card.Description>
-        </div>
-        <div class="flex gap-2">
-          <Button
-            class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-            onclick={handleTestFetch}
-            variant="secondary"
-          >
+      <Card.Header>
+        <Card.Title class="text-base" level={2}>{selected.sourceId}</Card.Title>
+        <Card.Description>
+          Origin {selected.origin} · refreshes every
+          <span class="tabular-nums">{selected.intervalMs / 1000}</span>s
+        </Card.Description>
+        <Card.Action class="flex gap-2">
+          <Button disabled={busy} onclick={handleTestFetch} variant="secondary">
+            {#if busy}
+              <Spinner aria-label="" />
+            {:else}
+              <RefreshCwIcon />
+            {/if}
             Refresh
           </Button>
-          <Button
-            class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-            onclick={handleWrite}
-          >
-            Save
-          </Button>
-        </div>
+          <Button disabled={busy || jsonError !== null} onclick={handleWrite}>Save</Button>
+        </Card.Action>
       </Card.Header>
 
-      <Card.Content class="flex flex-col gap-4">
-        {#if message}
-          <Alert.Root>
-            <Alert.Description>{message}</Alert.Description>
-          </Alert.Root>
-        {/if}
+      <Card.Content class="@container/panel grid items-start gap-4 @2xl/panel:grid-cols-[minmax(0,1fr)_17rem]">
+        <div class="flex flex-col gap-1.5">
+          <Label for="source-payload">Data</Label>
+          <Textarea
+            id="source-payload"
+            aria-describedby={jsonError ? "source-payload-error" : undefined}
+            aria-invalid={jsonError !== null}
+            class="min-h-[26rem] font-mono text-sm"
+            bind:value={draftJson}
+          />
+          <p
+            id="source-payload-error"
+            class="min-h-4 text-xs text-destructive"
+            role="status"
+            aria-live="polite"
+          >
+            {jsonError ?? ""}
+          </p>
+        </div>
 
-        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <div class="flex flex-col gap-1.5">
-            <Label for="source-payload">Data</Label>
-            <Textarea
-              id="source-payload"
-              class="min-h-[28rem] font-mono text-sm"
-              bind:value={draftJson}
-            />
-          </div>
+        <div class="flex flex-col gap-4">
+          <section class="panel-inset p-3" aria-labelledby="source-health">
+            <div class="mb-2 flex items-center justify-between gap-3">
+              <h3 id="source-health" class="text-sm font-semibold tracking-tight">Health</h3>
+              <StatusBadge
+                tone={selected.circuitOpenUntil
+                  ? "warning"
+                  : selected.consecutiveFailures > 0
+                    ? "warning"
+                    : "success"}
+              >
+                {selected.circuitOpenUntil ? "Paused" : "Active"}
+              </StatusBadge>
+            </div>
+            <div class="grid gap-2">
+              <StatTile label="Consecutive failures" value={selected.consecutiveFailures} />
+              <StatTile
+                label="Last updated"
+                value={new Date(selected.fetchedAt).toLocaleTimeString()}
+              />
+            </div>
+          </section>
 
-          <div class="flex flex-col gap-3">
-            <div class="rounded-lg border bg-muted/20 p-3">
-              <p class="text-sm font-semibold text-muted-foreground">Config</p>
-              <pre class="mt-3 overflow-auto font-mono text-xs">{JSON.stringify(selected.config, null, 2)}</pre>
-            </div>
-            <Separator />
-            <div class="rounded-lg border bg-muted/20 p-3">
-              <p class="text-sm font-semibold text-muted-foreground">Health</p>
-              <div class="mt-3 grid gap-2">
-                <StatTile label="Failures" value={selected.consecutiveFailures} />
-                <StatTile label="Last updated" value={new Date(selected.fetchedAt).toLocaleTimeString()} />
-                <StatTile label="Status" value={selected.circuitOpenUntil ? "Paused" : "Active"} />
-              </div>
-            </div>
-          </div>
+          <section class="panel-inset p-3" aria-labelledby="source-config">
+            <h3 id="source-config" class="mb-2 text-sm font-semibold tracking-tight">Config</h3>
+            <pre
+              class="overflow-x-auto rounded-md bg-background/50 p-2.5 font-mono text-xs">{JSON.stringify(
+                selected.config,
+                null,
+                2,
+              )}</pre>
+          </section>
         </div>
       </Card.Content>
     {:else}
-      <Empty.Root class="border-none py-12">
+      <Empty.Root class="border-none py-16">
         <Empty.Header>
-          <Empty.Title>Select a source to view its data.</Empty.Title>
+          <Empty.Media variant="icon">
+            <RadioIcon />
+          </Empty.Media>
+          <Empty.Title>No source selected</Empty.Title>
+          <Empty.Description>Pick a source from the list to view its data.</Empty.Description>
         </Empty.Header>
       </Empty.Root>
     {/if}

@@ -20,22 +20,22 @@
   }
 </script>
 
-<Card.Root size="sm" class="glass border-0 shadow-none">
-  <Card.Header class="flex-row items-start justify-between gap-3">
-    <div>
-      <Card.Title>Status</Card.Title>
-      <Card.Description>Connection and sensors.</Card.Description>
-    </div>
-    <StatusBadge tone={device?.online ? "success" : "destructive"}>
-      {device?.online ? "Online" : "Offline"}
-    </StatusBadge>
+<Card.Root size="sm">
+  <Card.Header>
+    <Card.Title level={2}>Status</Card.Title>
+    <Card.Description>Connection and sensors.</Card.Description>
+    <Card.Action>
+      <StatusBadge tone={device?.online ? "success" : "destructive"}>
+        {device?.online ? "Online" : "Offline"}
+      </StatusBadge>
+    </Card.Action>
   </Card.Header>
   <Card.Content class="grid grid-cols-2 gap-2">
     <StatTile label="Connection" value={statusLabel} />
     <StatTile label="Firmware" value={device?.fwVersion ?? "—"} />
-    <StatTile label="RSSI" value={`${telemetry.rssi} dBm`} />
+    <StatTile label="Signal" value={`${telemetry.rssi} dBm`} />
     <StatTile label="Memory" value={`${telemetry.heapFree.toLocaleString()} B`} />
-    <StatTile label="Light" value={telemetry.lux} />
+    <StatTile label="Light" value={`${telemetry.lux} lux`} />
     <StatTile label="Last seen" value={device ? minutesAgo(device.lastSeen) : "—"} />
   </Card.Content>
 </Card.Root>

@@ -1,13 +1,24 @@
 <script lang="ts">
+  import RecordPicker from "$lib/components/record-picker.svelte";
   import StatusBadge from "$lib/components/status-badge.svelte";
-  import * as Alert from "$lib/components/ui/alert/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Card from "$lib/components/ui/card/index.js";
+  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as Empty from "$lib/components/ui/empty/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
-  import * as Table from "$lib/components/ui/table/index.js";
-  import { cards, rules, saveRule, scenes } from "$lib/convex";
+  import * as Select from "$lib/components/ui/select/index.js";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
+  import { cards, rules, saveRule, scenes, type DashboardRule } from "$lib/convex";
+  import WorkflowIcon from "@lucide/svelte/icons/workflow";
+  import { toast } from "svelte-sonner";
+
+  const ACTION_KINDS = [
+    { value: "pin", label: "Pin a card" },
+    { value: "interrupt", label: "Interrupt with a card" },
+    { value: "scene", label: "Activate a scene" },
+    { value: "sleep", label: "Sleep the panel" },
+  ] as const;
 
   let selectedRuleId = $state<string | null>(null);
   let draftName = $state("");
@@ -19,7 +30,6 @@
   let actionSceneId = $state("");
   let actionDurationMs = $state(60_000);
   let lastLoaded = $state<string | null>(null);
-  let message = $state<string | null>(null);
   let busy = $state(false);
 
   $effect(() => {
@@ -42,20 +52,14 @@
   });
 
   let selectedRule = $derived($rules.find((rule) => rule._id === selectedRuleId) ?? null);
+  let actionKindLabel = $derived(
+    ACTION_KINDS.find((entry) => entry.value === actionKind)?.label ?? "Select an action",
+  );
+  let cardLabel = $derived($cards.find((card) => card._id === actionCardId)?.name ?? "None");
+  let sceneLabel = $derived($scenes.find((scene) => scene._id === actionSceneId)?.name ?? "None");
 
-  function actionLabel(kind: string): string {
-    switch (kind) {
-      case "pin":
-        return "Pin";
-      case "interrupt":
-        return "Interrupt";
-      case "scene":
-        return "Scene";
-      case "sleep":
-        return "Sleep";
-      default:
-        return kind;
-    }
+  function actionSummary(rule: DashboardRule): string {
+    return ACTION_KINDS.find((entry) => entry.value === rule.action.kind)?.label ?? rule.action.kind;
   }
 
   async function handleSave(): Promise<void> {
@@ -63,186 +67,164 @@
       return;
     }
     busy = true;
-    message = null;
     try {
       await saveRule({
         action: {
           cardId: actionCardId || undefined,
           durationMs: actionDurationMs,
           kind: actionKind,
-          sceneId: actionSceneId || undefined
+          sceneId: actionSceneId || undefined,
         },
         condition: draftCondition,
         enabled: draftEnabled,
         name: draftName,
         priority: draftPriority,
-        ruleId: selectedRule._id
+        ruleId: selectedRule._id,
       });
-      message = `Saved ${draftName}.`;
+      toast.success(`Saved ${draftName}.`);
     } catch (error) {
-      message = error instanceof Error ? error.message : "Couldn’t save rule.";
+      toast.error(error instanceof Error ? error.message : "Couldn’t save rule.");
     } finally {
       busy = false;
     }
   }
 </script>
 
-<header class="mb-4 flex flex-col gap-1">
-  <h1 class="text-xl font-semibold tracking-tight">Rules</h1>
-  <p class="text-sm text-muted-foreground">Automate the panel with conditions and actions.</p>
-</header>
-
-<div class="grid items-start gap-4 xl:grid-cols-[minmax(280px,360px)_minmax(0,1fr)]">
-  <section class="overflow-hidden rounded-xl border bg-card/40">
-    <div class="border-b px-4 py-3">
-      <h2 class="text-sm font-semibold">All rules</h2>
-      <p class="mt-1 text-sm text-muted-foreground">Select a rule to edit.</p>
-    </div>
-    {#if $rules.length === 0}
-      <Empty.Root class="border-none py-6">
-        <Empty.Header>
-          <Empty.Title>No rules</Empty.Title>
-          <Empty.Description>Load sample data to create your first rules.</Empty.Description>
-        </Empty.Header>
-      </Empty.Root>
-    {:else}
-      <Table.Root>
-        <Table.Header>
-          <Table.Row>
-            <Table.Head>Name</Table.Head>
-            <Table.Head>Action</Table.Head>
-            <Table.Head class="text-right">Priority</Table.Head>
-            <Table.Head>Enabled</Table.Head>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {#each $rules as rule (rule._id)}
-            <Table.Row
-              class="cursor-pointer"
-              data-state={selectedRuleId === rule._id ? "selected" : undefined}
-              aria-selected={selectedRuleId === rule._id}
-              onclick={() => (selectedRuleId = rule._id)}
-              onkeydown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  selectedRuleId = rule._id;
-                }
-              }}
-              tabindex={0}
-            >
-              <Table.Cell class="font-medium">{rule.name}</Table.Cell>
-              <Table.Cell class="text-sm text-muted-foreground">{actionLabel(rule.action.kind)}</Table.Cell>
-              <Table.Cell class="text-right tabular-nums">{rule.priority}</Table.Cell>
-              <Table.Cell>
-                <StatusBadge tone={rule.enabled ? "success" : "destructive"}>
-                  {rule.enabled ? "Enabled" : "Disabled"}
-                </StatusBadge>
-              </Table.Cell>
-            </Table.Row>
-          {/each}
-        </Table.Body>
-      </Table.Root>
-    {/if}
-  </section>
+<div class="grid items-start gap-5 xl:grid-cols-[minmax(260px,20rem)_minmax(0,1fr)]">
+  <RecordPicker
+    items={$rules}
+    selectedId={selectedRuleId}
+    getId={(rule: DashboardRule) => rule._id}
+    onselect={(id) => (selectedRuleId = id)}
+    title="All rules"
+    description="Select a rule to edit."
+    emptyTitle="No rules"
+    emptyDescription="Load sample data to create your first rules."
+    icon={WorkflowIcon}
+  >
+    {#snippet row(rule: DashboardRule)}
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-medium">{rule.name}</span>
+        <span class="block truncate text-[11px] text-muted-foreground">
+          {actionSummary(rule)}
+        </span>
+      </span>
+      <span class="shrink-0 text-xs tabular-nums text-muted-foreground">P{rule.priority}</span>
+      {#if !rule.enabled}
+        <StatusBadge tone="neutral">Off</StatusBadge>
+      {/if}
+    {/snippet}
+  </RecordPicker>
 
   <Card.Root>
     {#if selectedRule}
-      <Card.Header class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div class="flex flex-col gap-1.5">
-          <Card.Title class="text-xl">Edit Rule</Card.Title>
-          <Card.Description>When a condition is true, run an action.</Card.Description>
-        </div>
-        <Button
-          class="active:scale-[0.96] transition-transform duration-150 ease-[var(--ease-out)]"
-          onclick={handleSave}
-        >
-          Save Rule
-        </Button>
+      <Card.Header>
+        <Card.Title class="text-base" level={2}>Edit rule</Card.Title>
+        <Card.Description>When the condition is true, run the action.</Card.Description>
+        <Card.Action>
+          <Button disabled={busy} onclick={handleSave}>
+            {#if busy}
+              <Spinner aria-label="" />
+            {/if}
+            {busy ? "Saving…" : "Save rule"}
+          </Button>
+        </Card.Action>
       </Card.Header>
 
-      <Card.Content class="flex flex-col gap-4">
-        {#if message}
-          <Alert.Root>
-            <Alert.Description>{message}</Alert.Description>
-          </Alert.Root>
-        {/if}
-
-        <div class="grid gap-4 lg:grid-cols-3">
+      <Card.Content class="@container flex flex-col gap-5">
+        <div class="grid gap-4 @lg:grid-cols-2 @2xl:grid-cols-3">
           <div class="flex flex-col gap-1.5">
             <Label for="rule-name">Name</Label>
             <Input id="rule-name" bind:value={draftName} />
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="rule-priority">Priority</Label>
-            <Input id="rule-priority" class="font-mono tabular-nums" type="number" bind:value={draftPriority} />
+            <Input
+              id="rule-priority"
+              class="font-mono tabular-nums"
+              type="number"
+              bind:value={draftPriority}
+            />
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="rule-action">Action</Label>
-            <select
-              id="rule-action"
-              class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              bind:value={actionKind}
-            >
-              <option value="pin">Pin</option>
-              <option value="interrupt">Interrupt</option>
-              <option value="scene">Scene</option>
-              <option value="sleep">Sleep</option>
-            </select>
+            <Select.Root type="single" bind:value={actionKind}>
+              <Select.Trigger id="rule-action" class="w-full">{actionKindLabel}</Select.Trigger>
+              <Select.Content>
+                {#each ACTION_KINDS as entry (entry.value)}
+                  <Select.Item value={entry.value} label={entry.label} />
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </div>
         </div>
 
         <div class="flex flex-col gap-1.5">
           <Label for="rule-condition">Condition</Label>
-          <Input id="rule-condition" class="font-mono" bind:value={draftCondition} />
+          <Input
+            id="rule-condition"
+            class="font-mono"
+            placeholder="bus.urgent == true"
+            bind:value={draftCondition}
+          />
+          <p class="text-xs text-muted-foreground">
+            An expression over source data, for example <code class="font-mono"
+              >air.pm25 &gt; 75</code
+            >.
+          </p>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-3">
+        <div class="grid gap-4 @lg:grid-cols-2 @2xl:grid-cols-3">
           <div class="flex flex-col gap-1.5">
             <Label for="rule-card">Card</Label>
-            <select
-              id="rule-card"
-              class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              bind:value={actionCardId}
-            >
-              <option value="">None</option>
-              {#each $cards as card (card._id)}
-                <option value={card._id}>{card.name}</option>
-              {/each}
-            </select>
+            <Select.Root type="single" bind:value={actionCardId}>
+              <Select.Trigger id="rule-card" class="w-full">{cardLabel}</Select.Trigger>
+              <Select.Content>
+                <Select.Item value="" label="None" />
+                {#each $cards as card (card._id)}
+                  <Select.Item value={card._id} label={card.name} />
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </div>
           <div class="flex flex-col gap-1.5">
             <Label for="rule-scene">Scene</Label>
-            <select
-              id="rule-scene"
-              class="border-input dark:bg-input/30 h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              bind:value={actionSceneId}
-            >
-              <option value="">None</option>
-              {#each $scenes as scene (scene._id)}
-                <option value={scene._id}>{scene.name}</option>
-              {/each}
-            </select>
+            <Select.Root type="single" bind:value={actionSceneId}>
+              <Select.Trigger id="rule-scene" class="w-full">{sceneLabel}</Select.Trigger>
+              <Select.Content>
+                <Select.Item value="" label="None" />
+                {#each $scenes as scene (scene._id)}
+                  <Select.Item value={scene._id} label={scene.name} />
+                {/each}
+              </Select.Content>
+            </Select.Root>
           </div>
           <div class="flex flex-col gap-1.5">
-            <Label for="rule-duration">Duration</Label>
+            <Label for="rule-duration">Duration (ms)</Label>
             <Input
               id="rule-duration"
               class="font-mono tabular-nums"
+              min="0"
+              step="1000"
               type="number"
               bind:value={actionDurationMs}
             />
           </div>
         </div>
 
-        <Label class="inline-flex w-fit items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-foreground/10">
-          <input bind:checked={draftEnabled} class="accent-primary" type="checkbox" />
-          Enabled
+        <Label class="flex w-fit items-center gap-2.5">
+          <Checkbox id="rule-enabled" bind:checked={draftEnabled} />
+          Rule is enabled
         </Label>
       </Card.Content>
     {:else}
-      <Empty.Root class="border-none py-12">
+      <Empty.Root class="border-none py-16">
         <Empty.Header>
-          <Empty.Title>Select a rule to edit.</Empty.Title>
+          <Empty.Media variant="icon">
+            <WorkflowIcon />
+          </Empty.Media>
+          <Empty.Title>No rule selected</Empty.Title>
+          <Empty.Description>Pick a rule from the list to edit it.</Empty.Description>
         </Empty.Header>
       </Empty.Root>
     {/if}

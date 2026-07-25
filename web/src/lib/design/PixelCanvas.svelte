@@ -49,6 +49,8 @@
   }
 </script>
 
+<!-- The rendered matrix is one image to assistive tech; the canvas itself carries
+     no accessible content, so the label lives on the wrapper. -->
 <div
   aria-label={title}
   class={`relative inline-flex overflow-hidden bg-black ${className}`}
@@ -58,14 +60,16 @@
 >
   <canvas
     bind:this={canvas}
-    aria-label={title}
+    aria-hidden="true"
     class="block"
     height={32 * pitch}
     width={64 * pitch}
   ></canvas>
   {#if hovered}
+    <!-- The matrix is always black hardware, so this highlight is a fixed bright
+         amber rather than a theme token that would vanish in light mode. -->
     <div
-      class="pointer-events-none absolute rounded-[1px] border border-amber-300/70 bg-amber-300/15 shadow-[0_0_12px_rgba(251,191,36,0.35)]"
+      class="pointer-events-none absolute rounded-[1px] bg-[oklch(0.85_0.15_80/0.18)] ring-1 ring-[oklch(0.85_0.15_80/0.7)]"
       style={`left:${(hovered.x / 64) * 100}%;top:${(hovered.y / 32) * 100}%;width:${(Math.max(1, hovered.w) / 64) * 100}%;height:${(Math.max(1, hovered.h) / 32) * 100}%;`}
     ></div>
   {/if}

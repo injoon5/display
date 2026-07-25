@@ -18,6 +18,7 @@
   } from "$lib/convex";
   import LedMatrixPanel from "$lib/device/LedMatrixPanel.svelte";
   import { initMxrWasm, MXR_DIMENSIONS, render, type RenderHotspot } from "$lib/mxr";
+  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
 
@@ -37,7 +38,6 @@
   let mirrorNow = $state(Date.now());
   let pokeMessage = $state("hey — look at the wall");
   let busy = $state<string | null>(null);
-  let lastAction = $state<string | null>(null);
   let wasmEpoch = $state(0);
 
   const HOMEKIT_SWITCHES = [
@@ -50,6 +50,11 @@
   ] as const;
 
   let pitch = $state(10);
+
+  // Local echo so the slider tracks the pointer 1:1; the device only hears about
+  // it on release.
+  let brightnessDraft = $state<number | null>(null);
+  let brightnessValue = $derived(brightnessDraft ?? telemetry.brightness);
 
   $effect(() => {
     mirrorNow = nowMs;
@@ -108,7 +113,6 @@
     busy = label;
     try {
       await action();
-      lastAction = label;
       toast.success(label);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Something went wrong";
@@ -178,10 +182,17 @@
   }
 
   async function handleBrightness(value: number): Promise<void> {
-    if (!device) return;
-    await runAction(`Brightness set to ${value}%`, async () => {
-      await simulateTelemetry({ brightness: value, deviceId: device._id });
-    });
+    if (!device) {
+      brightnessDraft = null;
+      return;
+    }
+    try {
+      await runAction(`Brightness set to ${value}%`, async () => {
+        await simulateTelemetry({ brightness: value, deviceId: device._id });
+      });
+    } finally {
+      brightnessDraft = null;
+    }
   }
 
   async function handlePresence(value: boolean): Promise<void> {
@@ -196,42 +207,47 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <div class="flex items-start justify-between gap-3">
-    <div>
-      <h2 class="text-sm font-semibold tracking-tight">Live View</h2>
+  <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+    <div class="min-w-0">
+      <h2 class="truncate text-sm font-semibold tracking-tight">
+        {device?.name ?? "Wall Matrix Panel"}
+      </h2>
       <p class="mt-0.5 text-xs text-muted-foreground">
-        Double-click to advance. Click a hotspot to pin.
+        Double-click the panel to advance. Click a hotspot to pin it.
       </p>
     </div>
-    <div class="flex flex-wrap items-center justify-end gap-2">
-      <StatusBadge tone="warning">{card?.slug ?? "No Card"}</StatusBadge>
+    <div class="flex flex-wrap items-center justify-end gap-1.5">
+      <StatusBadge tone="neutral">{scene?.name ?? "No scene"}</StatusBadge>
+      <StatusBadge tone="mono">{card?.slug ?? "no card"}</StatusBadge>
       {#if device?.pinnedCardId}
-        <StatusBadge tone="success">Pinned</StatusBadge>
+        <StatusBadge tone="warning">Pinned</StatusBadge>
       {/if}
     </div>
   </div>
 
   <LedMatrixPanel
-    brightness={telemetry.brightness}
+    brightness={brightnessValue}
     framebuffer={frame.framebuffer}
     hotspots={frame.hotspots}
     online={device?.online ?? false}
-    pitch={pitch}
+    {pitch}
     ondoubletap={() => void handleDoubleTap()}
     onhotspot={(hotspot) => void handleHotspot(hotspot)}
   />
 
-  <div class="grid gap-3 sm:grid-cols-[1fr_1.2fr]">
-    <div class="glass flex min-h-10 flex-wrap items-center gap-2 rounded-xl px-3 py-2">
+  <div class="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
+    <div class="panel-inset flex flex-wrap items-center gap-2 p-2">
       <Button
         disabled={!device || busy !== null}
+        size="sm"
         variant="secondary"
         onclick={() => void handleDoubleTap()}
       >
-        Next Card
+        Next card
       </Button>
       <Button
         disabled={!device?.pinnedCardId || busy !== null}
+        size="sm"
         variant="outline"
         onclick={() =>
           void runAction("Unpin", async () => {
@@ -241,42 +257,43 @@
       >
         Unpin
       </Button>
-      {#if lastAction}
-        <p class="w-full font-mono text-[11px] text-muted-foreground">Last: {lastAction}</p>
-      {/if}
     </div>
 
-    <div class="glass flex min-h-10 flex-col justify-center gap-1.5 rounded-xl px-3 py-2">
+    <div class="panel-inset flex flex-col justify-center gap-1.5 px-3 py-2">
       <div class="flex items-center justify-between gap-3">
         <Label for="mirror-brightness" class="text-xs font-medium text-muted-foreground">
           Brightness
         </Label>
-        <span class="tabular-nums text-xs text-muted-foreground">
-          {telemetry.brightness}% · lux {telemetry.lux}
+        <span class="text-xs tabular-nums text-muted-foreground">
+          {brightnessValue}% · {telemetry.lux} lux
         </span>
       </div>
       <input
         id="mirror-brightness"
-        aria-label="Brightness"
-        class="press h-10 w-full accent-foreground"
+        class="h-6 w-full accent-foreground"
         disabled={!device || busy !== null}
         max="100"
         min="0"
         type="range"
-        value={telemetry.brightness}
+        value={brightnessValue}
+        oninput={(event) => {
+          brightnessDraft = Number(event.currentTarget.value);
+        }}
         onchange={(event) => {
-          const value = Number((event.currentTarget as HTMLInputElement).value);
-          void handleBrightness(value);
+          void handleBrightness(Number(event.currentTarget.value));
         }}
       />
     </div>
   </div>
 
-  <div role="toolbar" aria-label="Quick Pins" class="flex flex-wrap gap-2">
+  <div class="flex flex-wrap gap-2" role="group" aria-label="Quick pins">
     {#each HOMEKIT_SWITCHES as item (item.slug)}
+      {@const active = card?.slug === item.slug}
       <Button
+        aria-pressed={active}
         disabled={!device || !cardBySlug(item.slug) || busy !== null}
-        variant={card?.slug === item.slug ? "default" : "outline"}
+        size="sm"
+        variant={active ? "default" : "outline"}
         onclick={() =>
           void runAction(`Pinned ${item.label}`, async () => {
             await pinSlug(item.slug, 60_000);
@@ -287,25 +304,28 @@
     {/each}
   </div>
 
-  <details class="glass group rounded-xl">
+  <details class="panel-inset group">
     <summary
-      class="press flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium tracking-tight marker:content-none [&::-webkit-details-marker]:hidden"
+      class="press flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium tracking-tight outline-none marker:content-none focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden"
     >
-      <span>More Controls</span>
-      <span
-        class="text-xs text-muted-foreground transition-transform duration-150 group-open:rotate-180"
-        aria-hidden="true">▾</span
-      >
+      <span>More controls</span>
+      <ChevronDownIcon
+        class="size-4 text-muted-foreground transition-transform duration-200 ease-[var(--ease-out)] group-open:rotate-180"
+        aria-hidden="true"
+      />
     </summary>
 
-    <div class="flex flex-col gap-4 border-t border-white/5 px-3 py-3">
+    <div class="flex flex-col gap-4 border-t border-border px-3 py-3">
       <div class="flex flex-col gap-2">
-        <div class="text-xs font-medium text-muted-foreground">Scenes</div>
-        <div class="flex flex-wrap gap-2">
+        <p class="text-xs font-medium text-muted-foreground">Scenes</p>
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Scenes">
           {#each scenes as entry (entry._id)}
+            {@const active = scene?._id === entry._id}
             <Button
+              aria-pressed={active}
               disabled={!device || busy !== null}
-              variant={scene?._id === entry._id ? "default" : "outline"}
+              size="sm"
+              variant={active ? "default" : "outline"}
               onclick={() =>
                 void runAction(`Scene ${entry.name}`, async () => {
                   if (!device) return;
@@ -319,46 +339,46 @@
       </div>
 
       <div class="flex flex-col gap-2">
-        <div class="text-xs font-medium text-muted-foreground">Presence</div>
-        <div class="flex flex-wrap gap-2">
+        <p class="text-xs font-medium text-muted-foreground">Presence</p>
+        <div>
           <Button
+            aria-pressed={telemetry.presenceRoom}
             disabled={!device || busy !== null}
+            size="sm"
             variant={telemetry.presenceRoom ? "default" : "outline"}
             onclick={() => void handlePresence(!telemetry.presenceRoom)}
           >
-            Room {telemetry.presenceRoom ? "Occupied" : "Empty"}
+            Room {telemetry.presenceRoom ? "occupied" : "empty"}
           </Button>
         </div>
       </div>
 
-      <div class="flex flex-col gap-2">
-        <div class="text-xs font-medium text-muted-foreground">Message</div>
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div class="grid w-full gap-1.5">
-            <Label for="poke-message">Message</Label>
-            <Input
-              id="poke-message"
-              bind:value={pokeMessage}
-              class="min-h-10"
-              maxlength={48}
-              placeholder="Message"
-            />
-          </div>
-          <Button
-            disabled={!device || !pokeMessage.trim() || busy !== null}
-            onclick={() =>
-              void runAction("Message sent", async () => {
-                if (!device) return;
-                await poke({
-                  deviceId: device._id,
-                  durationMs: 10_000,
-                  message: pokeMessage,
-                });
-              })}
-          >
-            Send
-          </Button>
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div class="flex w-full flex-col gap-1.5">
+          <Label for="poke-message">Message</Label>
+          <Input
+            id="poke-message"
+            bind:value={pokeMessage}
+            maxlength={48}
+            placeholder="Show a message on the panel"
+          />
         </div>
+        <Button
+          class="w-full sm:w-auto"
+          disabled={!device || !pokeMessage.trim() || busy !== null}
+          size="sm"
+          onclick={() =>
+            void runAction("Message sent", async () => {
+              if (!device) return;
+              await poke({
+                deviceId: device._id,
+                durationMs: 10_000,
+                message: pokeMessage,
+              });
+            })}
+        >
+          Send
+        </Button>
       </div>
     </div>
   </details>

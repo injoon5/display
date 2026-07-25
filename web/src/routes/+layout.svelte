@@ -3,6 +3,7 @@
   import { page } from "$app/state";
   import StatusBadge from "$lib/components/status-badge.svelte";
   import StatTile from "$lib/components/stat-tile.svelte";
+  import ThemeToggle from "$lib/components/theme-toggle.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import { Toaster } from "$lib/components/ui/sonner/index.js";
   import { dashboardStatus, primaryDevice } from "$lib/convex";
@@ -40,16 +41,16 @@
     return page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
   }
 
-  function modeTone(mode: string): "success" | "warning" | "destructive" | "secondary" {
+  function modeTone(mode: string): "success" | "warning" | "destructive" | "neutral" {
     switch (mode) {
       case "live":
         return "success";
       case "degraded":
-        return "warning";
-      case "mock":
-        return "secondary";
-      default:
         return "destructive";
+      case "mock":
+        return "neutral";
+      default:
+        return "warning";
     }
   }
 </script>
@@ -58,21 +59,20 @@
   <title>{chrome.title} · Wall Matrix</title>
 </svelte:head>
 
-<ModeWatcher defaultMode="dark" track={false} />
-<Toaster richColors position="top-right" />
+<ModeWatcher
+  defaultMode="dark"
+  themeColors={{ dark: "#0b0d12", light: "#fbfbfd" }}
+/>
+<Toaster position="bottom-right" richColors />
 
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <Sidebar.Provider>
-  <Sidebar.Root
-    class="border-sidebar-border/60 bg-sidebar/80 backdrop-blur-xl"
-    collapsible="icon"
-    variant="inset"
-  >
+  <Sidebar.Root class="border-sidebar-border/60" collapsible="icon" variant="inset">
     <Sidebar.Header class="gap-3 px-3 py-3">
       <div class="flex items-center gap-2.5 px-1">
         <div
-          class="flex size-9 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_1px_0_oklch(1_0_0/0.12)_inset]"
+          class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
         >
           <MonitorIcon class="size-4" aria-hidden="true" />
         </div>
@@ -93,7 +93,7 @@
 
     <Sidebar.Content>
       <Sidebar.Group>
-        <Sidebar.GroupLabel class="text-muted-foreground/80">Control</Sidebar.GroupLabel>
+        <Sidebar.GroupLabel>Control</Sidebar.GroupLabel>
         <Sidebar.GroupContent>
           <nav aria-label="Primary">
             <Sidebar.Menu>
@@ -106,7 +106,11 @@
                     tooltipContent={item.label}
                   >
                     {#snippet child({ props })}
-                      <a href={item.href} {...props}>
+                      <a
+                        href={item.href}
+                        aria-current={isActive(item.href) ? "page" : undefined}
+                        {...props}
+                      >
                         <Icon aria-hidden="true" />
                         <span>{item.label}</span>
                       </a>
@@ -127,28 +131,29 @@
     <Sidebar.Rail />
   </Sidebar.Root>
 
-  <Sidebar.Inset id="main" class="bg-transparent">
+  <Sidebar.Inset class="bg-transparent">
     <header
-      class="sticky top-0 z-20 flex h-14 items-center gap-3 bg-background/55 px-4 backdrop-blur-xl supports-backdrop-filter:bg-background/45 shadow-[0_1px_0_oklch(1_0_0/0.06)]"
+      class="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border/60 bg-background/70 px-3 backdrop-blur-xl supports-backdrop-filter:bg-background/50 md:px-4"
     >
-      <Sidebar.Trigger class="press" />
+      <Sidebar.Trigger />
       <div class="min-w-0 flex-1">
-        <p class="truncate text-sm font-semibold tracking-tight text-balance">{chrome.title}</p>
-        <p class="truncate text-xs text-muted-foreground text-pretty">{chrome.subtitle}</p>
+        <h1 class="truncate text-sm font-semibold tracking-tight">{chrome.title}</h1>
+        <p class="truncate text-xs text-muted-foreground">{chrome.subtitle}</p>
       </div>
       {#if device}
         <StatusBadge tone={device.online ? "success" : "destructive"} class="hidden sm:inline-flex">
           {device.online ? "Online" : "Offline"}
         </StatusBadge>
       {/if}
+      <ThemeToggle />
     </header>
 
-    <div class="flex flex-1 flex-col gap-5 p-4 md:p-6">
+    <div id="main-content" tabindex="-1" class="flex flex-1 flex-col gap-5 p-4 outline-none md:p-6">
       <ConnectionBanner />
+      <!-- Navigation happens constantly, so the transition is a short fade with
+           no movement — enough to avoid a hard cut, not enough to feel slow. -->
       {#key page.url.pathname}
-        <div
-          class="flex flex-1 flex-col gap-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500"
-        >
+        <div class="flex flex-1 flex-col gap-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-200">
           {@render children?.()}
         </div>
       {/key}
